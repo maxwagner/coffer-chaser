@@ -1,0 +1,5 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Shell hooks must stay LF — a CR in the shebang breaks /bin/sh
+.githooks/** text eol=lf

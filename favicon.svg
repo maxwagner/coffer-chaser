@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Theme colors from index.html :root (bg #111318, gold #c9a84c) -->
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12" fill="#111318" stroke="#c9a84c" stroke-width="3"/>
+  <!-- domed lid -->
+  <path d="M12 31a20 15 0 0 1 40 0v3H12z" fill="#c9a84c"/>
+  <!-- base -->
+  <rect x="12" y="37" width="40" height="15" rx="2" fill="#c9a84c"/>
+  <!-- vertical straps (dark bands across lid and base) -->
+  <rect x="19.5" y="19" width="3" height="33" fill="#111318"/>
+  <rect x="41.5" y="19" width="3" height="33" fill="#111318"/>
+  <!-- lock plate with keyhole -->
+  <rect x="26.5" y="30" width="11" height="13" rx="2.5" fill="#111318"/>
+  <rect x="28.5" y="32" width="7" height="9" rx="2" fill="#c9a84c"/>
+  <circle cx="32" cy="35" r="1.5" fill="#111318"/>
+  <path d="M31.3 35.7h1.4l.8 3.3h-3z" fill="#111318"/>
+</svg>

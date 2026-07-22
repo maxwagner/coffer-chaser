@@ -1,0 +1,15 @@
+{
+  "name": "coffer-chaser",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "OCR build for Coffer Chaser, a Vindictus upgrade optimizer & knowledge base. The app ships as static HTML/CSS/JS (+ the pre-built, committed vendor/ppocr OCR bundle); esbuild is dev-only and never runs at page load.",
+  "scripts": {
+    "build:ocr": "node scripts/build-ppocr.mjs"
+  },
+  "devDependencies": {
+    "@gutenye/ocr-browser": "^1.4.8",
+    "esbuild": "^0.28.1",
+    "onnxruntime-web": "^1.27.0"
+  }
+}
