@@ -117,10 +117,44 @@
     h1 .app-icon { display: block; }
     h1 .tagline { color: var(--fg-dim); font-size: 13px; font-weight: 400; }
     h1 .hdr-status { margin-left: auto; }
+    /* Version link (header) → changelog modal. */
+    h1 .hdr-ver { margin-left: auto; background: none; border: 1px solid var(--border);
+      color: var(--fg-dim); font: 600 11px var(--font-mono); padding: 2px 7px;
+      border-radius: 4px; cursor: pointer; }
+    h1 .hdr-ver:hover { color: var(--fg); border-color: var(--head); }
+    h1 .hdr-ver + .hdr-status { margin-left: 8px; }
+    /* Freshness badge sized to match the version button (11px, same box height). */
+    h1 .hdr-status { display: inline-flex; align-items: center; }
+    h1 .hdr-status .badge { font-size: 11px; padding: 2px 8px; line-height: normal; }
+    .modal-back { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 60;
+      display: flex; align-items: flex-start; justify-content: center; padding: 60px 16px; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      width: 100%; max-width: 640px; max-height: 80vh; overflow: auto; }
+    .modal .mhead { display: flex; align-items: center; gap: 8px; padding: 12px 16px;
+      border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); }
+    .modal .mhead h2 { margin: 0; font-size: 15px; }
+    .modal .mclose { margin-left: auto; background: none; border: none; color: var(--fg-dim);
+      font-size: 18px; line-height: 1; cursor: pointer; }
+    .modal .mclose:hover { color: var(--fg); }
+    .modal .mbody { padding: 4px 16px 16px; }
+    .chg-rel { padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .chg-rel:last-child { border-bottom: none; }
+    .chg-rel > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 8px; }
+    .chg-rel > summary::-webkit-details-marker { display: none; }
+    .chg-rel > summary::before { content: "▸"; color: var(--fg-dim); font-size: 11px; }
+    .chg-rel[open] > summary::before { content: "▾"; }
+    .chg-rel > summary:hover .chg-ver { color: var(--fg); }
+    .chg-ver { font: 600 13px var(--font-mono); color: var(--gold); }
+    .chg-date { color: var(--fg-dim); font-size: 12px; }
+    .chg-count { color: var(--fg-dim); font-size: 11px; margin-left: auto; }
+    .chg-rel[open] .chg-count { display: none; }
+    .chg-notes { color: var(--fg-dim); font-size: 12px; margin: 4px 0 0; }
+    .chg-rel ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+    .chg-rel li { margin: 3px 0; }
     /* While booting: show only the header icon/title/subtitle + the spinner. Hide the tabs,
        controls, table, sidebar, and the freshness badge until the first render completes. */
     body.booting .tabs, body.booting #controls, body.booting #maintable,
-    body.booting .sidebar, body.booting .hdr-status { display: none; }
+    body.booting .sidebar, body.booting .hdr-status, body.booting .hdr-ver { display: none; }
     /* Boot spinner — shown until the first render (after the Sheet loaders resolve). */
     .boot-loading { display: flex; align-items: center; gap: 10px; padding: 40px 4px;
       color: var(--fg-dim); font-size: 13px; }
@@ -977,7 +1011,7 @@
 </head>
 <body class="booting">
   <header class="apphdr">
-    <h1><img class="app-icon" src="favicon.svg" alt="" width="26" height="26" />Coffer Chaser <span class="tagline">— A Vindictus Upgrading Tool</span><span id="status" class="hdr-status"></span></h1>
+    <h1><img class="app-icon" src="favicon.svg" alt="" width="26" height="26" />Coffer Chaser <span class="tagline">— A Vindictus Upgrading Tool</span><button type="button" id="verBtn" class="hdr-ver" title="What's new"></button><span id="status" class="hdr-status"></span></h1>
     <div class="tabs" id="tabs"></div>
   </header>
   <div class="pagerow">
@@ -1043,6 +1077,7 @@
     import { loadSealShop, sealShopValues } from "./js/sealshop.js";
     import { loadWeeklyBoxes, weeklyBoxOptions, weeklyDemand, weeklyBoxPlan, nextReset, stepBoxWaits, stepBoxSavings } from "./js/weeklybox.js";
     import { score } from "./js/score.js";
+    import { CHANGELOG, VERSION } from "./js/changelog.js";
     import { damageBreakdown, damageRating, dpsGain, statMarginals, DAMAGE_STAT_KEYS } from "./js/damage.js";
     import { makeCoster, enchantMethods, successRate, enchantCost, reEnhanceCost } from "./js/cost.js";
     import { generateMoves, solveThreshold, solveBudget, isLossy, slotsWithBaseSwap, bestBaseSwapBySlot, bestEnchantBySlotAffix, buildTierChain } from "./js/solver.js";
@@ -7575,6 +7610,31 @@
       document.getElementById("status").innerHTML =
         `<span class="badge ${live ? "live" : "fallback"}" title="${live ? "Live prices from the Sheet" : "Offline snapshot — live fetch failed"}">${live ? "LIVE" : "CACHED"}</span>`;
     }
+    // Header version button → changelog modal (js/changelog.js is the single source of truth).
+    document.getElementById("verBtn").textContent = "v" + VERSION;
+    function openChangelog() {
+      const back = document.createElement("div");
+      back.className = "modal-back";
+      back.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Changelog">
+        <div class="mhead"><h2>What's new</h2><button type="button" class="mclose" title="Close">&times;</button></div>
+        <div class="mbody">${CHANGELOG.map((r, i) => {
+          // Newest release opens expanded; older ones collapse to a one-line header so the
+          // modal stays scannable once there are many of them.
+          const n = (r.changes || []).length;
+          return `<details class="chg-rel"${i === 0 ? " open" : ""}>
+          <summary><span class="chg-ver">v${escTxt(r.version)}</span><span class="chg-date">${escTxt(r.date || "")}</span><span class="chg-count">${n} change${n === 1 ? "" : "s"}</span></summary>
+          ${r.notes ? `<p class="chg-notes">${escTxt(r.notes)}</p>` : ""}
+          <ul>${(r.changes || []).map((c) => `<li>${escTxt(c)}</li>`).join("")}</ul>
+        </details>`;
+        }).join("")}</div></div>`;
+      const close = () => { back.remove(); document.removeEventListener("keydown", onKey); };
+      const onKey = (e) => { if (e.key === "Escape") close(); };
+      back.addEventListener("click", (e) => { if (e.target === back || e.target.closest(".mclose")) close(); });
+      document.addEventListener("keydown", onKey);
+      document.body.appendChild(back);
+    }
+    document.getElementById("verBtn").addEventListener("click", openChangelog);
+
     renderStatus();
     renderTabs();
     renderTable();
