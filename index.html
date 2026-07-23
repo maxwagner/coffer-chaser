@@ -1073,7 +1073,7 @@
     import { infusionKind, infusionOptions, infusionTargets, infusionStatus, INFUSION_STAT_LABEL } from "./js/infusion.js";
     import { snapshotState, makeProfileRecord, upsertProfile, removeProfile, renameProfile } from "./js/profiles.js";
     import { loadRaids, nextRaid } from "./js/raids.js";
-    import { loadRaidDrops } from "./js/raiddrops.js";
+    import { loadRaidDrops, deriveRaidEssences } from "./js/raiddrops.js";
     import { loadSealShop, sealShopValues } from "./js/sealshop.js";
     import { loadWeeklyBoxes, weeklyBoxOptions, weeklyDemand, weeklyBoxPlan, nextReset, stepBoxWaits, stepBoxSavings } from "./js/weeklybox.js";
     import { score } from "./js/score.js";
@@ -1127,11 +1127,15 @@
       try { const s = JSON.parse(localStorage.getItem(FREE_ITEMS_STORAGE_KEY) || "null"); return Array.isArray(s) ? s.filter((x) => typeof x === "string") : []; }
       catch { return []; }
     };
+    // Weekly raid essences, DERIVED from the Raid Info + Raid Drops tabs (a new raid needs no
+    // code edit). Falls back to the config constant if the data yields nothing (offline/odd sheet).
+    const derivedEssences = deriveRaidEssences(raidDrops, raids);
+    const raidEssences = derivedEssences.length ? derivedEssences : FREE_RAID_ESSENCES;
     const userFreeItems = new Set(loadUserFreeItems()); // player-flagged free items (persisted, global)
     const persistUserFreeItems = () => { try { localStorage.setItem(FREE_ITEMS_STORAGE_KEY, JSON.stringify([...userFreeItems])); } catch { /* storage blocked */ } };
     const freeItems = new Set([
       ...(FREE_ENHANCEMENT_RUNE_DEFAULT ? [ENHANCEMENT_RUNE_NAME] : []),
-      ...(FREE_RAID_ESSENCES_DEFAULT ? FREE_RAID_ESSENCES : []),
+      ...(FREE_RAID_ESSENCES_DEFAULT ? raidEssences : []),
       ...userFreeItems,
     ]);
     const { cost, craftCost, netCost, invalidate } = makeCoster(prices, recipes, { freeItems });

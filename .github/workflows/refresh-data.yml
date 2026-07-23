@@ -1,0 +1,42 @@
+# Keeps the offline CSV snapshots in data/ in sync with the published Google Sheet.
+#
+# The snapshots are the app's fallback when the live Sheet fetch fails or times out
+# (js/sheet.js), so they mainly need to track the sheet's SHAPE — new tabs, columns,
+# raids. Nobody remembers to run `npm run refresh:data`, so this does it weekly and
+# commits only when something actually changed.
+#
+# scripts/refresh-data.mjs discovers tabs from js/config.js (*_CSV_URL paired with
+# *_CSV_FALLBACK), so a tab added to config is picked up here with no workflow edit —
+# including creating its snapshot file the first time.
+
+name: Refresh data snapshots
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Mondays 09:00 UTC
+  workflow_dispatch: # and on demand from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # No install step: the script uses only node built-ins + fetch.
+      - run: node scripts/refresh-data.mjs
+      - name: Commit changed snapshots
+        run: |
+          if git diff --quiet -- data/; then
+            echo "snapshots already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git commit -m "Refresh data snapshots from the published Sheet"
+          git push
