@@ -1,87 +1,70 @@
 Item,Level,Slot,Attack,Defense,Crit,Crit Res,Add Dmg,Def Pen,Bal,Att Spd,Dest,HP,Stam,Effect,STR,AGI,INT,WIL
-Blue Kitty Brooch,70,Brooch,,50,1,,,,,,,,,,,,,
-Brilliant Kitty Necklace,115,Necklace,,50,2,2,,,2,,,100,,,,,,
-Obsidian Kitty Necklace,125,Necklace,,50,4,4,,,4,,,100,,,,,,
-Red Kitty Necklace,100,Necklace,,50,,,,,,,,100,,,,,,
-Red Moon Brooch,100,Brooch,,50,1,,,,,2,,,,,,,,
-White Kitty Necklace,60,Necklace,,50,,,,,,,,,,,,,,
-Seraphic Feathers Brooch,105,Brooch,,100,2,,,,,2,,,,,,,,
-Gray Twilight Brooch,110,Brooch,,200,4,,,,,3,,,,,,,,
-The Book of Ardri,110,Totem,610,2290,5,12,,,,3,,,,,,,,
-The Book of Orna,115,Totem,1010,2690,7,14,,,,3,,,,,,,,
-Uaithne Mail,120,Chest,,4508,,44,750,,,,,500,,,225,113,304,100
-Eriu Book,125,Totem,1910,3590,13,20,,,,3,,,,,180,90,243,80
-Beginner Uaithne Mail,120,Chest,,4618,,44,780,,,,,500,,,225,113,304,100
-Fine Uaithne Mail,120,Chest,,4728,,44,810,,,,,500,,,225,113,304,100
-Superior Uaithne Mail,120,Chest,,4838,,44,840,,,,,500,,,225,113,304,100
-Rare Uaithne Mail,120,Chest,,4948,,44,870,,,,,500,,,225,113,304,100
-Legendary Uaithne Mail,120,Chest,,5058,,44,900,,,,,500,,,225,113,304,100
-Uaithne Boots,120,Feet,,4338,,33,750,,,,,500,,,225,113,304,100
++12 Orna Boots,115,Feet,,4001,,26,600,,,,,300,,,180,90,,80
++12 Orna Gauntlets,115,Hands,,4001,,26,600,,,,,300,,,180,90,,80
++12 Orna Greaves,115,Legs,,3975,,39,600,,,,,300,,,180,90,,80
++12 Orna Helm,120,Head,,4001,,26,600,,,,,300,,,180,90,,80
++12 Orna Mail,115,Chest,,4178,,34,600,,,,,300,,,180,90,,80
++12 Orna Weapon,115,Weapon,32962,,112,,3000,,55,40,,,,,110,60,,80
++13 Orna Boots,115,Feet,,4026,,26,650,,,,,500,,,180,90,,80
++13 Orna Gauntlets,115,Hands,,4026,,26,650,,,,,500,,,180,90,,80
++13 Orna Greaves,115,Legs,,4000,,39,650,,,,,500,,,180,90,,80
++13 Orna Helm,120,Head,,4026,,26,650,,,,,500,,,180,90,,80
++13 Orna Mail,115,Chest,,4203,,34,650,,,,,500,,,180,90,,80
++13 Orna Weapon,115,Weapon,33232,,112,,3250,,55,42,,,,,110,60,,80
++14 Orna Boots,115,Feet,,4051,,26,700,,,,,500,,,180,90,,80
++14 Orna Gauntlets,115,Hands,,4051,,26,700,,,,,500,,,180,90,,80
++14 Orna Greaves,115,Legs,,4025,,39,700,,,,,500,,,180,90,,80
++14 Orna Helm,120,Head,,4051,,26,700,,,,,500,,,180,90,,80
++14 Orna Mail,115,Chest,,4228,,34,700,,,,,500,,,180,90,,80
++14 Orna Weapon,115,Weapon,33502,,112,,3500,,55,44,,,,,110,60,,80
++15 Orna Boots,115,Feet,,4085,,26,750,,,,,500,,,180,90,,80
++15 Orna Gauntlets,115,Hands,,4085,,26,750,,,,,500,,,180,90,,80
++15 Orna Greaves,115,Legs,,4059,,39,750,,,,,500,,,180,90,,80
++15 Orna Helm,120,Head,,4085,,26,750,,,,,500,,,180,90,,80
++15 Orna Mail,115,Chest,,4262,,34,750,,,,,500,,,180,90,,80
++15 Orna Weapon,115,Weapon,33822,,112,,3750,,55,46,,,,,110,60,,80
+Beginner Eriu Gauntlets,125,Hands,,5118,,37,945,,,,,500,,,225,113,304,100
+Beginner Eriu Greaves,125,Legs,,5093,,58,945,,,,,500,,,225,113,304,100
+Beginner Eriu Helm,125,Head,,5118,,37,945,,,,,500,,,180,90,243,80
+Beginner Eriu Mail,125,Chest,,5339,,50,945,,,,,500,,,225,113,304,100
+Beginner Eriu Weapon,125,Weapon,38650,,137,,4400,,76,47,,,,,110,60,148,80
 Beginner Uaithne Boots,120,Feet,,4448,,33,780,,,,,500,,,225,113,304,100
-Fine Uaithne Boots,120,Feet,,4558,,33,810,,,,,500,,,225,113,304,100
-Superior Uaithne Boots,120,Feet,,4668,,33,840,,,,,500,,,225,113,304,100
-Rare Uaithne Boots,120,Feet,,4778,,33,870,,,,,500,,,225,113,304,100
-Legendary Uaithne Boots,120,Feet,,4888,,33,900,,,,,500,,,225,113,304,100
-Uaithne Gauntlets,120,Hands,,4338,,33,750,,,,,500,,,225,113,304,100
 Beginner Uaithne Gauntlets,120,Hands,,4448,,33,780,,,,,500,,,225,113,304,100
-Fine Uaithne Gauntlets,120,Hands,,4558,,33,810,,,,,500,,,225,113,304,100
-Superior Uaithne Gauntlets,120,Hands,,4668,,33,840,,,,,500,,,225,113,304,100
-Rare Uaithne Gauntlets,120,Hands,,4778,,33,870,,,,,500,,,225,113,304,100
-Legendary Uaithne Gauntlets,120,Hands,,4888,,33,900,,,,,500,,,225,113,304,100
-Uaithne Helm,120,Head,,4338,,33,750,,,,,500,,,180,90,243,80
-Beginner Uaithne Helm,120,Head,,4448,,33,780,,,,,500,,,180,90,243,80
-Fine Uaithne Helm,120,Head,,4558,,33,810,,,,,500,,,180,90,243,80
-Superior Uaithne Helm,120,Head,,4668,,33,840,,,,,500,,,180,90,243,80
-Rare Uaithne Helm,120,Head,,4778,,33,870,,,,,500,,,180,90,243,80
-Legendary Uaithne Helm,120,Head,,4888,,33,900,,,,,500,,,180,90,243,80
-Uaithne Greaves,120,Legs,,4293,,52,750,,,,,500,,,225,113,304,100
 Beginner Uaithne Greaves,120,Legs,,4403,,52,780,,,,,500,,,225,113,304,100
-Fine Uaithne Greaves,120,Legs,,4513,,52,810,,,,,500,,,225,113,304,100
-Superior Uaithne Greaves,120,Legs,,4623,,52,840,,,,,500,,,225,113,304,100
-Rare Uaithne Greaves,120,Legs,,4733,,52,870,,,,,500,,,225,113,304,100
-Legendary Uaithne Greaves,120,Legs,,4843,,52,900,,,,,500,,,225,113,304,100
-The Book of Uaithne,120,Totem,1410,3090,10,17,,,,3,,,,,,,,
-Lord's Obsidian Bracelet,125,Bracelet,500,,,3,,,,,,,,,,,,
-Lord's Rusty Obsidian Bracelet,125,Bracelet,500,,,1,,,,,,,,,,,,
-The Watcher's Mysterious Cat Statue,120,Artifact,500,,,,,,3,,,,,"Restores 320sp, 70s cooldown",,,,
-The Watcher's Rusty Mysterious Cat Statue,120,Artifact,500,,,,,,1,,,,,"Restores 320sp, 70s cooldown",,,,
-The Watcher's Rusty Succubus Fang,120,Artifact,500,,,,,,1,,,,,"Restores 15% of your Att as HP, 20s duration, 180s cooldown",,,,
-The Watcher's Rusty War Goddess Statue,120,Artifact,500,,,,,,1,,,,,"Add Dmg +1000, 20s duration, 70s cooldown",,,,
-The Watcher's Rusty Werewolf Paw,120,Artifact,500,,,,,,1,,,,,"Increases Att Spd by 22% when used, 30s duration, 120s cooldown",,,,
-The Watcher's Succubus Fang,120,Artifact,500,,,,,,3,,,,,"Restores 15% of your Att as HP, 20s duration, 180s cooldown",,,,
-The Watcher's War Goddess Statue,120,Artifact,500,,,,,,3,,,,,"Add Dmg +1000, 20s duration, 70s cooldown",,,,
-The Watcher's Werewolf Paw,120,Artifact,500,,,,,,3,,,,,"Increases Att Spd by 22% when used, 30s duration, 120s cooldown",,,,
-Usurper's Rhod Compass,110,Rhod,500,,3,,,,,,,,,,,,,
-Usurper's Rusty Rhod Compass,110,Rhod,500,,1,,,,,,,,,,,,,
-Usurper's Shiny Rhod Compass,110,Rhod,500,,3,,,,,,150,,,,,,,
-Fallen One's Rhod Compass,115,Rhod,1000,,7,,,,,,300,,,,,,,
-Fallen One's Rusty Rhod Compass,115,Rhod,1000,,5,,,,,,300,,,,,,,
-Fallen One's Shiny Rhod Compass,115,Rhod,1000,,7,,,,,,450,,,,,,,
-Lord's Complete Obsidian Bracelet,125,Bracelet,1000,,,5,,,,,400,,,,,,,
-Lord's Glowing Obsidian Bracelet,125,Bracelet,1000,,,3,,,,,200,,,,,,,
-The Watcher's Complete Mysterious Cat Statue,120,Artifact,1000,,,,,,5,,300,,,"Restores 320sp, 70s cooldown",,,,
-The Watcher's Complete Succubus Fang,120,Artifact,1000,,,,,,5,,300,,,"Restores 15% of your Att as HP, 20s duration, 180s cooldown",,,,
-The Watcher's Complete War Goddess Statue,120,Artifact,1000,,,,,,5,,300,,,"Add Dmg +1000, 20s duration, 70s cooldown",,,,
-The Watcher's Complete Werewolf Paw,120,Artifact,1000,,,,,,5,,300,,,"Increases Att Spd by 22% when used, 30s duration, 120s cooldown",,,,
-The Watcher's Glowing Mysterious Cat Statue,120,Artifact,1000,,,,,,3,,150,,,"Restores 320sp, 70s cooldown",,,,
-The Watcher's Glowing Succubus Fang,120,Artifact,1000,,,,,,3,,150,,,"Restores 15% of your Att as HP, 20s duration, 180s cooldown",,,,
-The Watcher's Shining War Goddess Statue,120,Artifact,1000,,,,,,3,,150,,,"Add Dmg +1000, 20s duration, 70s cooldown",,,,
-The Watcher's Shining Werewolf Paw,120,Artifact,1000,,,,,,3,,150,,,"Increases Att Spd by 22% when used, 30s duration, 120s cooldown",,,,
-Usurper's Complete Rhod Compass,110,Rhod,1000,,5,,,,,,300,,,,,,,
-Fallen One's Complete Rhod Compass,115,Rhod,2000,,10,,,,,,600,,,,,,,
-Uaithne Weapon,120,Weapon,34900,,128,,3750,,67,47,,,,,110,60,148,80
+Beginner Uaithne Helm,120,Head,,4448,,33,780,,,,,500,,,180,90,243,80
+Beginner Uaithne Mail,120,Chest,,4618,,44,780,,,,,500,,,225,113,304,100
 Beginner Uaithne Weapon,120,Weapon,35400,,128,,3850,,67,47,,,,,110,60,148,80
-Fine Uaithne Weapon,120,Weapon,35900,,128,,3950,,67,47,,,,,110,60,148,80
-Superior Uaithne Weapon,120,Weapon,36400,,128,,4050,,67,47,,,,,110,60,148,80
-Rare Uaithne Weapon,120,Weapon,36900,,128,,4150,,67,47,,,,,110,60,148,80
-Legendary Uaithne Weapon,120,Weapon,37400,,128,,4250,,67,47,,,,,110,60,148,80
+Blue Kitty Brooch,70,Brooch,,50,1,,,,,,,,,,,,,
 Blue Kitty Necklace,60,Necklace,,,,,,,,,,100,,,,,,
+Brilliant Kitty Necklace,115,Necklace,,50,2,2,,,2,,,100,,,,,,
 Bronze Lion Statue,1,Artifact,,,,,,,,,,,,"Increases HP by 5,000 for 10 seconds, 180s cooldown",,,,
 Dark Belt,110,Belt,,,,,,,6,,,,,,,,,
 Dimensional Earrings,110,Earrings,,,5,,,,,,,,,,,,,
+Eriu Book,125,Totem,1910,3590,13,20,,,,3,,,,,180,90,243,80
+Eriu Gauntlets,125,Hands,,4888,,36,900,,,,,500,,,225,113,304,100
+Eriu Greaves,125,Legs,,4843,,57,900,,,,,500,,,225,113,304,100
+Eriu Helm,125,Head,,4888,,36,900,,,,,500,,,180,90,243,80
+Eriu Mail,125,Chest,,5058,,49,900,,,,,500,,,225,113,304,100
+Eriu Weapon,125,Weapon,37400,,136,,4250,,75,47,,,,,110,60,148,80
+Fallen One's Complete Rhod Compass,115,Rhod,2000,,10,,,,,,600,,,,,,,
+Fallen One's Rhod Compass,115,Rhod,1000,,7,,,,,,300,,,,,,,
+Fallen One's Rusty Rhod Compass,115,Rhod,1000,,5,,,,,,300,,,,,,,
+Fallen One's Shiny Rhod Compass,115,Rhod,1000,,7,,,,,,450,,,,,,,
 Fear of the Divide,110,"Ring 1, Ring 2",,,4,,,,4,,,125,,,,,,
 Fighting Belt,115,Belt,,,,,,,8,,,,,,,,,
+Fine Eriu Gauntlets,125,Hands,,5348,,38,990,,,,,500,,,225,113,304,100
+Fine Eriu Greaves,125,Legs,,5343,,59,990,,,,,500,,,225,113,304,100
+Fine Eriu Helm,125,Head,,5348,,38,990,,,,,500,,,180,90,243,80
+Fine Eriu Mail,125,Chest,,5620,,51,990,,,,,500,,,225,113,304,100
+Fine Eriu Weapon,125,Weapon,39900,,138,,4550,,77,47,,,,,110,60,148,80
+Fine Uaithne Boots,120,Feet,,4558,,33,810,,,,,500,,,225,113,304,100
+Fine Uaithne Gauntlets,120,Hands,,4558,,33,810,,,,,500,,,225,113,304,100
+Fine Uaithne Greaves,120,Legs,,4513,,52,810,,,,,500,,,225,113,304,100
+Fine Uaithne Helm,120,Head,,4558,,33,810,,,,,500,,,180,90,243,80
+Fine Uaithne Mail,120,Chest,,4728,,44,810,,,,,500,,,225,113,304,100
+Fine Uaithne Weapon,120,Weapon,35900,,128,,3950,,67,47,,,,,110,60,148,80
 Fire Wisp Crystal,1,Artifact,,,,,,,,,,,,"Inflicts continuous fire damge on nearby enemies for 10s, 180s cooldown.",,,,
+Gray Twilight Brooch,110,Brooch,,200,4,,,,,3,,,,,,,,
 Greater Bronze Lion Statue,1,Artifact,,,,,,,,,,,,"Increases HP by 5,000 for 10 seconds, 150s cooldown",,,,
 Greater Mysterious Cat Statue,1,Artifact,,,,,,,,,,,,"Restores 250sp, 70s cooldown",,,,
 Greater Succubus Fang,1,Artifact,,,,,,,,,,,,"Restores 13% of your Att as HP, 20s duration, 180s cooldown",,,,
@@ -89,65 +72,91 @@ Greater War Goddess Statue,1,Artifact,,,,,,,,,,,,"Increases ATT and M. ATT by 1,
 Greater Werewolf Paw,1,Artifact,,,,,,,,,,,,"Increases Att Spd by 20% when used, 30s duration, 120s cooldown",,,,
 Kitty Brooch,40,Brooch,,,,,,,,,,,,,,,,
 Kobold's Clockwork Doll,1,Artifact,,,,,,,,,,,,"Summons a Kobold Bomber when used, 180s cooldown.",,,,
+Legendary Eriu Gauntlets,125,Hands,,6158,,41,1125,,,,,500,,,225,113,304,100
+Legendary Eriu Greaves,125,Legs,,6243,,66,1125,,,,,500,,,225,113,304,100
+Legendary Eriu Helm,125,Head,,6158,,41,1125,,,,,500,,,180,90,243,80
+Legendary Eriu Mail,125,Chest,,6502,,57,1125,,,,,500,,,225,113,304,100
+Legendary Uaithne Boots,120,Feet,,4888,,33,900,,,,,500,,,225,113,304,100
+Legendary Uaithne Gauntlets,120,Hands,,4888,,33,900,,,,,500,,,225,113,304,100
+Legendary Uaithne Greaves,120,Legs,,4843,,52,900,,,,,500,,,225,113,304,100
+Legendary Uaithne Helm,120,Head,,4888,,33,900,,,,,500,,,180,90,243,80
+Legendary Uaithne Mail,120,Chest,,5058,,44,900,,,,,500,,,225,113,304,100
+Legendary Uaithne Weapon,120,Weapon,37400,,128,,4250,,67,47,,,,,110,60,148,80
+Lord's Complete Obsidian Bracelet,125,Bracelet,1000,,,5,,,,,400,,,,,,,
+Lord's Glowing Obsidian Bracelet,125,Bracelet,1000,,,3,,,,,200,,,,,,,
+Lord's Obsidian Bracelet,125,Bracelet,500,,,3,,,,,,,,,,,,
+Lord's Rusty Obsidian Bracelet,125,Bracelet,500,,,1,,,,,,,,,,,,
 Mysterious Cat Statue,1,Artifact,,,,,,,,,,,,"Restores 250sp, 90s cooldown",,,,
+Obsidian Kitty Necklace,125,Necklace,,50,4,4,,,4,,,100,,,,,,
 Phoenix Feather Bundle,1,Artifact,,,,,,,,,,,,"Activates life flare, must trigger in 170s, 90s cooldown.",,,,
 Rage of the Rift,110,"Ring 1, Ring 2",,,4,,,,4,,,125,,,,,,
+Rare Eriu Gauntlets,125,Hands,,5808,,40,1080,,,,,500,,,225,113,304,100
+Rare Eriu Greaves,125,Legs,,5943,,63,1080,,,,,500,,,225,113,304,100
+Rare Eriu Helm,125,Head,,5808,,40,1080,,,,,500,,,180,90,243,80
+Rare Eriu Mail,125,Chest,,6208,,55,1080,,,,,500,,,225,113,304,100
+Rare Eriu Weapon,125,Weapon,42400,,140,,4850,,79,47,,,,,110,60,148,80
+Rare Uaithne Boots,120,Feet,,4778,,33,870,,,,,500,,,225,113,304,100
+Rare Uaithne Gauntlets,120,Hands,,4778,,33,870,,,,,500,,,225,113,304,100
+Rare Uaithne Greaves,120,Legs,,4733,,52,870,,,,,500,,,225,113,304,100
+Rare Uaithne Helm,120,Head,,4778,,33,870,,,,,500,,,180,90,243,80
+Rare Uaithne Mail,120,Chest,,4948,,44,870,,,,,500,,,225,113,304,100
+Rare Uaithne Weapon,120,Weapon,36900,,128,,4150,,67,47,,,,,110,60,148,80
+Red Kitty Necklace,100,Necklace,,50,,,,,,,,100,,,,,,
+Red Moon Brooch,100,Brooch,,50,1,,,,,2,,,,,,,,
 Roots of Abundance,125,Earrings,,,15,,,,,,,,4,,125,50,167,58
 Sanctuary Earrings,115,Earrings,,,7,,,,,,,,,,,,,
+Seraphic Feathers Brooch,105,Brooch,,100,2,,,,,2,,,,,,,,
 Shrouded Moonlight,115,"Ring 1, Ring 2",,,6,,,,5,,,125,,,,,,
 Shrouded Shadow,115,"Ring 1, Ring 2",,,6,,,,5,,,125,,,,,,
 Starlight Belt,125,Belt,,,,,,,16,,,,,,145,95,193,105
 Succubus Fang,1,Artifact,,,,,,,,,,,,"Restores 10% of your Att as HP, 20s duration, 180s cooldown",,,,
+Superior Eriu Gauntlets,125,Hands,,5578,,39,1035,,,,,500,,,225,113,304,100
+Superior Eriu Greaves,125,Legs,,5643,,61,1035,,,,,500,,,225,113,304,100
+Superior Eriu Helm,125,Head,,5578,,39,1035,,,,,500,,,180,90,243,80
+Superior Eriu Mail,125,Chest,,5914,,53,1035,,,,,500,,,225,113,304,100
+Superior Eriu Weapon,125,Weapon,41150,,139,,4700,,78,47,,,,,110,60,148,80
+Superior Uaithne Boots,120,Feet,,4668,,33,840,,,,,500,,,225,113,304,100
+Superior Uaithne Gauntlets,120,Hands,,4668,,33,840,,,,,500,,,225,113,304,100
+Superior Uaithne Greaves,120,Legs,,4623,,52,840,,,,,500,,,225,113,304,100
+Superior Uaithne Helm,120,Head,,4668,,33,840,,,,,500,,,180,90,243,80
+Superior Uaithne Mail,120,Chest,,4838,,44,840,,,,,500,,,225,113,304,100
+Superior Uaithne Weapon,120,Weapon,36400,,128,,4050,,67,47,,,,,110,60,148,80
+The Book of Ardri,110,Totem,610,2290,5,12,,,,3,,,,,,,,
+The Book of Legacy,95,Totem,,40,3,2,,,,,,,,,60,,80,
+The Book of Orna,115,Totem,1010,2690,7,14,,,,3,,,,,,,,
+The Book of Uaithne,120,Totem,1410,3090,10,17,,,,3,,,,,,,,
 The Cursed Belt,120,Belt,,,,,,,12,,,,,,145,95,193,105
 The Sun's Wish,120,Earrings,,,11,,,,,,,,4,,125,50,167,58
+The Watcher's Complete Mysterious Cat Statue,120,Artifact,1000,,,,,,5,,300,,,"Restores 320sp, 70s cooldown",,,,
+The Watcher's Complete Succubus Fang,120,Artifact,1000,,,,,,5,,300,,,"Restores 15% of your Att as HP, 20s duration, 180s cooldown",,,,
+The Watcher's Complete War Goddess Statue,120,Artifact,1000,,,,,,5,,300,,,"Add Dmg +1000, 20s duration, 70s cooldown",,,,
+The Watcher's Complete Werewolf Paw,120,Artifact,1000,,,,,,5,,300,,,"Increases Att Spd by 22% when used, 30s duration, 120s cooldown",,,,
+The Watcher's Glowing Mysterious Cat Statue,120,Artifact,1000,,,,,,3,,150,,,"Restores 320sp, 70s cooldown",,,,
+The Watcher's Glowing Succubus Fang,120,Artifact,1000,,,,,,3,,150,,,"Restores 15% of your Att as HP, 20s duration, 180s cooldown",,,,
+The Watcher's Mysterious Cat Statue,120,Artifact,500,,,,,,3,,,,,"Restores 320sp, 70s cooldown",,,,
+The Watcher's Rusty Mysterious Cat Statue,120,Artifact,500,,,,,,1,,,,,"Restores 320sp, 70s cooldown",,,,
+The Watcher's Rusty Succubus Fang,120,Artifact,500,,,,,,1,,,,,"Restores 15% of your Att as HP, 20s duration, 180s cooldown",,,,
+The Watcher's Rusty War Goddess Statue,120,Artifact,500,,,,,,1,,,,,"Add Dmg +1000, 20s duration, 70s cooldown",,,,
+The Watcher's Rusty Werewolf Paw,120,Artifact,500,,,,,,1,,,,,"Increases Att Spd by 22% when used, 30s duration, 120s cooldown",,,,
+The Watcher's Shining War Goddess Statue,120,Artifact,1000,,,,,,3,,150,,,"Add Dmg +1000, 20s duration, 70s cooldown",,,,
+The Watcher's Shining Werewolf Paw,120,Artifact,1000,,,,,,3,,150,,,"Increases Att Spd by 22% when used, 30s duration, 120s cooldown",,,,
+The Watcher's Succubus Fang,120,Artifact,500,,,,,,3,,,,,"Restores 15% of your Att as HP, 20s duration, 180s cooldown",,,,
+The Watcher's War Goddess Statue,120,Artifact,500,,,,,,3,,,,,"Add Dmg +1000, 20s duration, 70s cooldown",,,,
+The Watcher's Werewolf Paw,120,Artifact,500,,,,,,3,,,,,"Increases Att Spd by 22% when used, 30s duration, 120s cooldown",,,,
 Token of Quiet,120,"Ring 1, Ring 2",,,8,,,,6,,,125,,,140,70,180,80
 Token of Silence,120,"Ring 1, Ring 2",,,6,,,,8,,,125,,,140,70,180,80
+Uaithne Boots,120,Feet,,4338,,33,750,,,,,500,,,225,113,304,100
+Uaithne Gauntlets,120,Hands,,4338,,33,750,,,,,500,,,225,113,304,100
+Uaithne Greaves,120,Legs,,4293,,52,750,,,,,500,,,225,113,304,100
+Uaithne Helm,120,Head,,4338,,33,750,,,,,500,,,180,90,243,80
+Uaithne Mail,120,Chest,,4508,,44,750,,,,,500,,,225,113,304,100
+Uaithne Weapon,120,Weapon,34900,,128,,3750,,67,47,,,,,110,60,148,80
+Usurper's Complete Rhod Compass,110,Rhod,1000,,5,,,,,,300,,,,,,,
+Usurper's Rhod Compass,110,Rhod,500,,3,,,,,,,,,,,,,
+Usurper's Rusty Rhod Compass,110,Rhod,500,,1,,,,,,,,,,,,,
+Usurper's Shiny Rhod Compass,110,Rhod,500,,3,,,,,,150,,,,,,,
 War Goddess Statue,1,Artifact,,,,,,,,,,,,"Increases ATT and M. ATT by 1,000 when used, 30s duration, 300s cooldown",,,,
 Werewolf Paw,1,Artifact,,,,,,,,,,,,"Increases Att Spd by 20% when used, 20s duration, 120s cooldown",,,,
 White Kitty Brooch,70,Brooch,,,,,,,,2,,,,,,,,
-Eriu Weapon,125,Weapon,37400,,136,,4250,,75,47,,,,,110,60,148,80
-Beginner Eriu Weapon,125,Weapon,38650,,137,,4400,,76,47,,,,,110,60,148,80
-Fine Eriu Weapon,125,Weapon,39900,,138,,4550,,77,47,,,,,110,60,148,80
-Superior Eriu Weapon,125,Weapon,41150,,139,,4700,,78,47,,,,,110,60,148,80
-Eriu Helm,125,Head,,4888,,36,900,,,,,500,,,180,90,243,80
-Beginner Eriu Helm,125,Head,,5118,,37,945,,,,,500,,,180,90,243,80
-Fine Eriu Helm,125,Head,,5348,,38,990,,,,,500,,,180,90,243,80
-Superior Eriu Helm,125,Head,,5578,,39,1035,,,,,500,,,180,90,243,80
-Rare Eriu Helm,125,Head,,5808,,40,1080,,,,,500,,,180,90,243,80
-Legendary Eriu Helm,125,Head,,6158,,41,1125,,,,,500,,,180,90,243,80
-Eriu Mail,125,Chest,,5058,,49,900,,,,,500,,,225,113,304,100
-Beginner Eriu Mail,125,Chest,,5339,,50,945,,,,,500,,,225,113,304,100
-Fine Eriu Mail,125,Chest,,5620,,51,990,,,,,500,,,225,113,304,100
-Superior Eriu Mail,125,Chest,,5914,,53,1035,,,,,500,,,225,113,304,100
-Rare Eriu Mail,125,Chest,,6208,,55,1080,,,,,500,,,225,113,304,100
-Legendary Eriu Mail,125,Chest,,6502,,57,1125,,,,,500,,,225,113,304,100
-Eriu Greaves,125,Legs,,4843,,57,900,,,,,500,,,225,113,304,100
-Beginner Eriu Greaves,125,Legs,,5093,,58,945,,,,,500,,,225,113,304,100
-Fine Eriu Greaves,125,Legs,,5343,,59,990,,,,,500,,,225,113,304,100
-Superior Eriu Greaves,125,Legs,,5643,,61,1035,,,,,500,,,225,113,304,100
-Rare Eriu Greaves,125,Legs,,5943,,63,1080,,,,,500,,,225,113,304,100
-Legendary Eriu Greaves,125,Legs,,6243,,66,1125,,,,,500,,,225,113,304,100
-+12 Orna Weapon,115,Weapon,32962,,112,,3000,,55,40,,,,,110,60,,80
-+13 Orna Weapon,115,Weapon,33232,,112,,3250,,55,42,,,,,110,60,,80
-+14 Orna Weapon,115,Weapon,33502,,112,,3500,,55,44,,,,,110,60,,80
-+15 Orna Weapon,115,Weapon,33822,,112,,3750,,55,46,,,,,110,60,,80
-+12 Orna Helm,120,Head,,4001,,26,600,,,,,300,,,180,90,,80
-+13 Orna Helm,120,Head,,4026,,26,650,,,,,500,,,180,90,,80
-+14 Orna Helm,120,Head,,4051,,26,700,,,,,500,,,180,90,,80
-+15 Orna Helm,120,Head,,4085,,26,750,,,,,500,,,180,90,,80
-+12 Orna Mail,115,Chest,,4178,,34,600,,,,,300,,,180,90,,80
-+13 Orna Mail,115,Chest,,4203,,34,650,,,,,500,,,180,90,,80
-+14 Orna Mail,115,Chest,,4228,,34,700,,,,,500,,,180,90,,80
-+15 Orna Mail,115,Chest,,4262,,34,750,,,,,500,,,180,90,,80
-+12 Orna Gauntlets,115,Hands,,4001,,26,600,,,,,300,,,180,90,,80
-+13 Orna Gauntlets,115,Hands,,4026,,26,650,,,,,500,,,180,90,,80
-+14 Orna Gauntlets,115,Hands,,4051,,26,700,,,,,500,,,180,90,,80
-+15 Orna Gauntlets,115,Hands,,4085,,26,750,,,,,500,,,180,90,,80
-+12 Orna Greaves,115,Legs,,3975,,39,600,,,,,300,,,180,90,,80
-+13 Orna Greaves,115,Legs,,4000,,39,650,,,,,500,,,180,90,,80
-+14 Orna Greaves,115,Legs,,4025,,39,700,,,,,500,,,180,90,,80
-+15 Orna Greaves,115,Legs,,4059,,39,750,,,,,500,,,180,90,,80
-+12 Orna Boots,115,Feet,,4001,,26,600,,,,,300,,,180,90,,80
-+13 Orna Boots,115,Feet,,4026,,26,650,,,,,500,,,180,90,,80
-+14 Orna Boots,115,Feet,,4051,,26,700,,,,,500,,,180,90,,80
-+15 Orna Boots,115,Feet,,4085,,26,750,,,,,500,,,180,90,,80
+White Kitty Necklace,60,Necklace,,50,,,,,,,,,,,,,,
+Yoke of Mortality,125,"Ring 1, Ring 2",,,8,,,,9,,,125,,,140,70,180,80

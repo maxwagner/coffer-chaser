@@ -1,39 +1,87 @@
-Seal or Ticket,Item,Contains,Cost,Stock,Count,Cost,Profit / Seal,Total Coupons
-Uaithne Seal,Superior Enhancement Elixir,,1,,4,"558,089","558,089"
-Uaithne Seal,Sreng's Essence,,3,,1,"28,250,000","9,416,667"
-Uaithne Seal,Spinos' Essence,,3,,1,"7,686,478","2,562,159"
-Uaithne Seal,Gorbas' Essence,,3,,1,"6,755,536","2,251,845"
-Uaithne Seal,Morgant's Essence,,2,,1,"2,610,023","1,305,012"
-Uaithne Seal,Uaithne Fragment: Weapon,,4,,1,"2,975,030","743,758"
-Uaithne Seal,Uaithne Fragment: Chest Armor,,4,,1,"3,609,212","902,303"
-Uaithne Seal,Uaithne Fragment: Feet Armor,,4,,1,"2,486,737","621,684"
-Uaithne Seal,Uaithne Fragment: Hand Armor,,4,,1,"3,140,394","785,099"
-Uaithne Seal,Uaithne Fragment: Head Armor,,4,,1,"3,187,051","796,763"
-Uaithne Seal,Uaithne Fragment: Leg Armor,,4,,1,"2,441,729","610,432"
-Uaithne Seal,Keen Uaithne Crystal,,1,,1,"2,503,524","2,503,524"
-Uaithne Seal,Lightweight Uaithne Crystal,,1,,1,"2,607,715","2,607,715"
-Uaithne Seal,Perfect Uaithne Crystal,,1,,1,"2,901,335","2,901,335"
-Uaithne Seal,Robust Uaithne Crystal,,1,,1,"709,391","709,391"
-Uaithne Seal,Smooth Uaithne Crystal,,1,,1,"468,139","468,139"
-Uaithne Seal,Solid Uaithne Crystal,,1,,1,"666,835","666,835"
-Uaithne Seal,Stable Uaithne Crystal,,1,,1,"2,928,078","2,928,078"
-Uaithne Seal,Unrelenting Uaithne Crystal,,1,,1,"689,864","689,864"
-Everyday Vending Machine,Clone Outfit Crafting Box,,45,1,1,,0
-Everyday Vending Machine,Enchant Rune (Gift),Enchant Rune,30,1,1,,0
-Everyday Vending Machine,Premium Armor Enhancement Rune (Gift),Premium Armor Enhancement Rune,15,2,1,"45,000,000","3,000,000"
-Everyday Vending Machine,Tarian Steel,,10,2,1,"3,098,404","309,840"
-Everyday Vending Machine,Uaithne Crystal Box,Uaithne Crystal,10,6,1,"17,767,448","1,776,745"
-Everyday Vending Machine,"Keen, Lightweight Eriu Crystal Destiny Box",Keen Eriu Crystal | Lightweight Eriu Crystal,8,3,1,,0
-Everyday Vending Machine,Uaithne Only Crystal Destiny Box,Keen Uaithne Crystal | Lightweight Uaithne Crystal | Perfect Uaithne Crystal | Robust Uaithne Crystal | Smooth Uaithne Crystal | Solid Uaithne Crystal | Stable Uaithne Crystal | Unrelenting Uaithne Crystal,8,3,1,,0
-Everyday Vending Machine,Uaithne Fragment Destiny Box,Uaithne Fragment: Weapon | Uaithne Fragment: Chest Armor | Uaithne Fragment: Feet Armor | Uaithne Fragment: Hand Armor | Uaithne Fragment: Head Armor | Uaithne Fragment: Leg Armor,8,3,1,,0
-Everyday Vending Machine,Superior Element Stone Box,Superior Element Stone,8,3,1,"781,288","97,661"
-Everyday Vending Machine,Rune Rune! Box,Unstable Enhancement Rune & Unstable Enchant Rune,8,5,1,,0
-Everyday Vending Machine,Brynn Elixir Box,,6,3,1,,0
-Everyday Vending Machine,Mysterious Shard Grade 3,,5,8,1,"1,145,806","229,161"
-Everyday Vending Machine,Abyssal Shard Grade 3,,5,8,1,"1,428,928","285,786"
-Everyday Vending Machine,Sealed Power: Fragments,,5,8,30,"1,177,413","235,483"
-Everyday Vending Machine,Enhanced/New Era Materials Destiny Box,,5,8,1,,0
-Seal of Bravery,Damascus Steel,,20,,1,,
-Seal of Bravery,Jardin Steel,,60,,1,,
-Seal of Bravery,Unstable Enhancement Rune,,100,1,1,,
-Seal of Bravery,Unstable Enchant Rune,,235,1,1,,
+Seal or Ticket,Total Coupons,Item,Contains,Cost,Stock,Count
+Seal of Bravery,,Damascus Steel,,20,,1
+Seal of Bravery,,Jardin Steel,,60,,1
+Seal of Bravery,,Unstable Enhancement Rune,,100,1,1
+Seal of Bravery,,Airtight Unstable Enchant Rune (x1),,235,1,1
+Ardri Seal,,Rank 5 Enchant Scroll Destiny Box,Brutal Enchant Scroll | Enmity Enchant Scroll | Cool Enchant Scroll | Advance Enchant Scroll | Dignified Enchant Scroll | Lament Enchant Scroll | Sorrowful Enchant Scroll | Frenzy Enchant Scroll | Irate Enchant Scroll | Vehement Enchant Scroll | Chaser's Enchant Scroll | Raging Enchant Scroll | Madness Enchant Scroll,40,6,1
+Uaithne Seal,,Superior Enhancement Elixir,,1,,4
+Uaithne Seal,,Sreng's Essence,,3,,1
+Uaithne Seal,,Spinos' Essence,,3,,1
+Uaithne Seal,,Gorbas' Essence,,3,,1
+Uaithne Seal,,Morgant's Essence,,2,,1
+Uaithne Seal,,Uaithne Fragment: Weapon,,4,,1
+Uaithne Seal,,Uaithne Fragment: Chest Armor,,4,,1
+Uaithne Seal,,Uaithne Fragment: Feet Armor,,4,,1
+Uaithne Seal,,Uaithne Fragment: Hand Armor,,4,,1
+Uaithne Seal,,Uaithne Fragment: Head Armor,,4,,1
+Uaithne Seal,,Uaithne Fragment: Leg Armor,,4,,1
+Uaithne Seal,,Keen Uaithne Crystal,,1,,1
+Uaithne Seal,,Lightweight Uaithne Crystal,,1,,1
+Uaithne Seal,,Perfect Uaithne Crystal,,1,,1
+Uaithne Seal,,Robust Uaithne Crystal,,1,,1
+Uaithne Seal,,Smooth Uaithne Crystal,,1,,1
+Uaithne Seal,,Solid Uaithne Crystal,,1,,1
+Uaithne Seal,,Stable Uaithne Crystal,,1,,1
+Uaithne Seal,,Unrelenting Uaithne Crystal,,1,,1
+Eriu Seal,,Tarian Steel,,1,,1
+Eriu Seal,,Lucian's Essence,,2,,1
+Eriu Seal,,Semias' Essence,,2,,1
+Eriu Seal,,Uscias' Essence,,2,,1
+Eriu Seal,,Eriu Fragment: Weapon,,2,,1
+Eriu Seal,,Eriu Fragment: Auxiliary Equipment,,2,,1
+Eriu Seal,,Eriu Fragment: Head Armor,,2,,1
+Eriu Seal,,Eriu Fragment: Leg Armor,,2,,1
+Eriu Seal,,Eriu Fragment: Chest Armor,,2,,1
+Eriu Seal,,Eriu Fragment: Roots of Abundance,,2,,1
+Eriu Seal,,Eriu Fragment: Starlight Belt,,2,,1
+Eriu Seal,,Keen Eriu Crystal,,1,,1
+Eriu Seal,,Lightweight Eriu Crystal,,1,,1
+Eriu Seal,,Stable Eriu Crystal,,1,,1
+Eriu Seal,,Solid Eriu Crystal,,1,,1
+Eriu Seal,,Smooth Eriu Crystal,,1,,1
+Eriu Seal,,Robust Eriu Crystal,,1,,1
+Eriu Seal,,Uaithne Seal,,1,,1
+Eriu Seal,,Esras' Essence,,2,,1
+Eriu Seal,,Eriu Fragment: Hand Armor,,2,,1
+Eriu Seal,,Eriu Fragment: Yoke of Mortality,,2,,1
+Eriu Seal,,Perfect Eriu Crystal,,1,,1
+Eriu Seal,,Unrelenting Eriu Crystal,,1,,1
+Monthly Mission Ticket,,Mysterious Shard Grade 3,,1,,1
+Monthly Mission Ticket,,Abyssal Shard Grade 3,,1,,1
+Monthly Mission Ticket,,Airtight Unstable Enchant Rune (x1),,6,1,1
+Monthly Mission Ticket,,Premium Armor Enhancement Rune,,12,1,1
+Everyday Vending Machine,240,Clone Outfit Crafting Box,,45,1,
+Everyday Vending Machine,,Enchant Rune (Gift),Airtight Enchant Rune,30,1,
+Everyday Vending Machine,,Premium Armor Enhancement Rune (Gift),Premium Armor Enhancement Rune,15,2,
+Everyday Vending Machine,,Tarian Steel,,10,2,
+Everyday Vending Machine,,Uaithne Crystal Box,Uaithne Crystal,10,6,
+Everyday Vending Machine,,"Keen, Lightweight Eriu Crystal Destiny Box",Keen Eriu Crystal | Lightweight Eriu Crystal,8,3,
+Everyday Vending Machine,,Uaithne Only Crystal Destiny Box,Solid Uaithne Crystal | Smooth Uaithne Crystal | Robust Uaithne Crystal | Unrelenting Uaithne Crystal | Keen Uaithne Crystal | Lightweight Uaithne Crystal | Stable Uaithne Crystal | Perfect Uaithne Crystal,8,3,
+Everyday Vending Machine,,Uaithne Fragment Destiny Box,Uaithne Fragment: Auxiliary Equipment | Uaithne Fragment: Weapon | Uaithne Fragment: Head Armor | Uaithne Fragment: Chest Armor | Uaithne Fragment: Leg Armor | Uaithne Fragment: Hand Armor | Uaithne Fragment: Feet Armor,8,3,
+Everyday Vending Machine,,Superior Element Stone Box,Superior Element Stone,8,3,
+Everyday Vending Machine,,Rune Rune! Box,Unstable Enhancement Rune & Airtight Unstable Enchant Rune (x1),8,5,
+Everyday Vending Machine,,Brynn Elixir Box,,6,3,
+Everyday Vending Machine,,Mysterious Shard Grade 3,,5,8,
+Everyday Vending Machine,,Abyssal Shard Grade 3,,5,8,
+Everyday Vending Machine,,Sealed Power: Fragments,,5,8,30
+Everyday Vending Machine,,Enhanced/New Era Materials Destiny Box,Enhanced New Era Ore x10 + Enhanced New Era Cloth x10 + Enhanced New Era Leather x10 + Enhanced New Era Orb x10,5,8,
+Everyday Vending Machine,,Resenlian's Battle Completion Scroll,,4,8,
+Everyday Vending Machine,,Redeemers Seal Box,Redeemers Seal x2 + Departure License: Redeemers,3,3,
+Everyday Vending Machine,,AP 500 Capsule,,3,10,
+Everyday Vending Machine,,"Goddess Grace (Party, Binding)",,3,30,
+Everyday Vending Machine,,Divine Blessing Stone (Binding),,3,30,
+Everyday Vending Machine,,Exquisite HP Potion,,1,50,3
+Mysterious Raid Cube Fragments,60,Stable Uaithne Crystal Cube,Uaithne Crystal x3,40,,
+Mysterious Raid Cube Fragments,,Unstable Uaithne Crystal Cube,Uaithne Crystal x2-4,40,,
+Mysterious Raid Cube Fragments,,Stable Mysterious Shard Grade 3 Cube,Mysterious Shard Grade 3 x3,20,,
+Mysterious Raid Cube Fragments,,Unstable Mysterious Shard Grade 3 Cube,Mysterious Shard Grade 3 x2-4,20,,
+Mysterious Raid Cube Fragments,,Stable Abyssal Shard Grade 3 Cube,Abyssal Shard Grade 3 x3,20,,
+Mysterious Raid Cube Fragments,,Unstable Abyssal Shard Grade 3 Cube,Abyssal Shard Grade 3 x2-4,20,,
+Mysterious Raid Cube Fragments,,Stable Superior Enhancement Elixir Cube,Superior Enhancement Elixir x5,4,,
+Mysterious Raid Cube Fragments,,Unstable Superior Enhancement Elixir Cube,Superior Enhancement Elixir x4-6,4,,
+Mysterious Raid Cube Fragments,,Enhanced Stable New Era Cube,Enhanced New Era Ore x7 & Enhanced New Era Cloth x7 & Enhanced New Era Leather x7 & Enhanced New Era Orb x7,3,,
+Mysterious Raid Cube Fragments,,Enhanced Unstable New Era Cube,Enhanced New Era Ore x5-9 & Enhanced New Era Cloth x5-9 & Enhanced New Era Leather x5-9 & Enhanced New Era Orb x5-9,3,,
+Mysterious Raid Cube Fragments,,Stable New Era Cube,New Era Cloth x10 & New Era Leather x10 & New Era Ore x10 & New Era Stone x10 & New Era Orb x10,2,,
+Mysterious Raid Cube Fragments,,Unstable New Era Cube,New Era Cloth x7-13 & New Era Leather x7-13 & New Era Ore x7-13 & New Era Stone x7-13 & New Era Orb x7-13,2,,
+Mysterious Raid Cube Fragments,,Stable Exquisite HP Potion Cube,Exquisite HP Potion x7,1,,
+Mysterious Raid Cube Fragments,,Unstable Exquisite HP Potion Cube,Exquisite HP Potion x5-9,1,,
