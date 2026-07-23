@@ -8,7 +8,7 @@ import { ppDetectionsToWords, parseDetections, detectionsToLines } from "./scann
 const asset = (p) => new URL(p, import.meta.url).href;
 
 // Point onnxruntime-web at the vendored wasm and run multi-threaded. Threads need cross-origin
-// isolation (SharedArrayBuffer) — supplied by COOP/COEP (serve.py locally, coi-serviceworker on
+// isolation (SharedArrayBuffer). Supplied by COOP/COEP (serve.py locally, coi-serviceworker on
 // GitHub Pages). Cap threads so we don't oversubscribe on high-core machines.
 ortEnv.wasm.wasmPaths = asset("../vendor/ppocr/ort/");
 ortEnv.wasm.numThreads = Math.min(navigator.hardwareConcurrency || 4, 8);
@@ -64,7 +64,7 @@ export async function scanImage(blob, { canonicalize = (n) => n, isKnown = () =>
   bmp.close?.();
   // PP-OCR (the @gutenye/ocr-browser lib) returns box coordinates in its DETECTION space, which is
   // each image dimension rounded UP to the next multiple of 32 (verified: 417→448, 798→800,
-  // 1039→1056). Scale the boxes back to true image space so ABSOLUTE positions are right — the
+  // 1039→1056). Scale the boxes back to true image space so ABSOLUTE positions are right, the
   // review-row crop uses them, and the error grows with y (a bottom row lands ~half a row too low).
   // Relative logic (row grouping, price column) is unaffected either way; only the crop needs this.
   const scaled = scaleDetections(detections, w, h);
@@ -83,7 +83,7 @@ export async function scanImage(blob, { canonicalize = (n) => n, isKnown = () =>
     if (r.price != null) entries.push({ name, price: r.price });
     else if (name) unpricedNames.add(name);
     // Not a known item → hand to the review UI, but only if it's worth a human's time (has a price,
-    // or reads like a real multi-word name — not a stray OCR fragment).
+    // or reads like a real multi-word name, not a stray OCR fragment).
     if (!isKnown(name) && (r.price != null || substantial(name))) review.push({ name, price: r.price ?? null, y: r.y, top: r.top, bottom: r.bottom });
   }
   const priced = new Set(entries.map((e) => e.name.toLowerCase()));

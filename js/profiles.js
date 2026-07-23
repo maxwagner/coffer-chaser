@@ -2,9 +2,9 @@
 //
 // The app optimizes ONE working loadout + stat block at a time, but the player runs
 // many characters with different gear. A "profile" is a named snapshot of the swap
-// unit — the loadout (all slots), the hand-entered stat totals, and the completed
+// unit, the loadout (all slots), the hand-entered stat totals, and the completed
 // manual prep-goals (Checklist tab, §14.2) whose rewards are already folded into those
-// totals — so switching characters is one click instead of re-editing every slot. The
+// totals, so switching characters is one click instead of re-editing every slot. The
 // snapshot ALSO carries three OPTIONAL Planner fields (SPEC §17.5): the owned-items
 // inventory, the manual gold total, and the planner path. Only vetoes stay global.
 // Legacy records saved before those fields existed simply omit them; the caller keeps the
@@ -15,7 +15,7 @@
 
 // Deep-clone the swap unit (loadout + stats + completed-goal ids, plus the optional Planner
 // extras). structuredClone drops any frozen-ness, so the returned copy is independently
-// mutable and detached from the source objects — editing the working state after a snapshot
+// mutable and detached from the source objects, editing the working state after a snapshot
 // never mutates a stored profile. `checklist` is an array of checked goal ids (optional;
 // defaults to []). `inventory` ({name:qty}), `gold` (number), and `path` ({v,steps}) are
 // OPTIONAL (SPEC §17.5): passing null/undefined omits the field entirely so a legacy caller
@@ -32,7 +32,7 @@ export function snapshotState(loadout, stats, checklist = [], inventory = null, 
   return snap;
 }
 
-// Fresh unique-ish id for a new profile (local single-user tool — no collision risk).
+// Fresh unique-ish id for a new profile (local single-user tool, no collision risk).
 const newId = () => `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
 // Build a profile record from the current working state. The swap unit is deep-cloned so the

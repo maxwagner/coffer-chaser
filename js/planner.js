@@ -1,25 +1,25 @@
-// Planner (SPEC §17): pure logic for user-built upgrade paths — step schema,
+// Planner (SPEC §17): pure logic for user-built upgrade paths, step schema,
 // serialize/import, reconciliation against a live loadout, materials aggregation,
 // and the affordability projection. No DOM; index.html owns all rendering.
 //
 // A PATH is `{ v: 1, steps: [Step] }`. A STEP is the fixed IDENTITY of one action
-// (what to do); its cost/materials are never stored — `reconcilePath` recomputes them
+// (what to do); its cost/materials are never stored, `reconcilePath` recomputes them
 // live from current prices and the state simulated after the prior steps, so a path
 // exported months ago (or built for a different character) stays priceable.
 //
 // Step shapes (every step: { id, kind }):
-//   kind:"note"  { text }                         — free-text ("farm X until drop")
-//   kind:"goal"  { goalId }                       — a PREP_GOALS checklist goal
-//   kind:"move"  { slot, type, ...identity, onItem? } — one ATOMIC move:
-//     enchantSwap  { affix, scroll }              — put `scroll` on `slot`'s affix
-//     baseSwap     { item, toLevel? }             — equip `item` (re-enhance to toLevel)
-//     tierStep     { item }                       — advance ONE hop to tier output `item`
-//     gearEnhance  { item, toLevel }              — Orna +N variant `item` (one level)
-//     enhanceStep  { toLevel }                    — accessory enhance to +toLevel (one level)
-//     tuneStep     { stat, capstone, maxes:[{stat,amount}], partial? } — partial:true =
+//   kind:"note"  { text }, free-text ("farm X until drop")
+//   kind:"goal"  { goalId }, a PREP_GOALS checklist goal
+//   kind:"move"  { slot, type, ...identity, onItem? }, one ATOMIC move:
+//     enchantSwap  { affix, scroll }, put `scroll` on `slot`'s affix
+//     baseSwap     { item, toLevel? }, equip `item` (re-enhance to toLevel)
+//     tierStep     { item }, advance ONE hop to tier output `item`
+//     gearEnhance  { item, toLevel }. Orna +N variant `item` (one level)
+//     enhanceStep  { toLevel }, accessory enhance to +toLevel (one level)
+//     tuneStep     { stat, capstone, maxes:[{stat,amount}], partial? }, partial:true =
 //                  a tick-limited tune to `maxes[0].amount` (below the cap), priced by
 //                  tunePartialMove instead of the to-cap live move (SPEC §17.7)
-//   `onItem` (optional, enchant/enhance/tune): the base the step was authored against —
+//   `onItem` (optional, enchant/enhance/tune): the base the step was authored against:
 //   used by gapProposal to say "this step expects <onItem>" when the importer's gear differs.
 //   `comment` (optional, ANY kind): a free-text annotation the user attaches to the step
 //   ("wait for a sale", "farm the mats first"); display-only, rides in the path + export (§17.8).
@@ -33,7 +33,7 @@ export const PATH_VERSION = 1;
 export const EXPORT_APP = "coffer-chaser";
 export const EXPORT_KIND = "planner-path";
 
-// ── Relocated pure helpers (formerly inline in index.html) ──────────────────────
+// Relocated pure helpers (formerly inline in index.html)
 // All take the moveCtx-style `ctx` first: { recipes, cost, craftCost, priceOf, enchants, tierChain }.
 
 // The ordered list of tier outputs from `from` up to `to` (e.g. Beginner Uaithne →
@@ -49,7 +49,7 @@ export const tierPath = (tierChain, from, to) => {
 };
 
 // Is `name` something you'd CRAFT rather than buy (recipe exists, not free, craft ≤ market)?
-// The single shared test — expandBOM's recursion, the Planner panel's expandability, the
+// The single shared test, expandBOM's recursion, the Planner panel's expandability, the
 // affordability walk, and consume-on-complete all agree on when a shortfall means crafting.
 export const isCraftedMat = (ctx, n) => ctx.cost(n) !== 0 && !!ctx.recipes[n]
   && ctx.craftCost(n) != null && ctx.craftCost(n) <= (ctx.priceOf(n) ?? Infinity);
@@ -84,13 +84,13 @@ export const addLeafBuys = (ctx, buys, material, qty) => {
 
 // Decompose a move's gold into the leaf items you actually buy (drives the trend feed
 // and the Planner's per-step materials). null when nothing bought drives the cost
-// (accessory enhanceStep — see stepMaterials — or an unpriced move).
+// (accessory enhanceStep. See stepMaterials. Or an unpriced move).
 export const moveBuys = (ctx, m) => {
   if (m.type === "tierStep" || m.type === "baseSwap") {
     if (!m.to) return null;
     const buys = { ...expandBOM(ctx, m.to, m.from).buys };
     // A jump tierStep's gold also spans the enhancement EV (per-attempt qty × expected
-    // tries) and the tuning prerequisite — weigh their materials too; on an Orna jump
+    // tries) and the tuning prerequisite, weigh their materials too; on an Orna jump
     // they often dominate the move's gold, so a craft-only trend would mislead.
     for (const s of m.enhanceSteps || [])
       for (const [n, q] of Object.entries(s.materials)) addLeafBuys(ctx, buys, n, q * s.tries);
@@ -118,7 +118,7 @@ export const moveBuys = (ctx, m) => {
 };
 
 // FIRST-LEVEL pile for the Planner materials panel: the same move shapes as moveBuys but
-// WITHOUT recursing into crafted materials — an Advancement Stone stays "1 × Advancement
+// WITHOUT recursing into crafted materials, an Advancement Stone stays "1 × Advancement
 // Stone" (the panel expands its recipe inline on demand, like the Upgrades move detail),
 // instead of being pre-flattened to its base leaves. The trend feed keeps leaf moveBuys.
 export const moveBuysShallow = (ctx, m) => {
@@ -154,8 +154,8 @@ export const moveBuysShallow = (ctx, m) => {
 };
 
 // Draw `qty` of `name` from `stock` (MUTATED), returning the gold that covers the
-// shortfall. A crafted shortfall recurses into its recipe — owned sub-materials get
-// consumed instead of bought — so the shallow piles still credit leaf stock the way
+// shortfall. A crafted shortfall recurses into its recipe, owned sub-materials get
+// consumed instead of bought, so the shallow piles still credit leaf stock the way
 // the old fully-flattened piles did (netCost semantics, SPEC §5.2). Quantities can be
 // fractional (EV piles); callers round where the UI needs whole items.
 export function drawMaterial(ctx, stock, name, qty, depth = 0) {
@@ -170,7 +170,7 @@ export function drawMaterial(ctx, stock, name, qty, depth = 0) {
   return gold;
 }
 
-// ── Step constructors / identity ────────────────────────────────────────────────
+// Step constructors / identity
 let _idSeq = 0;
 export const newStepId = () =>
   `s_${Date.now().toString(36)}_${(_idSeq++).toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`;
@@ -192,7 +192,7 @@ export function stepKey(step) {
   if (step.kind === "goal") return `goal:${step.goalId}`;
   const target = step.type === "enchantSwap" ? step.scroll
     // Tune keys include the target amounts so PARTIAL chunks of the same stat coexist as
-    // separate steps ("10 ticks now, 10 more later", SPEC §17.7) — two identical to-cap
+    // separate steps ("10 ticks now, 10 more later", SPEC §17.7). Two identical to-cap
     // adds still collide (same amounts), which is the de-dupe's actual job.
     : step.type === "tuneStep" ? `${step.stat}@${(step.maxes || []).map((m) => m.amount).join(",")}`
     : step.type === "enhanceStep" ? step.toLevel
@@ -201,7 +201,7 @@ export function stepKey(step) {
   return `${step.type}:${step.slot}:${step.affix || "base"}:${target ?? ""}`;
 }
 
-// ── List transforms (all return a NEW path; steps are shared, order arrays fresh) ──
+// List transforms (all return a NEW path; steps are shared, order arrays fresh)
 export const insertSteps = (path, index, steps) => {
   const i = Math.max(0, Math.min(index, path.steps.length));
   return { ...path, steps: [...path.steps.slice(0, i), ...steps, ...path.steps.slice(i)] };
@@ -217,8 +217,8 @@ export const moveStep = (path, id, toIndex) => {
   return { ...path, steps };
 };
 
-// ── Serialize / import ───────────────────────────────────────────────────────────
-// Field whitelist per step kind — parse strips anything else so a hand-edited or
+// Serialize / import
+// Field whitelist per step kind, parse strips anything else so a hand-edited or
 // future-versioned file can't smuggle junk into the store.
 const MOVE_FIELDS = {
   enchantSwap: ["affix", "scroll", "onItem"],
@@ -233,7 +233,7 @@ const MOVE_FIELDS = {
 export const serializePath = (path) =>
   JSON.stringify({ app: EXPORT_APP, kind: EXPORT_KIND, v: PATH_VERSION, steps: path.steps }, null, 2);
 
-// parsePath(text) → { path, error } — never throws. Accepts the export envelope or a
+// parsePath(text) → { path, error }, never throws. Accepts the export envelope or a
 // bare `{v, steps}` store shape; validates kinds + required fields, strips unknown
 // fields, and re-ids every step (import must never collide with existing ids).
 export function parsePath(text) {
@@ -242,15 +242,15 @@ export function parsePath(text) {
   catch { return { path: null, error: "Not valid JSON." }; }
   if (!raw || typeof raw !== "object") return { path: null, error: "Not a planner path." };
   if (raw.kind != null && raw.kind !== EXPORT_KIND) return { path: null, error: "Not a planner path export." };
-  if ((raw.v ?? 1) > PATH_VERSION) return { path: null, error: `Made by a newer version (v${raw.v}) — update the app.` };
+  if ((raw.v ?? 1) > PATH_VERSION) return { path: null, error: `Made by a newer version (v${raw.v}). Update the app.` };
   if (!Array.isArray(raw.steps)) return { path: null, error: "No steps found." };
   const steps = [];
   for (const [i, s] of raw.steps.entries()) {
     const bad = (why) => ({ path: null, error: `Step ${i + 1}: ${why}` });
     if (!s || typeof s !== "object") return bad("not an object.");
-    // An optional free-text `comment` can ride on ANY step (SPEC §17.8) — carried through
+    // An optional free-text `comment` can ride on ANY step (SPEC §17.8). Carried through
     // import/export verbatim (serializePath dumps the step as-is; here we preserve it).
-    // `comment` (any kind, SPEC §17.8) and `free` (any kind, SPEC §17.9 — the user got this
+    // `comment` (any kind, SPEC §17.8) and `free` (any kind, SPEC §17.9, the user got this
     // upgrade for nothing, so its gold + materials read as 0) ride through import verbatim.
     const withComment = (step) => {
       if (typeof s.comment === "string" && s.comment.trim()) step.comment = s.comment;
@@ -281,7 +281,7 @@ export function parsePath(text) {
   return { path: { v: PATH_VERSION, steps }, error: null };
 }
 
-// ── Plain-language step labels (shared by the TSV export and the step cards) ─────
+// Plain-language step labels (shared by the TSV export and the step cards)
 // `slotLabel` maps a slot id to its display name ("ring1" → "Ring 1"); defaults to the id.
 export function stepLabel(step, slotLabel = (s) => s) {
   if (step.kind === "note") return step.text;
@@ -314,7 +314,7 @@ export function pathToTSV(entries, slotLabel = (s) => s) {
   return rows.join("\n");
 }
 
-// ── Move → steps decomposition (the single entry-point normalizer) ───────────────
+// Move → steps decomposition (the single entry-point normalizer)
 // Every "Add to plan" source funnels through this: a display-merged row explodes to its
 // underlying steps, a CUMULATIVE tierStep explodes to one step per hop, and a tierStep
 // that bundles an Orna +N→+15 enhance prerequisite emits those levels as their own
@@ -357,27 +357,27 @@ export function moveToSteps(move, ctx, baseName = null) {
   }
 }
 
-// ── In-Planner upgrade builder (SPEC §17.7) ───────────────────────────────────────
+// In-Planner upgrade builder (SPEC §17.7)
 // Candidate upgrade moves for ONE slot, generated live from the loadout (composition/
 // rings aware, exactly like the app-wide move list) and bucketed by "part" so the
 // Planner's Add-upgrade chooser can cascade slot → part → change. `base` covers tier/
 // base swaps AND enhancement (gear Orna +N, accessory +N); `prefix`/`suffix` are the two
 // enchant affixes; `tuning` is the base-stat/capstone tune moves. Infusion is NOT a
-// costed move (SPEC §14), so the UI offers it as a note — it never appears here. Returns
+// costed move (SPEC §14), so the UI offers it as a note, it never appears here. Returns
 // { base:[move…], prefix:[…], suffix:[…], tuning:[…], applicable:{base,prefix,suffix,tuning} }
 // (empty arrays for parts with no available change), or null for an unknown/absent slot.
 // `applicable` marks which parts the slot STRUCTURALLY supports even when no upgrade exists
-// right now (e.g. a maxed-out suffix) — the UI lists every applicable part and says "no
+// right now (e.g. a maxed-out suffix). The UI lists every applicable part and says "no
 // available upgrades" for an empty one, rather than hiding the part. Each move is
 // `moveToSteps`-ready.
-// `statesOverride` (optional): pre-simulated slot states — pass reconcilePath's `states` so
+// `statesOverride` (optional): pre-simulated slot states, pass reconcilePath's `states` so
 // the builder offers upgrades FROM THE PLAN'S TAIL (after you plan "+13" it offers "+14"),
 // not from the live loadout, which would keep re-offering already-planned steps.
 export function slotUpgradeOptions(loadout, slot, ctx, statesOverride = null) {
   const states = statesOverride || initStates(loadout, ctx);
   const state = states[slot];
   if (!state) return null; // unknown/absent slot
-  // An EMPTY slot (no base — e.g. an artifact you haven't acquired yet) still has upgrades:
+  // An EMPTY slot (no base, e.g. an artifact you haven't acquired yet) still has upgrades:
   // slotMoves offers ACQUIRE baseSwaps (SPEC §6) so the planner can build the acquire, and its
   // enchant/tune parts light up on the plan tail once the acquire is queued (statesOverride).
   const lctx = { ...ctx, composition: compositionOf(states), rings: ringsOf(states) };
@@ -400,9 +400,9 @@ export function slotUpgradeOptions(loadout, slot, ctx, statesOverride = null) {
   return groups;
 }
 
-// ── Multi-level enhance targets (SPEC §17.7) ──────────────────────────────────────
+// Multi-level enhance targets (SPEC §17.7)
 // An enhanceable accessory (ring/belt/earrings) enhances ONE level at a time, so slotMoves
-// only ever offers "+N → +N+1" — reaching +20 by hand means authoring eight steps. This
+// only ever offers "+N → +N+1", reaching +20 by hand means authoring eight steps. This
 // returns a `{ label, steps }` option per reachable target level ABOVE the current one; each
 // expands to the FULL run of enhanceStep steps (current+1 … target) in one insert, so the
 // planner can add "enhance to +20" as a single action. reconcilePath prices every intermediate
@@ -425,12 +425,12 @@ export function enhanceTargetOptions(loadout, slot, ctx, statesOverride = null) 
   return opts;
 }
 
-// ── Multi-level GEAR enhance targets (SPEC §17.7) ─────────────────────────────────
+// Multi-level GEAR enhance targets (SPEC §17.7)
 // The Orna analogue of enhanceTargetOptions: slotMoves only ever offers the single next
 // "+N → +N+1" gearEnhance, so a +12 piece heading for +15 needed three separate adds (and
 // the builder, working off the live loadout, never even showed +14/+15). One option per
 // reachable target level; each expands to the per-level gearEnhance run. The +level variant
-// item must exist in bySlot for every intermediate level (the walk stops at the first gap —
+// item must exist in bySlot for every intermediate level (the walk stops at the first gap:
 // levels beyond it can't be priced or applied). Empty for non-Orna, non-tier, or maxed gear.
 export function gearEnhanceTargetOptions(loadout, slot, ctx, statesOverride = null) {
   if (!TIER_SLOT_IDS.includes(slot)) return [];
@@ -446,7 +446,7 @@ export function gearEnhanceTargetOptions(loadout, slot, ctx, statesOverride = nu
     steps.push({ id: newStepId(), kind: "move", slot, type: "gearEnhance", item: name, toLevel: target });
     opts.push({
       label: `to +${target}${target - lvl > 1 ? ` (${target - lvl} levels)` : ""}`,
-      // Each option owns its steps (fresh ids) — sharing step objects across options would
+      // Each option owns its steps (fresh ids). Sharing step objects across options would
       // collide ids when two options are ever inserted.
       steps: steps.map((s) => ({ ...s, id: newStepId() })),
     });
@@ -454,8 +454,8 @@ export function gearEnhanceTargetOptions(loadout, slot, ctx, statesOverride = nu
   return opts;
 }
 
-// ── Satisfied-or-better (the derived "done" test, SPEC §17) ───────────────────────
-// A step is done when the slot's state already IS the target — or something strictly
+// Satisfied-or-better (the derived "done" test, SPEC §17)
+// A step is done when the slot's state already IS the target, or something strictly
 // better: a base further UP the tier chain, a higher enhance level, a higher-scoring
 // same-family enchant, tuning at/above the step's amounts, or (accessories, off-chain)
 // a base whose scored stats match or beat the target's.
@@ -502,7 +502,7 @@ export function satisfiedOrBetter(state, step, ctx) {
   }
 }
 
-// ── Live move lookup — regenerate the slot's candidates and match by identity ─────
+// Live move lookup, regenerate the slot's candidates and match by identity
 export function findLiveMove(state, step, lctx) {
   // Partial tune (SPEC §17.7): a below-cap target has no matching slotMoves row (tuneMoves
   // only ever offers to-cap), so it's priced directly. null (row gone / gate closed) falls
@@ -524,10 +524,10 @@ export function findLiveMove(state, step, lctx) {
   return null;
 }
 
-// ── Per-step materials (the "what to gather for THIS step" pile) ──────────────────
-// FIRST-LEVEL buys via moveBuysShallow (a crafted intermediate stays one row — the panel
+// Per-step materials (the "what to gather for THIS step" pile)
+// FIRST-LEVEL buys via moveBuysShallow (a crafted intermediate stays one row, the panel
 // expands it on demand), except: accessory enhanceStep uses its own EV pile (per-attempt
-// qty × expected tries — moveBuys deliberately skips it for the trend feed), and a
+// qty × expected tries, moveBuys deliberately skips it for the trend feed), and a
 // non-scroll enchant method (scraps/spam/exquisite) is gold-only (you buy scraps/failures
 // at market, not a fixed shopping list). Quantities can be fractional (EV); UI rounds.
 export function stepMaterials(ctx, move) {
@@ -541,15 +541,15 @@ export function stepMaterials(ctx, move) {
   return { gold: move.goldCost, materials: moveBuysShallow(ctx, move) || {} };
 }
 
-// ── Gap proposals for blocked steps ────────────────────────────────────────────────
+// Gap proposals for blocked steps
 // A blocked step gets a proposed list of INSERT steps that would make it possible from
 // the current state, or null when we can't compute one (→ impossible; skip-only).
 // `expected` = the base the step needs (from the path's own earlier steps, or onItem).
 export function gapProposal(state, step, ctx, expected = null) {
   const mkStep = (type, props) => ({ id: newStepId(), kind: "move", slot: step.slot, type, ...props });
-  // Empty slot (no base equipped — an artifact/accessory not yet acquired). A DEPENDENT move
-  // (enchant/enhance/tune) needs a base first, so if we can name the intended one — the base the
-  // path itself established (`expected`) or the step's authored-against `onItem` — propose
+  // Empty slot (no base equipped, an artifact/accessory not yet acquired). A DEPENDENT move
+  // (enchant/enhance/tune) needs a base first, so if we can name the intended one, the base the
+  // path itself established (`expected`) or the step's authored-against `onItem`, propose
   // ACQUIRING it; the dependent step then reconciles once the acquire is in (forward simulation).
   // A base/tier step IS the acquire (and already failed to price via findLiveMove), so don't
   // re-propose it. Without a known base we can't name one → skip-only.
@@ -558,14 +558,14 @@ export function gapProposal(state, step, ctx, expected = null) {
     const want = expected ?? step.onItem ?? null;
     if (!want) return null;
     return { steps: [mkStep("baseSwap", { item: want })],
-      reason: `your ${step.slot} is empty — acquire a ${want} first` };
+      reason: `your ${step.slot} is empty, acquire a ${want} first` };
   }
   if (step.type === "enhanceStep") {
     const cur = state.enhance?.level;
     if (cur == null || cur >= step.toLevel - 1) return null;
     const steps = [];
     for (let l = cur + 1; l < step.toLevel; l++) steps.push(mkStep("enhanceStep", { toLevel: l }));
-    return { steps, reason: `your ${step.slot} is +${cur} — the levels in between are missing` };
+    return { steps, reason: `your ${step.slot} is +${cur}, the levels in between are missing` };
   }
   if (step.type === "gearEnhance") {
     const curLvl = plusLevel(state.base?.name), tgtLvl = step.toLevel;
@@ -574,7 +574,7 @@ export function gapProposal(state, step, ctx, expected = null) {
     const steps = [];
     for (let l = curLvl + 1; l < tgtLvl; l++)
       steps.push(mkStep("gearEnhance", { item: bumpPlus(step.item, l), toLevel: l }));
-    return { steps, reason: `your ${step.slot} is +${curLvl} — the levels in between are missing` };
+    return { steps, reason: `your ${step.slot} is +${curLvl}, the levels in between are missing` };
   }
   // enchant/tune (and a disconnected tier/base): the step expects a different base.
   const want = expected ?? step.onItem ?? (step.type === "tierStep" || step.type === "baseSwap" ? step.item : null);
@@ -586,19 +586,19 @@ export function gapProposal(state, step, ctx, expected = null) {
   return { steps, reason: `this step expects a ${want} (you have a ${cur})` };
 }
 
-// ── Reconcile: the workhorse — walk the path against the live loadout ─────────────
+// Reconcile: the workhorse, walk the path against the live loadout
 // Returns { entries, states } where each entry = { step, status, move?, gold?, goldFull?,
 // materials?, warnings, gap?, reason? } and `states` = the slot states AFTER the whole
-// path's ready steps (the plan's tail — feed it to slotUpgradeOptions & co. so the add
+// path's ready steps (the plan's tail, feed it to slotUpgradeOptions & co. so the add
 // chooser builds on what's already planned). Statuses:
-//   done       — the loadout already satisfies the step (or better)
-//   ready      — doable right now from the simulated state; carries live move + cost
-//   blocked    — prerequisite mismatch; carries a `gap` proposal (insert steps / skip)
-//   impossible — can't be priced or regenerated for this gear; skip-only
-//   info       — a note step
+//   done, the loadout already satisfies the step (or better)
+//   ready, doable right now from the simulated state; carries live move + cost
+//   blocked, prerequisite mismatch; carries a `gap` proposal (insert steps / skip)
+//   impossible, can't be priced or regenerated for this gear; skip-only
+//   info, a note step
 // State simulates FORWARD: each ready step's move is applied before judging the next,
 // so step N is priced from the world after steps 1…N−1. A blocked step does NOT advance
-// its slot (downstream same-slot steps cascade to blocked — intended).
+// its slot (downstream same-slot steps cascade to blocked, intended).
 export function reconcilePath(path, loadout, checklistDone, ctx) {
   const states = initStates(loadout, ctx);
   const entries = [];
@@ -611,10 +611,10 @@ export function reconcilePath(path, loadout, checklistDone, ctx) {
     }
     const state = states[step.slot];
     if (!state) { entries.push({ step, status: "impossible", reason: `unknown slot "${step.slot}"`, warnings: [] }); continue; }
-    // Infusion (SPEC §14/§17): NOT a solver move — reconcile prices it here. It's free (a +1
+    // Infusion (SPEC §14/§17): NOT a solver move, reconcile prices it here. It's free (a +1
     // stone) and folds a single stat line, replacing whatever the slot held. done when the slot
     // already carries ≥ this step's amount of the same stat; otherwise ready with the replace-delta.
-    // `state.infusion` (seeded from the loadout by initStates) IS forward-simulated here — an
+    // `state.infusion` (seeded from the loadout by initStates) IS forward-simulated here, an
     // earlier infuse step on this slot updates it, so a later one (or the add chooser reading
     // the plan-tail `states`) sees what the plan itself already queued, not just the live gear.
     if (step.type === "infuse") {
@@ -642,7 +642,7 @@ export function reconcilePath(path, loadout, checklistDone, ctx) {
     const move = findLiveMove(state, step, lctx);
     if (move) {
       const { gold, materials } = stepMaterials(ctx, move);
-      // A user-flagged FREE step (SPEC §17.9) costs no gold and needs no materials — you're
+      // A user-flagged FREE step (SPEC §17.9) costs no gold and needs no materials, you're
       // getting the upgrade for nothing (event box, hand-me-down, already-owned). Its stat gain
       // still counts (statDiff rides on `move`); only the price + shopping pile zero out.
       const free = !!step.free;
@@ -657,7 +657,7 @@ export function reconcilePath(path, loadout, checklistDone, ctx) {
     } else {
       const gap = gapProposal(state, step, ctx, expectedBase[step.slot] ?? null);
       const emptyReason = !state.base
-        ? `your ${step.slot} is empty — acquire a base for it first, then this step can apply`
+        ? `your ${step.slot} is empty, acquire a base for it first, then this step can apply`
         : "can't be priced or isn't an upgrade from your current gear";
       entries.push({
         step, status: gap ? "blocked" : "impossible", gap: gap || undefined,
@@ -683,9 +683,9 @@ export function reconcilePath(path, loadout, checklistDone, ctx) {
       // (non-Destruction) is lost on any wipe; enhance levels are lost on a base swap.
       const redone = t === "tuneStep" ? true
         : t === "enhanceStep" ? l.step.type === "baseSwap"
-        : true; // enchantSwap: re-buy/rune cost either way — worth flagging
+        : true; // enchantSwap: re-buy/rune cost either way, worth flagging
       if (redone) {
-        e.warnings.push(`step ${j + 1} replaces this ${e.step.slot} — this work may be redone`);
+        e.warnings.push(`step ${j + 1} replaces this ${e.step.slot}, this work may be redone`);
         break;
       }
     }
@@ -693,9 +693,9 @@ export function reconcilePath(path, loadout, checklistDone, ctx) {
   return { entries, states };
 }
 
-// ── Smart reorder (SPEC §17.15) ────────────────────────────────────────────────────
+// Smart reorder (SPEC §17.15)
 // Dependency-aware reordering of the working path. ONE topological merge underneath every
-// mode — only the tiebreak key changes — so no mode can ever emit a step before the base it
+// mode. Only the tiebreak key changes. So no mode can ever emit a step before the base it
 // depends on. The single hard constraint: within a slot, steps form an ordered CHAIN
 // (acquire → tier → enhance → enchant/tune/infuse); across slots there's no dependency, so
 // value modes freely interleave slots. The leading done-run is pinned (history is never
@@ -703,14 +703,14 @@ export function reconcilePath(path, loadout, checklistDone, ctx) {
 // same-slot step is never blocked by list order).
 //
 // Modes:
-//   "deps"     — key = original position. Minimal reshuffle: only lifts a base/tier above the
+//   "deps", key = original position. Minimal reshuffle: only lifts a base/tier above the
 //                enchant/enhance/tune that needs it (fixes red "blocked" cards after a drag).
-//   "cheapest" — ready move steps sorted by reconciled gold ascending.
-//   "value"    — ready move steps sorted by gold ÷ pointGain ascending (best bang first).
-//   "smart"    — value, but on BOX-ADJUSTED gold (subtract `opts.boxSavings[id]` — the gold a
+//   "cheapest", ready move steps sorted by reconciled gold ascending.
+//   "value", ready move steps sorted by gold ÷ pointGain ascending (best bang first).
+//   "smart". Value, but on BOX-ADJUSTED gold (subtract `opts.boxSavings[id]`. The gold a
 //                weekly box will cover), so box-cheapened upgrades float up. SPEC §18.
 // Value keys use the CURRENT-order reconciled costs (order-dependent netting makes true
-// order-optimal a solver problem, out of scope) — a good-enough ranking. The UI runs a
+// order-optimal a solver problem, out of scope). A good-enough ranking. The UI runs a
 // "deps" pass + re-reconcile before a value pass so a currently-blocked step is priced first.
 export const REORDER_MODES = ["deps", "cheapest", "value", "smart"];
 
@@ -722,7 +722,7 @@ const slotRank = (step) => {
     case "tierStep": return 1;      // advance tiers
     case "gearEnhance": return 2;   // Orna +N (level-ordered below)
     case "enhanceStep": return 3;   // accessory +N (level-ordered below)
-    default: return 5;              // enchantSwap / tuneStep / infuse — need the base
+    default: return 5;              // enchantSwap / tuneStep / infuse, need the base
   }
 };
 const canonChain = (arr, origIndex) => arr.slice().sort((a, b) =>
@@ -753,10 +753,10 @@ const mergeChains = (chains, keyOf, origIndex) => {
 export function reorderPath(path, entries, mode = "deps", opts = {}) {
   const steps = path.steps;
   const byId = new Map(entries.map((e) => [e.step.id, e]));
-  // Completed steps float to the TOP — they're history, and reconcile never applies a done
+  // Completed steps float to the TOP, they're history, and reconcile never applies a done
   // step's move, so moving one can't change any pricing. GUARD: only float a done step whose
   // slot had NO earlier pending (not-done) move. Otherwise the step might read "done" only
-  // because an earlier PLANNED step produced it — lifting it above that step would flip it
+  // because an earlier PLANNED step produced it, lifting it above that step would flip it
   // back to not-done. The leading done-run always qualifies (nothing pending before it).
   const floatIds = new Set();
   const pendingSlot = new Set();
@@ -812,13 +812,13 @@ export function reorderPath(path, entries, mode = "deps", opts = {}) {
     ? path : { ...path, steps: next };
 }
 
-// ── Quick-add search (SPEC §17.7) ──────────────────────────────────────────────────
+// Quick-add search (SPEC §17.7)
 // Rank `cands` (built by the UI from every slot's upgrade options + the checklist goals)
 // against a free-text query. Each candidate carries a `search` haystack (label + slot +
 // part + target names). Matching: every whitespace-separated token must appear as a
 // substring (case-insensitive); a token landing on a word start scores higher. Ties (and
 // the empty query) fall back to the candidate's `value` (points per gold, best first).
-// Returns at most `limit` candidates, best first. Pure — the UI owns rendering/insertion.
+// Returns at most `limit` candidates, best first. Pure, the UI owns rendering/insertion.
 export function quickAddFilter(cands, query, limit = 12) {
   const toks = String(query || "").toLowerCase().split(/\s+/).filter(Boolean);
   const scored = [];
@@ -837,14 +837,14 @@ export function quickAddFilter(cands, query, limit = 12) {
   return scored.slice(0, limit).map((x) => x[1]);
 }
 
-// ── Phase-5 sugar helpers (SPEC §17.14) ────────────────────────────────────────────
+// Phase-5 sugar helpers (SPEC §17.14)
 
 // Independent snapshot of a path for the one-level undo toast: fresh path + step objects
 // (comment edits mutate steps in place, so a shared reference would corrupt the snapshot).
-// Nested arrays (tuneStep maxes) are only ever REPLACED, never mutated — safe to share.
+// Nested arrays (tuneStep maxes) are only ever REPLACED, never mutated, safe to share.
 export const clonePath = (path) => ({ v: path.v ?? PATH_VERSION, steps: path.steps.map((s) => ({ ...s })) });
 
-// Count of consecutive LEADING done entries — the collapsible "✓ N completed" run at the
+// Count of consecutive LEADING done entries, the collapsible "✓ N completed" run at the
 // top of the list. Stops at the first non-done entry (an interior done card never collapses;
 // it's context for the steps around it).
 export const leadingDoneRun = (entries) => {
@@ -853,7 +853,7 @@ export const leadingDoneRun = (entries) => {
   return n;
 };
 
-// Mats-only shopping list TSV of an aggregated pile (SPEC §17.14): one row per item —
+// Mats-only shopping list TSV of an aggregated pile (SPEC §17.14): one row per item:
 // need (ceiled EV), have (via `ownedOf`), shortfall, and the est. gold to buy the shortfall
 // at `costOf` unit prices (0 for free/covered items). Rows sort by name like the panel.
 export function shoppingListTSV(materials, ownedOf, costOf) {
@@ -865,7 +865,7 @@ export function shoppingListTSV(materials, ownedOf, costOf) {
   return rows.join("\n");
 }
 
-// ── Materials aggregation over a selection ────────────────────────────────────────
+// Materials aggregation over a selection
 // Sums the READY entries only (done needs nothing; blocked/impossible can't be priced).
 // `ids` = Set of step ids to include; null/empty → the whole path.
 export function aggregateMaterials(entries, ids = null) {
@@ -879,9 +879,9 @@ export function aggregateMaterials(entries, ids = null) {
   return { gold, materials, steps };
 }
 
-// ── Projected-stat aggregation over a selection (SPEC §17, phase 3) ───────────────
+// Projected-stat aggregation over a selection (SPEC §17, phase 3)
 // Sums the READY move entries' forward-simulated `statDiff`s (done/blocked/impossible
-// contribute nothing — done is already in currentStats, and the rest aren't priced).
+// contribute nothing, done is already in currentStats, and the rest aren't priced).
 // Also tallies `pointGain` for a total ranking-points line. `ids` = Set of step ids to
 // include; null/empty → the whole path. Mirrors aggregateMaterials; pure (the UI adds
 // currentStats to get current → projected).
@@ -899,10 +899,10 @@ export function aggregateStatDiffs(entries, ids = null) {
   return { stats, points, steps };
 }
 
-// ── Raid-unlock milestones (SPEC §17.13, redesign phase 4) ────────────────────────
+// Raid-unlock milestones (SPEC §17.13, redesign phase 4)
 // Cumulative projected stats AFTER each entry: start from `currentStats` and fold in each
 // READY move entry's forward-simulated statDiff (set-bonus/ring-pair deltas are already
-// inside it — never re-add). done contributes nothing (it's already in currentStats);
+// inside it, never re-add). done contributes nothing (it's already in currentStats);
 // blocked/impossible/note/goal entries carry the previous snapshot forward. Returns one
 // stat map per entry (aligned by index; consecutive no-change entries share the object).
 export function projectedStatsAt(entries, currentStats) {
@@ -922,7 +922,7 @@ export function projectedStatsAt(entries, currentStats) {
 // The stat targets a raid asks of you, per aim: "qb" = the Quick-Battle ENTRY floors
 // (entry is gated by QB only; cf. nextRaid in raids.js), "cap" = those floors with the
 // capped stats (bal/crit/critRes) raised to the raid's caps (`raid.targets`, built at
-// load — the Target tab's QB entry / Caps toggle, mirrored here for the Planner card).
+// load, the Target tab's QB entry / Caps toggle, mirrored here for the Planner card).
 export const raidAimTargets = (raid, aim = "qb") =>
   (aim === "cap" ? raid.targets : raid.qb) || {};
 
@@ -938,7 +938,7 @@ export function raidShortfall(raid, stats, aim = "qb") {
   return short;
 }
 
-// The easiest raid whose `aim` targets `stats` does NOT fully meet — the Planner card's
+// The easiest raid whose `aim` targets `stats` does NOT fully meet, the Planner card's
 // auto pick ("next raid"). Unlike raids.js nextRaid (which falls back to the hardest raid
 // when everything is met), this returns null so the card can say "all met" instead.
 export function nextUnmetRaid(raids, stats, aim = "qb") {
@@ -950,7 +950,7 @@ export function nextUnmetRaid(raids, stats, aim = "qb") {
 // For each raid whose `aim` targets (QB entry floors by default) the PATH-START stats
 // don't all meet, the index of the first
 // entry after which the cumulative projected stats meet them all. Returns [{ raid, index }]
-// in crossing order (raids crossing at the same step keep the input — ascending-difficulty —
+// in crossing order (raids crossing at the same step keep the input, ascending-difficulty, 
 // order). Raids already enterable at the start are excluded (nothing to unlock); raids the
 // path never reaches are absent.
 export function raidMilestones(entries, currentStats, raids, aim = "qb") {
@@ -969,14 +969,14 @@ export function raidMilestones(entries, currentStats, raids, aim = "qb") {
   return out;
 }
 
-// ── Affordability projection ──────────────────────────────────────────────────────
+// Affordability projection
 // "How far down the path do current materials + gold carry you?" Walks the entries in
 // order consuming a SCRATCH copy of the inventory and gold: each ready step draws its
 // materials from stock (shortfall bought with gold at ctx.cost unit prices, on top of
 // the step's non-material gold). `prefixN` = count of leading steps coverable in
 // sequence (done steps pass through free; the walk stops at the first unaffordable,
 // blocked, or impossible step). `coverable` = ids of EVERY ready step individually
-// affordable from the FULL starting stock (the "affordable now" per-card flags) — not
+// affordable from the FULL starting stock (the "affordable now" per-card flags). Not
 // just post-break ones, so identical steps flag consistently regardless of the break.
 // gold == null → unlimited (the user isn't tracking gold).
 export function projectAffordability(entries, inventory, gold, ctx) {
@@ -987,9 +987,9 @@ export function projectAffordability(entries, inventory, gold, ctx) {
     return Math.max(0, ((move && (move.goldCost + (move.inventoryCredit || 0))) ?? 0) - matGold);
   };
   const tryStep = (e, stock, goldLeft) => {
-    // A FREE step (SPEC §17.9) costs nothing and draws no stock — always coverable.
+    // A FREE step (SPEC §17.9) costs nothing and draws no stock, always coverable.
     if (e.free) return 0;
-    // Returns the gold spent, or null if unaffordable. Draws stock in place — recursively:
+    // Returns the gold spent, or null if unaffordable. Draws stock in place, recursively:
     // a crafted material's shortfall consumes owned sub-materials before buying (drawMaterial),
     // so leaf stock still counts even though the pile stays at the first level.
     let spend = unitGold(e.move, e.materials);
@@ -1004,7 +1004,7 @@ export function projectAffordability(entries, inventory, gold, ctx) {
     if (e.step.kind !== "move" || e.status === "done") { if (!broke) prefixN++; continue; }
     if (e.status !== "ready") { broke = true; continue; }
     // Per-card "affordable now" flag: test EVERY ready step individually against the FULL
-    // starting stock/gold — independent of where the sequential prefix walk breaks, so two
+    // starting stock/gold, independent of where the sequential prefix walk breaks, so two
     // identical steps don't get marked differently just because a blocked step sits between
     // them (a step inside the affordable prefix is affordable too; flag it the same).
     const solo = { ...(inventory || {}) };

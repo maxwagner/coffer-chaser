@@ -11,7 +11,7 @@
 //
 // Slot labels are shared with the Enchants tab (SLOT_NAME_TO_ID), but stat columns
 // are not: this tab uses the long headers (ITEM_STAT_COLUMNS). HP/Stam columns
-// exist in the sheet but are deliberately not parsed — not part of the score.
+// exist in the sheet but are deliberately not parsed, not part of the score.
 
 import {
   ITEMS_CSV_URL, ITEMS_CSV_FALLBACK, ITEMS_COLUMNS,
@@ -58,7 +58,7 @@ export function rowsToItems(rows) {
 }
 
 // Group a flat item list by slot id. An item that applies to several slots
-// appears under each (a shared candidate menu — same item, two ring slots).
+// appears under each (a shared candidate menu, same item, two ring slots).
 export function itemsBySlot(items) {
   const bySlot = {};
   for (const item of items) {

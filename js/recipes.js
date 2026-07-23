@@ -3,7 +3,7 @@
 //   recipes[itemName] = { fee, materials: [ { material, qty }, ... ] }
 //
 // One unified tab now holds ordinary craftables AND the weapon/armor tier-chain
-// recipes (SPEC §4) — both are "just crafting". Each material is a name + qty
+// recipes (SPEC §4). Both are "just crafting". Each material is a name + qty
 // ("#") pair; per-line "$" / "Craft Price" snapshots are gone (the app recomputes
 // craft cost live, see craftCost in cost.js). A tier's recipe lists the PREVIOUS
 // tier as a material, so the recursive craftCost rolls up the whole chain.
@@ -37,7 +37,7 @@ export function rowsToRecipes(rows) {
     for (const b of blocks) {
       const mat = (row[b.name] || "").trim();
       if (!mat) continue;
-      // The "+15 Orna <slot>" tier baseline is owned/free (SPEC §4) — skip it as a
+      // The "+15 Orna <slot>" tier baseline is owned/free (SPEC §4). Skip it as a
       // priced material so the first real tier still resolves, but REMEMBER it as the
       // chain link (`baseTier`): it marks this recipe as the orna→system jump step,
       // which `tierStep` move-gen (solver.js) needs since it's gone from `materials`.

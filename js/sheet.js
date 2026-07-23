@@ -2,7 +2,7 @@
 // and later items/recipes/tier tables). The whole document is published to web,
 // so each tab is just a gid on the same base URL.
 
-// ── CSV parsing ──────────────────────────────────────────────────────────────
+// CSV parsing
 // Minimal RFC-4180 parser: quoted fields, embedded commas, escaped quotes (""),
 // CRLF/LF. The sheet quotes its numbers ("555,800"), so split-on-comma corrupts.
 export function parseCsv(text) {
@@ -26,7 +26,7 @@ export function parseCsv(text) {
 }
 
 // "555,800" → 555800 ; "-8" → -8 ; "" / "—" → null
-// Strips grouping separators but preserves a leading minus sign — several stat
+// Strips grouping separators but preserves a leading minus sign, several stat
 // columns (Bal, Att Spd, the comparison "Change" block) are legitimately
 // negative, and dropping the sign silently flips them positive.
 export function toInt(raw) {
@@ -64,7 +64,7 @@ export function headerIndex(headerRow, names, width = headerRow.length) {
 }
 
 // How long to wait on a live Sheet fetch before giving up and using the snapshot.
-// The published-CSV endpoint can STALL (not error) — slow/rate-limited/hung — and a
+// The published-CSV endpoint can STALL (not error). Slow/rate-limited/hung. And a
 // bare `await fetch` would then never resolve, hanging the whole boot (loaders run in
 // one Promise.all, so one stuck tab blocks the app forever). Abort past this and fall
 // back to the committed data/*.csv snapshot instead.

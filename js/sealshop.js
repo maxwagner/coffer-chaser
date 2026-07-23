@@ -11,15 +11,15 @@ import { fetchSheetRows, headerIndex, toInt } from "./sheet.js";
 // rows (incl. header) → { currencyName: [{ name, contains, cost, count, stock }, …] },
 // preserving sheet order. `name` = the display/in-game reward name (the `Item` column, e.g.
 // "Uaithne Crystal Box"); `contains` = the price-feed key(s) it resolves to (the optional
-// `Contains` column, e.g. "Uaithne Crystal", or a "A | B" / "A & B" / "A + B" expression —
+// `Contains` column, e.g. "Uaithne Crystal", or a "A | B" / "A & B" / "A + B" expression;
 // see resolveItem). A blank/absent Contains falls back to `name`, so rows whose reward name
 // already IS the feed key need no Contains. `cost` = currency units per pack; `count` = items
 // per pack (blank → 1); `stock` = purchase cap (null = unlimited). Rows missing a currency or
-// name are skipped. A blank/zero cost is kept as-is (null) — the valuator guards on cost > 0.
+// name are skipped. A blank/zero cost is kept as-is (null). The valuator guards on cost > 0.
 export function rowsToSealShop(rows) {
   if (!rows.length) return {};
   const idx = headerIndex(rows[0], SEAL_SHOP_COLUMNS);
-  // "Contains" is OPTIONAL (added after the other columns) — soft lookup so a sheet/snapshot
+  // "Contains" is OPTIONAL (added after the other columns). Soft lookup so a sheet/snapshot
   // that predates it still loads; a blank/absent cell falls back to the display name below.
   const ci = rows[0].map((h) => h.trim()).indexOf("Contains");
   const out = {};
@@ -46,11 +46,11 @@ export function rowsToSealShop(rows) {
 // effective contribution qty·price (null when unpriced). The uniform assumption for a range
 // is a DELIBERATE approximation for boxes that publish a spread but not per-count odds (an
 // "unstable" cube giving 2-4 of a material); if real per-count odds exist, model it as a
-// gamble (" & ") instead. This is a modeling choice, flagged — not invented game data.
+// gamble (" & ") instead. This is a modeling choice, flagged, not invented game data.
 //
 // `priceOf` (optional) resolves an item's effective UNIT gold. When omitted it's the raw
 // market feed (prices[item][basis]); the app passes the coster's `cost` so contents value at
-// min(market, craft) — a redemption is worth the cheapest way to otherwise obtain it, matching
+// min(market, craft). A redemption is worth the cheapest way to otherwise obtain it, matching
 // the project-wide cost rule (SPEC §5), so a craftable-but-unlisted item still prices.
 function pricePick(token, prices, basis, priceOf) {
   const s = String(token);
@@ -97,7 +97,7 @@ function parseOutcomes(cell) {
 // A GAMBLE box: one purchase, a RANDOM outcome (e.g. "Enhance Rune & Enchant Rune", a 50/50;
 // or "70% A & 30% B" for uneven rates). Value = the EXPECTED VALUE = Σ (rate · value), where
 // each outcome's value honors its own quantity suffix. Unlike a choice box we can't skip an
-// unpriced outcome — a missing price makes the EV unknowable — so if ANY outcome is unpriced
+// unpriced outcome. A missing price makes the EV unknowable. So if ANY outcome is unpriced
 // the box is null (never guessed). `chosen` is null; `picks` carries each outcome's rate for
 // display.
 export function resolveGamble(itemCell, prices = {}, basis = PRICE_BASIS, priceOf = null) {
@@ -114,7 +114,7 @@ export function resolveGamble(itemCell, prices = {}, basis = PRICE_BASIS, priceO
 // A BUNDLE box: one purchase, you get EVERY listed item (e.g. the Brynn Elixir Box, or the
 // Redeemers Seal Box = "Redeemers Seal x2 + a license"). List the full price-feed names
 // separated by " + "; value = the SUM of all contents (each honoring its quantity suffix).
-// Like a gamble we can't skip an unpriced part — a missing price makes the total unknowable —
+// Like a gamble we can't skip an unpriced part, a missing price makes the total unknowable, 
 // so if ANY part is unpriced the box is null (never guessed). `chosen` is null (you get all);
 // `picks` carries each part's qty + price for display.
 export function resolveBundle(itemCell, prices = {}, basis = PRICE_BASIS, priceOf = null) {
@@ -139,7 +139,7 @@ export function resolveItem(itemCell, prices = {}, basis = PRICE_BASIS, priceOf 
   if (cell.includes("|")) return { kind: "choice", ...resolveChoice(cell, prices, basis, priceOf) };
   if (cell.includes("&")) return { kind: "gamble", ...resolveGamble(cell, prices, basis, priceOf) };
   if (cell.includes("+")) return { kind: "bundle", ...resolveBundle(cell, prices, basis, priceOf) };
-  const r = resolveBundle(cell, prices, basis, priceOf); // single item (one part) — honors xN / xA-B
+  const r = resolveBundle(cell, prices, basis, priceOf); // single item (one part). Honors xN / xA-B
   return { kind: r.picks[0]?.random ? "range" : "single", ...r };
 }
 
@@ -151,7 +151,7 @@ export function resolveItem(itemCell, prices = {}, basis = PRICE_BASIS, priceOf 
 // (never guessed). Returns { currency: { unit, best, options:[{name, contains, cost, count,
 // stock, kind, alts, picks, chosen, price, perUnit}] } }, options sorted best-first.
 //
-// `priceOf` (optional, name → unit gold) overrides the raw market lookup — the app passes the
+// `priceOf` (optional, name → unit gold) overrides the raw market lookup, the app passes the
 // coster's `cost` so contents value at min(market, craft), letting a craftable redemption price
 // off its recipe when it has no market listing (SPEC §5, §16.10). `totals` (optional, currency
 // → coupon budget from the sheet) adds a best-value `basket` per currency (see sealShopBasket).
@@ -176,7 +176,7 @@ export function sealShopValues(shop, prices = {}, basis = PRICE_BASIS, priceOf =
 // Greedy bounded knapsack: buy the highest gold-per-coupon option first (perUnit order), up to
 // its purchase limit (`stock`; null = unlimited) and what the budget affords, then the next.
 // Optimal under divisibility and an excellent heuristic for the small integer coupon costs here.
-// Unpriced options (perUnit null) are skipped — we can't value them. gold/buy = perUnit·cost.
+// Unpriced options (perUnit null) are skipped, we can't value them. gold/buy = perUnit·cost.
 // Returns { picks:[{ option, buys, coupons, gold }], gold, spent, left }.
 export function sealShopBasket(options, total) {
   const budget = Number(total) || 0;

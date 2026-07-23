@@ -9,7 +9,7 @@
 //     maxTune,   // max TOTAL increase (a delta over the untuned Items value)
 //     gold,      // flat gold per tick
 //     materials, // [ { material, qty }, ... ] per tick
-//     unlock,    // 0 base / 1 Surplus I / 2 Surplus II — cumulative gate
+//     unlock,    // 0 base / 1 Surplus I / 2 Surplus II, cumulative gate
 //   }, ... ]
 //
 // The cost of tuning a stat to its cap is ceil(MaxTune / Step) ticks × the per-tick

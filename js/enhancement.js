@@ -3,7 +3,7 @@
 //
 //   steps[from] = {
 //     from, to,            // +level step (e.g. 12 → 13)
-//     rates,               // ABSOLUTE per-attempt success % — rates[0] = 1st attempt,
+//     rates,               // ABSOLUTE per-attempt success %, rates[0] = 1st attempt,
 //                          // rates[k] = the rate after k consecutive failures, last = 100
 //     gold,                // flat gold fee per attempt
 //     materials,           // { name: qty } consumed per attempt

@@ -6,17 +6,17 @@ import {
   EXQUISITE_RUNE_NAME, PROTECT_RUNE_COST, PRICE_BASIS, SCRAP_SALE_FEE,
 } from "./config.js";
 
-// ── Acquisition cost (SPEC §5.2) ─────────────────────────────────────────────
+// Acquisition cost (SPEC §5.2)
 // cost(item)   = min( marketplace price, craft cost )
 // craftCost(r) = flatFee + Σ qty · cost(material)   (recurses; crafting is 100%)
 //
 // Both recurse through `recipes` and use the live `prices` feed for leaves. A
 // memo cache speeds repeated lookups; a `building` set guards against recipe
 // cycles. Returns null when an item can be neither bought nor fully crafted
-// (some leaf material is unpriced) — callers surface that as a TODO, not a guess.
+// (some leaf material is unpriced). Callers surface that as a TODO, not a guess.
 
 // `freeItems` (optional) is a LIVE Set of item names whose acquisition cost is
-// forced to 0 — used for the "free Enhancement Rune" toggle (the player has a
+// forced to 0, used for the "free Enhancement Rune" toggle (the player has a
 // stockpile). It is read on every `cost()` call and shared with the caller, so
 // mutating the set + calling the returned `invalidate()` (to clear memos) re-prices
 // the whole graph without rebuilding the coster. Anything that consumes a free item
@@ -28,7 +28,7 @@ export function makeCoster(prices, recipes, { basis = PRICE_BASIS, freeItems = n
   const closureMemo = new Map(); // name → Set of every material in its recipe expansion (incl. itself)
   const marketOf = (name) => prices[name]?.[basis] ?? null;
 
-  // Transitive material closure of `name`'s recipe tree (name itself included) —
+  // Transitive material closure of `name`'s recipe tree (name itself included):
   // the set of items whose owned stock could possibly change netCost(name). Cycle-safe
   // (a revisited node contributes what's been collected so far). Memoized; static per
   // coster since `recipes` never changes (freeItems/prices don't affect the SHAPE).
@@ -41,7 +41,7 @@ export function makeCoster(prices, recipes, { basis = PRICE_BASIS, freeItems = n
     return set;
   }
 
-  // True when `owned` stocks nothing that could alter netCost(name) — the common case,
+  // True when `owned` stocks nothing that could alter netCost(name). The common case,
   // where netCost degenerates to need·cost(name) without walking the recipe tree.
   function ownsNoneOf(name, owned) {
     const cl = closureOf(name);
@@ -72,7 +72,7 @@ export function makeCoster(prices, recipes, { basis = PRICE_BASIS, freeItems = n
     if (costMemo.has(name)) return costMemo.get(name);
     let result;
     if (freeItems && freeItems.has(name)) {
-      result = 0; // stockpiled / free — overrides both market and craft
+      result = 0; // stockpiled / free, overrides both market and craft
     } else {
       const market = marketOf(name);
       const craft = craftCost(name);
@@ -83,14 +83,14 @@ export function makeCoster(prices, recipes, { basis = PRICE_BASIS, freeItems = n
     return result;
   }
 
-  // ── Inventory-aware acquisition (SPEC §5.2 inventory) ────────────────────────
+  // Inventory-aware acquisition (SPEC §5.2 inventory)
   // Gold to acquire `qty` units of `name` while drawing down `owned` (a {name:count}
   // map, MUTATED in place) at ANY node: owned units of the item are consumed FIRST
   // (an owned crafted intermediate is NOT expanded; owned leaves subtract), and only
-  // the shortfall is bought/crafted — choosing buy-vs-craft exactly like cost(), so an
+  // the shortfall is bought/crafted, choosing buy-vs-craft exactly like cost(), so an
   // EMPTY `owned` reproduces qty·cost(name) unchanged. Each consumed unit is tallied
   // into `used` (when provided). Returns null when a needed leaf is unpriceable (same
-  // as cost()). Callers clone the live inventory PER MOVE — naive per-move netting: a
+  // as cost()). Callers clone the live inventory PER MOVE, naive per-move netting: a
   // move may credit the full stock; nothing is globally allocated across the ranked list.
   function netCost(name, qty, owned, used) {
     if (qty <= 0) return 0;
@@ -114,8 +114,8 @@ export function makeCoster(prices, recipes, { basis = PRICE_BASIS, freeItems = n
     // Craft path: draw the recipe's materials down against the CURRENT inventory on a
     // scratch clone, so we can compare its true (inventory-aware) cost against buying
     // WITHOUT committing. This is what lets owned ingredients flip a rune from "buy" to
-    // "craft" even when its market price is below its nominal (all-bought) craft cost —
-    // the old shortcut compared market vs the market-priced craft and skipped the recipe
+    // "craft" even when its market price is below its nominal (all-bought) craft cost.
+    // The old shortcut compared market vs the market-priced craft and skipped the recipe
     // entirely when buying looked cheaper, hiding the ingredients the player already owns.
     // `building` guards recipe cycles (a cyclic recipe can't be priced → craft stays null).
     let craft = null, craftOwned = null, craftUsed = null;
@@ -143,7 +143,7 @@ export function makeCoster(prices, recipes, { basis = PRICE_BASIS, freeItems = n
     return buy;
   }
 
-  // Drop all cached costs — call after mutating `freeItems` (or `prices`) so the
+  // Drop all cached costs, call after mutating `freeItems` (or `prices`) so the
   // next lookups recompute. The `cost`/`craftCost` function identities are stable
   // across this, so existing closures (moveCtx, view builders) keep working.
   function invalidate() { costMemo.clear(); craftMemo.clear(); building.clear(); }
@@ -166,7 +166,7 @@ export function successRate(rank) {
 //  - (1/p) = expected scrolls bought before one sticks; (q/p) = expected
 //    failures, each consuming a protect rune and yielding ONE scrap.
 //  - Scraps are sold as you go (scrapResale = scrapPrice × (1 − sale fee)), so
-//    no 4-fail guarantee floor is modeled here — the separate "buy 4 scraps"
+//    no 4-fail guarantee floor is modeled here, the separate "buy 4 scraps"
 //    method already provides the cost ceiling via the outer min().
 //  - With no scrap, scrapResale is null → plain geometric, no recovery.
 //  - The result can be NEGATIVE when scrap resale exceeds scroll outlay (real
@@ -201,7 +201,7 @@ export function enchantMethods(
       // scroll landing first try, so scrap resale can never make an enchant read
       // free/profitable. `raw` (may dip below scroll, even negative) + `floored`
       // are kept for the detail. Each expected failure also burns one enchant rune
-      // (`runesUsed`, valued 0 but surfaced) — guaranteed ranks never fail, so
+      // (`runesUsed`, valued 0 but surfaced). Guaranteed ranks never fail, so
       // they never touch a rune.
       methods.push({
         method: "spam", gold: Math.max(scroll, raw), raw,
@@ -212,13 +212,13 @@ export function enchantMethods(
   return methods.sort((a, b) => a.gold - b.gold);
 }
 
-// Cheapest way to land one specific enchant, as { gold, method } — or null.
+// Cheapest way to land one specific enchant, as { gold, method }, or null.
 export function enchantCost(enchant, prices, opts) {
   const methods = enchantMethods(enchant, prices, opts);
   return methods.length ? methods[0] : null;
 }
 
-// ── Accessory enhancement EV (SPEC §6 enhanceStep) ───────────────────────────
+// Accessory enhancement EV (SPEC §6 enhanceStep)
 // Failure keeps the level (no downgrade), so reaching a level is a finite series:
 // each attempt has the same material/gold cost, and the success rate climbs with
 // consecutive failures via the pity bonuses until a guaranteed attempt. Expected
@@ -245,7 +245,7 @@ export function enhanceStepCost(entry, pityBonuses, prices, basis = PRICE_BASIS,
   let matCost = 0;
   const materials = {};
   for (const [name, qty] of Object.entries(entry.materials)) {
-    // A user-flagged free item (SPEC §17.9) prices at 0, mirroring the coster's freeItems set —
+    // A user-flagged free item (SPEC §17.9) prices at 0, mirroring the coster's freeItems set,
     // so marking an enhance material free actually zeroes the step, not just the coster-priced paths.
     const unit = freeItems && freeItems.has(name) ? 0 : (prices[name]?.[basis] ?? null);
     if (unit == null) return null; // can't fully price this step → not actionable
@@ -257,7 +257,7 @@ export function enhanceStepCost(entry, pityBonuses, prices, basis = PRICE_BASIS,
   return { gold: attempts * perAttempt, attempts, perAttempt, fee: entry.gold || 0, materials };
 }
 
-// ── Gear enhancement EV (SPEC §12 gearEnhanceCost) ───────────────────────────
+// Gear enhancement EV (SPEC §12 gearEnhanceCost)
 // Expected attempts to pass ONE weapon/armor +level given the ABSOLUTE per-attempt
 // success rates (`rates`, %): rates[0] = first attempt, rates[k] = the rate after k
 // consecutive failures, last entry = 100 (guaranteed). Failure keeps the level, so
@@ -314,7 +314,7 @@ export function gearEnhanceCost(fromLevel, toLevel, steps, prices, basis = PRICE
 }
 
 // Expected gold to enhance an accessory from `fromLevel` up to `toLevel` on a given
-// item-level bracket — the sum of each level's EV step. Used to (a) restore a
+// item-level bracket, the sum of each level's EV step. Used to (a) restore a
 // freshly-swapped base to the slot's current enhance level (a new base is +0, SPEC
 // §6/§7.2) and (b) push it higher during re-baselining. Returns gold, 0 when there
 // is nothing to do, or null if any step is unpriceable (→ caller drops the move).

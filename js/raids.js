@@ -28,9 +28,9 @@ export function rowsToRaids(rows) {
   for (const [k, h] of Object.entries(RAID_QB_COLUMNS)) cols[`qb_${k}`] = h;
   for (const [k, h] of Object.entries(RAID_CAP_COLUMNS)) cols[`cap_${k}`] = h;
   const idx = headerIndex(rows[0], cols);
-  // Hero column is OPTIONAL — look it up directly so a sheet without it still loads.
+  // Hero column is OPTIONAL, look it up directly so a sheet without it still loads.
   const heroIdx = rows[0].findIndex((h) => (h || "").trim().toLowerCase() === RAID_HERO_COLUMN.toLowerCase());
-  // Base-gold columns are OPTIONAL too (added incrementally as runs are done) — look up by name.
+  // Base-gold columns are OPTIONAL too (added incrementally as runs are done). Look up by name.
   const findCol = (name) => rows[0].findIndex((h) => (h || "").trim().toLowerCase() === name.toLowerCase());
   const goldNormalIdx = findCol(RAID_GOLD_COLUMNS.goldNormal);
   const goldHeroIdx = findCol(RAID_GOLD_COLUMNS.goldHero);

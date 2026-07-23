@@ -3,9 +3,9 @@
 // `currentStats` and a move's `statDiff` plug in directly.
 //
 // Pipeline (4 stages; stage 1 verified to the decimal against the in-game
-// "Applied ATT Graph", stages 2–3 community-derived — treat as beta):
-//   1. Applied ATT   — piecewise on gap = att − boss DEF (raw DEF; DEF Pen excluded here)
-//   2. Effective ATT — DEF Pen applies (endDEF = DEF − 8·pen), then the legacy
+// "Applied ATT Graph", stages 2–3 community-derived, treat as beta):
+//   1. Applied ATT, piecewise on gap = att − boss DEF (raw DEF; DEF Pen excluded here)
+//   2. Effective ATT. DEF Pen applies (endDEF = DEF − 8·pen), then the legacy
 //                      5th-degree polynomial in x = (att − def + 900)/(def + 900)
 //   3. + Additional Damage × an attack-dependent multiplier keyed on applied − endDEF
 //   4. × Balance × Critical × Destruction (final multipliers)
@@ -94,13 +94,13 @@ export function dpsGain(statDiff, stats, boss) {
   return (damageRating(after, boss) / base - 1) * 100;
 }
 
-// % damage gain per +1 of each damage stat at the current position — the Damage
+// % damage gain per +1 of each damage stat at the current position, the Damage
 // tab's main table. Bal/crit report 0 once at/over the boss's cap.
 //
 // The pipeline floors intermediate values (Math.floor/trunc), so a literal +1
-// probe stairsteps — 0 on most points, a whole point at floor boundaries. Probe
+// probe stairsteps, 0 on most points, a whole point at floor boundaries. Probe
 // with a larger stat-appropriate step and normalize back to per-+1 for a smooth,
-// honest per-point value. Bal/crit stay at 1 (integer stats near small caps —
+// honest per-point value. Bal/crit stay at 1 (integer stats near small caps:
 // a wide probe would cross the cap and understate them).
 const MARGINAL_PROBE = Object.freeze({ att: 100, addDmg: 10, bal: 1, crit: 1, destruction: 100, defPen: 10 });
 export function statMarginals(stats, boss) {

@@ -1,4 +1,4 @@
-// Infusion (SPEC §14) — a random secondary stat line rolled onto gear (weapon/armor/accessories).
+// Infusion (SPEC §14). A random secondary stat line rolled onto gear (weapon/armor/accessories).
 // Nexon does not publish infusion success rates and the crowd-sourced ones are unreliable, so an
 // infusion is NOT modeled as a costed gold-per-point move. Instead it surfaces as a pre-Upgrades
 // CHECKLIST of per-slot GOALS: record what a piece currently has (folded into stat totals like
@@ -29,7 +29,7 @@ export function infusionOptions(slotId) {
   return { bal: [1, 2, 3], crit: [1, 2, 3], attSpd: [1] }; // weapon + accessory
 }
 
-// The RECOMMENDED target(s) for a slot (SPEC §14) — the stat+amount the player usually aims for.
+// The RECOMMENDED target(s) for a slot (SPEC §14). The stat+amount the player usually aims for.
 // EVERY non-armor piece (weapon + all accessories) aims for +2 Bal OR +2 Crit (a choice); armor →
 // +2 Crit Res. Def is a POSSIBLE roll but never a recommended target.
 export function infusionTargets(slotId) {
@@ -43,7 +43,7 @@ export function infusionTargets(slotId) {
 //   { applicable, status: "met" | "partial" | "none", met, suggested: [{stat, amount}…] }
 //   - "met":     the slot has ≥ a target's amount of a target stat (e.g. +2 Bal, or +2 Crit Res).
 //   - "partial": the slot has exactly +1 of a target stat (bal/crit for non-armor, crit res for
-//                armor) — on the right track, chase +2 of THAT committed stat (the alternative is
+//                armor). On the right track, chase +2 of THAT committed stat (the alternative is
 //                suppressed once committed).
 //   - "none":    nothing on-goal (empty, or only an off-goal roll like Def) → suggest a first step.
 // `met` is kept as a boolean alias of `status === "met"`.

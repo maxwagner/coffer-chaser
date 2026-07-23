@@ -10,9 +10,9 @@
 //     family,      // upgrade-chain / effect group within the slot ("" = default family)
 //     minLevel,    // minimum ITEM level the scroll can be applied to (null = no requirement)
 //     stats,       // scored stats only (SPEC §2), zero-valued keys omitted
-//     appliesTo,   // [slotId, ...]  (secondary is excluded — no enchants/stats)
+//     appliesTo,   // [slotId, ...]  (secondary is excluded, no enchants/stats)
 //     scrap,       // "Enchant Scroll Scrap: <base>" name (priced via the feed; the
-//                  // feed gates availability — null only for unnamable scrolls)
+//                  // feed gates availability, null only for unnamable scrolls)
 //     effect,      // informational text (e.g. "27 Crit Dmg"); "" if none
 //   }
 

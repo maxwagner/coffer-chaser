@@ -6,7 +6,7 @@
 //
 //   bonuses[system][pieceCount] = { def, bal, ... }   // scored keys, zeros omitted
 //
-// Values are the TOTAL bonus at that piece count (not incremental) — you get exactly
+// Values are the TOTAL bonus at that piece count (not incremental). You get exactly
 // the row matching your count, so setBonusAt() returns the single highest tier ≤ N.
 
 import {
@@ -37,7 +37,7 @@ export function rowsToSetBonuses(rows) {
   return bonuses;
 }
 
-// Scored bonus stats active when wearing `count` pieces of `system` — the row for
+// Scored bonus stats active when wearing `count` pieces of `system`, the row for
 // the highest tier ≤ count ({} when none / count ≤ 0). Tolerant of gaps in the
 // tier list (picks the best populated tier you've reached).
 export function setBonusAt(bonuses, system, count) {
@@ -77,7 +77,7 @@ export function setBonusDelta(bonuses, composition, slot, newSystem) {
   return delta;
 }
 
-// ── Ring set bonus (SPEC §13.1) ──
+// Ring set bonus (SPEC §13.1)
 // The two ring slots grant a scored bonus ONLY when they hold two DIFFERENT rings of the
 // SAME level (exactly two named rings exist per level, so "different + same level" == the
 // intended pair). Keyed in the SetBonuses tab as "<level> Rings" with Pieces=2 (e.g.

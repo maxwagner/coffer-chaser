@@ -1,5 +1,5 @@
 // Accessory enhancement loader (SPEC §6 enhanceStep). The source CSV is unlike the
-// other tabs: it stacks several tables separated by blank rows —
+// other tabs: it stacks several tables separated by blank rows.
 //
 //   1. a shared "Chances" pity table: rows = enhance level 1-20, columns 1x..10x =
 //      the additive % bonus to the base success rate after that many CONSECUTIVE

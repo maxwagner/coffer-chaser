@@ -4,7 +4,7 @@
 // frame-diff drops frames that look unchanged from the last kept one (nothing new scrolled in) so a
 // long GIF doesn't explode OCR time; the caller then dedups at the LINE level (mergeGifFrameLines
 // in scanner.js) to absorb the scroll overlap between the frames we do keep. Browser-only
-// (ImageDecoder/canvas) — not unit-tested; the line dedup that follows IS pure + tested.
+// (ImageDecoder/canvas). Not unit-tested; the line dedup that follows IS pure + tested.
 
 // True for a GIF blob/File (by MIME, falling back to the .gif extension for pasted/renamed files).
 export function isGif(blob) {
@@ -33,7 +33,7 @@ const canvasToBlob = (canvas) => new Promise((res) => canvas.toBlob((b) => res(b
 
 // Decode a GIF blob → array of frame PNG blobs. Consecutive frames whose 8×8 average-hash is within
 // `hashTol` of the last KEPT frame are skipped (visually unchanged → nothing new to OCR); at most
-// `maxFrames` are kept, so a long GIF can't run away (the earliest frames win — a chat log only
+// `maxFrames` are kept, so a long GIF can't run away (the earliest frames win, a chat log only
 // grows downward, so the tail is captured by later kept frames scrolling into view).
 export async function gifToFrames(blob, { maxFrames = 60, hashTol = 4, onProgress } = {}) {
   if (typeof ImageDecoder === "undefined") throw new Error("This browser can't decode GIFs (needs WebCodecs ImageDecoder).");
@@ -53,7 +53,7 @@ export async function gifToFrames(blob, { maxFrames = 60, hashTol = 4, onProgres
     canvas.getContext("2d").drawImage(img, 0, 0);
     const hash = aHash(canvas);
     img.close();
-    if (lastHash && hamming(hash, lastHash) <= hashTol) continue; // unchanged frame — don't OCR it
+    if (lastHash && hamming(hash, lastHash) <= hashTol) continue; // unchanged frame, don't OCR it
     lastHash = hash;
     frames.push(await canvasToBlob(canvas));
     onProgress?.({ frame: frames.length });

@@ -1,4 +1,4 @@
-// In-browser OCR auction scanner — PURE parsing layer (SPEC §16). Reads auction-house
+// In-browser OCR auction scanner. PURE parsing layer (SPEC §16). Reads auction-house
 // screenshots' OCR output, extracts (item name, min price) rows, and accumulates them into a
 // summary the user copies as TSV to paste into the PriceInfo Sheet tab.
 //
@@ -9,7 +9,7 @@
 // engine-agnostic (it consumes generic word boxes) is why swapping Tesseract → PP-OCR touched
 // only js/ppocr.js and the adapter here, not the row/name logic.
 
-// ── price token parsing ───────────────────────────────────────────────────────
+// price token parsing
 
 // Price-context letter→digit corrections. A price-column token is *known* numeric,
 // so any letter is an OCR misread and is mapped aggressively (applied only to tokens
@@ -30,14 +30,14 @@ const translatePrice = (s) => s.replace(/[\s\S]/g, (c) => PRICE_DIGIT_MAP[c] ?? 
 
 const SEP_RE = /[,.\s]+/;
 
-// The auction house caps a listing at 999,999,999. Anything larger is an OCR artifact —
+// The auction house caps a listing at 999,999,999. Anything larger is an OCR artifact,
 // usually two vertically-adjacent thin repeated-digit prices ("77,777,777" over "11,111,111")
 // read as one over-long token ("7,177,717,717"). Reject it so we never record the garbage
 // magnitude; strict callers re-OCR, lenient callers drop the price (the row then surfaces).
 const MAX_PRICE = 999_999_999;
 
 // Parse a price string into { value, well }. Auction prices always group as
-// N,NNN,NNN — first group 1–3 digits, every following group exactly 3. `well`
+// N,NNN,NNN, first group 1–3 digits, every following group exactly 3. `well`
 // reports whether the read matches that structure; a malformed read (a letter in a
 // group, or a wrong-length group) means a digit was dropped/garbled and the value is
 // unreliable. { value: null } when there are no usable digit groups.
@@ -58,12 +58,12 @@ export function toPrice(token, strict = false) {
   const t = translatePrice(token.trim().replace(/^[$'"]+/, ""));
   const { value, well } = parsePriceGroups(t);
   if (value == null || value < 1) return null;
-  if (value > MAX_PRICE) return null; // over-long read (merged/garbled) — never a real price
+  if (value > MAX_PRICE) return null; // over-long read (merged/garbled). Never a real price
   if (strict && (!well || value < 1000)) return null;
   return value;
 }
 
-// ── name cleaning ─────────────────────────────────────────────────────────────
+// name cleaning
 
 // Junk tokens: roman numerals / stack counts, short bare numbers (level/qty),
 // tier/level column tokens (T0, I5, l5…), stars + their OCR misreads (kk wk wae…),
@@ -75,17 +75,17 @@ const JUNK = /^(?:[IVX]{1,4}|[ivxl]{1,4}|\d{1,3}|[A-Za-z]\d{1,3}[A-Za-z]*|\d{1,3
 const LEVEL_RE = /^(?:\d{1,3}|[IVXivxl]{1,4})$/;
 const LEAD_NOISE = /^[^A-Za-z0-9]+/;
 // The "(Permanent)" variant tag, stripped so a permanent listing conflates onto its base scroll
-// (the min of base vs pricier-permanent is the correct base price — SPEC §16.5). OCR mangles the
+// (the min of base vs pricier-permanent is the correct base price. SPEC §16.5). OCR mangles the
 // tag on these dim second-line rows ("(Pe manent)", "(Pemanent)", a dropped paren), so match it
 // fuzzily: an optional paren, "Pe", any run of spaces/"r", then the stable "manent" tail. No real
 // item name contains "…manent", so this can't over-strip.
 const PERM_TAG = /\s*\(?\s*pe[\sr]*manent\)?\s*/gi;
-// Non-global detector for the (fuzzy) "(Permanent)" tag — flags a row as a permanent variant
+// Non-global detector for the (fuzzy) "(Permanent)" tag, flags a row as a permanent variant
 // BEFORE PERM_TAG strips it, so the caller can drop an unidentifiable permanent duplicate (its
 // base row is always captured separately and is cheaper, so it wins the min anyway).
 const PERM_DETECT = /\(?\s*pe[\sr]*manent/i;
 const GRADE_WORDS = new Set(["grade", "level", "tier", "rank"]);
-// Small real words that legitimately appear in names — never trimmed as edge noise.
+// Small real words that legitimately appear in names, never trimmed as edge noise.
 const SHORT_WORDS = new Set(["of", "to", "a", "an"]);
 // An edge token is OCR noise if it's ≤2 chars, contains a letter (so pure grade digits
 // like "1" stay), and isn't a small real word.
@@ -108,8 +108,8 @@ const NAME_FIXES = {
 const HEADER_WORDS = new Set(["item", "level", "quality", "price", "listings"]);
 
 // High-contrast outlined game text (the dim/colored rarity rows: green "Smooth/Solid/Keen…"
-// crystals & chunks) is detected TWICE by Tesseract — the full word plus an edge-clipped
-// "ghost" copy — interleaved as "Solid olid", "Crystal Crysta", "Keen een", "Moonli Moonlight".
+// crystals & chunks) is detected TWICE by Tesseract, the full word plus an edge-clipped
+// "ghost" copy, interleaved as "Solid olid", "Crystal Crysta", "Keen een", "Moonli Moonlight".
 // Two adjacent tokens are ghosts of each other when, case-insensitively, the shorter is a prefix
 // OR suffix of the longer (the clipped edge) AND it's the SAME word truncated: either ≤2 chars
 // were shaved, or the shorter still covers ≥60% of the longer (catches deeper clips like
@@ -123,7 +123,7 @@ function ghostPair(a, b) {
   const ratioOk = short.length >= 4 && short.length / long.length >= 0.6;
   // Exact edge clip: the shorter IS a prefix/suffix of the longer ("Crystal"/"Crysta", "Solid"/"olid").
   if (long.startsWith(short) || long.endsWith(short)) return long.length - short.length <= 2 || ratioOk;
-  // Fuzzy edge clip: the shorter is within ONE char of a same-length edge slice of the longer — the
+  // Fuzzy edge clip: the shorter is within ONE char of a same-length edge slice of the longer, the
   // same word doubled where the full copy is ALSO garbled ("Niflh" vs "Hiflheim": "Niflh" is 1 edit
   // from "Hiflh", the leading 5 of "Hiflheim"). Keep the fuller token; the canonicalizer snaps the
   // residual single-char error. Tightly bounded (≥4 chars, ≥60% length, ≤1 edit) to avoid real words.
@@ -152,7 +152,7 @@ export function cleanName(raw) {
   let tokens = raw.trim().split(/\s+/).filter(Boolean);
   // Normalize a trailing OCR double-quote to an apostrophe so the possessive survives.
   tokens = tokens.map((t) => t.replace(/(?<=\w)"$/, "'"));
-  // Standalone grade digits misread as punctuation/letters — convert before strip/junk.
+  // Standalone grade digits misread as punctuation/letters, convert before strip/junk.
   tokens = tokens.map((t) => SOLO[t] ?? t);
   // Strip leading/trailing punctuation, preserving a trailing possessive apostrophe.
   const stripped = [];
@@ -179,7 +179,7 @@ export function cleanName(raw) {
   // Trim short OCR-noise fragments that bled in from the level/price column at the NAME
   // EDGES (e.g. "...Rhod Compass ns", "Shrouded Moonlight iT", "ee reir Royal Castle").
   // Edge-only + ≤2 chars + must contain a letter (so a kept grade digit like "Grade 1"
-  // is protected) + never a small real word ("of"/"to") — mid-name tokens are untouched,
+  // is protected) + never a small real word ("of"/"to"). Mid-name tokens are untouched,
   // so "Roots of Abundance" survives. Trim repeatedly in case two fragments stack.
   while (kept.length > 1 && isEdgeNoise(kept[kept.length - 1])) kept.pop();
   while (kept.length > 1 && isEdgeNoise(kept[0])) kept.shift();
@@ -189,7 +189,7 @@ export function cleanName(raw) {
   return NAME_FIXES[name] ?? name;
 }
 
-// ── canonicalization against the app's known item names ───────────────────────
+// canonicalization against the app's known item names
 
 const CANON_THRESHOLD = 0.88; // min similarity ratio to accept a fuzzy snap
 const CANON_MARGIN = 0.05;    // best must beat the runner-up by this, else ambiguous
@@ -214,7 +214,7 @@ export function editDistance(a, b, cap) {
   return prev[b.length];
 }
 
-// LCS-based similarity ratio (2·LCS / (|a|+|b|)) — a faithful stand-in for Python's
+// LCS-based similarity ratio (2·LCS / (|a|+|b|)). A faithful stand-in for Python's
 // difflib SequenceMatcher.ratio() for our purpose, since the absolute edit-distance
 // cap below is the decisive guard anyway.
 function ratio(a, b) {
@@ -234,7 +234,7 @@ function ratio(a, b) {
 
 // Build a canonicalizer over a list of known names. A cleaned OCR name is snapped to
 // the closest known item only when the match is both strong and unambiguous *and* the
-// absolute edit distance is small — so common misses (dropped apostrophe, a thin grade
+// absolute edit distance is small, so common misses (dropped apostrophe, a thin grade
 // digit, minor garble) are corrected while genuinely new items, and ambiguous body-part
 // swaps like "Chest Armor" vs "Hand Armor", pass through unchanged. The edit-distance cap
 // is the critical guard: a long name with one wrong word scores a high ratio off its
@@ -243,7 +243,7 @@ const PREFIX_MIN_TOKENS = 3; // a prefix this long is enough to identify an item
 
 // Normalize OCR spacing so a spacing garble becomes an EXACT match: split a merged
 // camelCase word ("WakingStone" → "Waking Stone") and put a space after ":"/"," and
-// around "(" — OCR routinely drops these in structured names like
+// around "(". OCR routinely drops these in structured names like
 // "Waking Stone:Damage Boost(8%)". Idempotent on already-clean names.
 export function normSpace(s) {
   return String(s || "")
@@ -258,7 +258,7 @@ export function normSpace(s) {
     .trim();
 }
 
-// The digit-runs in a name, sorted — the identity of a numeric-variant family (Waking
+// The digit-runs in a name, sorted, the identity of a numeric-variant family (Waking
 // Stone "(8%)" vs "(10%)", "(4 sec)" vs "(5 sec)", grade tiers). A fuzzy snap must NOT
 // bridge a number difference: those are DISTINCT items, so a 1-digit gap is not a typo.
 const numsOf = (s) => (String(s).toLowerCase().match(/\d+/g) || []).sort();
@@ -288,7 +288,7 @@ export function makeCanonicalizer(names) {
         editDistance(key, bestNorm, CANON_MAX_EDITS) <= CANON_MAX_EDITS && sameNums(key, bestNorm)) return best;
 
     // Unique long-prefix fallback: the read shares a long leading run of tokens with exactly ONE
-    // vocab item, and only its TAIL diverges — OCR garbled the last word(s) ("The Watcher's
+    // vocab item, and only its TAIL diverges. OCR garbled the last word(s) ("The Watcher's
     // Mysterious Cat Jos tatue" → "…Cat Statue"). This is safe against sibling mis-snaps that the
     // edit-cap guards (Chest≠Hand Armor): those differ WITHIN the prefix, so no single vocab item
     // owns the matched prefix uniquely. Require ≥3 shared tokens, a strictly-unique best prefix,
@@ -308,8 +308,8 @@ export function makeCanonicalizer(names) {
 
     // Unique-suffix fallback (clipped PREFIX): a detection box that starts a few px late clips the
     // first letter(s), so the read is a character-SUFFIX of the true name ("ecuting Enchant Scroll"
-    // ← "Ex" lost). Edit-distance can't disambiguate — "ecuting" is 2 edits from BOTH "Echoing" and
-    // "Executing" — but the read is a suffix of only ONE ("executing"), which resolves it. Snap when
+    // ← "Ex" lost). Edit-distance can't disambiguate, "ecuting" is 2 edits from BOTH "Echoing" and
+    // "Executing", but the read is a suffix of only ONE ("executing"), which resolves it. Snap when
     // exactly one vocab item ends with the read AND the read covers ≥ half of it (so a bare
     // "…Enchant Scroll" suffix, shared by many, isn't unique → won't match; a genuinely ambiguous
     // clip like "ment" ← Lament/Judgment stays unsnapped). Exact matches were already returned above,
@@ -322,11 +322,11 @@ export function makeCanonicalizer(names) {
       }
       if (sCount === 1) return sBest;
     }
-    return norm; // no snap — still return the spacing-normalized name (cleaner than the raw OCR read)
+    return norm; // no snap, still return the spacing-normalized name (cleaner than the raw OCR read)
   };
 }
 
-// Best-effort ranked candidates for a name that DIDN'T auto-snap — the Scanner review UI shows
+// Best-effort ranked candidates for a name that DIDN'T auto-snap, the Scanner review UI shows
 // these so the user can one-click the right item (or type their own). Pure text similarity: the
 // top-N vocab items by LCS ratio, above a loose floor (well below `canonicalize`'s snap threshold,
 // since here a human confirms). `names` is the same vocabulary passed to `makeCanonicalizer`; the
@@ -348,7 +348,7 @@ export function suggestNames(names, name, n = 5, floor = 0.4) {
 // identifies a real known item, so a legitimate item like "New Era Ore" is never force-merged into a
 // similarly-named raid drop like "Enhanced New Era Ore" (of which it's a suffix) just because the
 // picked raid's small drop table lacks the plain form. Only fall back to the raid-scoped
-// canonicalizer for names the global vocabulary can't place — garbled reads, or raid-only items not
+// canonicalizer for names the global vocabulary can't place, garbled reads, or raid-only items not
 // in the price vocab. `globalCanon`/`isKnown`/`raidCanon` are supplied by the caller; `raidSet` is
 // the lowercased set of the raid's drops (confirms the raid snap landed on a real entry). Pure.
 export function resolveDropName(raw, { globalCanon, isKnown, raidCanon = null, raidSet = null }) {
@@ -358,7 +358,7 @@ export function resolveDropName(raw, { globalCanon, isKnown, raidCanon = null, r
   return g;
 }
 
-// ── sealed-container (bottle) valuation ───────────────────────────────────────
+// sealed-container (bottle) valuation
 // A "Mysterious Glass Bottle (Lv. N)" is a sealed container: its own market listing is worthless
 // (untradeable), so it's valued at the EXPECTED VALUE of what it opens into (SPEC §16.8). Contents
 // are game data (never guessed): `fixed` = guaranteed items [[name, qty]…]; `oneOf` = a
@@ -413,7 +413,7 @@ export function dropUnitValue(name, prices = {}) {
 // Canonicalize a bottle name: rewrite the OCR-garbled `Lv. N` tag with the repaired numeric level
 // (e.g. "Mysterious Glass Bottle (Lv.10o)" → "Mysterious Glass Bottle (Lv. 100)"). Non-bottles (or
 // bottles with no readable level) pass through unchanged. Applied at scan time so the STORED name is
-// clean — two differently-garbled reads of the same bottle then merge into one drop tally row.
+// clean, two differently-garbled reads of the same bottle then merge into one drop tally row.
 export function normalizeBottleName(name) {
   const lvl = bottleLevel(name);
   if (lvl == null) return name;
@@ -431,13 +431,13 @@ export function bottleContentsLabel(name) {
   return "";
 }
 
-// ── vocabulary-guided junk repair ─────────────────────────────────────────────
+// vocabulary-guided junk repair
 // Connectives that legitimately appear lowercase mid-name ("Roots of Abundance",
-// "Protects the Altar") — never stripped as junk.
+// "Protects the Altar"). Never stripped as junk.
 const REPAIR_STOPWORDS = new Set(["of", "the", "to", "a", "an", "and", "or", "for", "in", "on", "with"]);
 
 // Two adjacent tokens are likely the SAME word read twice (an OCR ghost of its neighbour) when
-// they're near the same length and within 2 edits — e.g. "Uaithne"/"Harthne" (the THN-e tail
+// they're near the same length and within 2 edits, e.g. "Uaithne"/"Harthne" (the THN-e tail
 // survives, the head is garbled). Looser than ghostPair's edge-clip rule; safe ONLY because
 // repairName accepts a removal solely when the result snaps to a KNOWN item.
 function adjacentGhost(a, b) {
@@ -462,10 +462,10 @@ export function repairName(name, isKnown, canonicalize) {
     const snapped = canonicalize(arr.join(" "));
     return isKnown(snapped) ? snapped : null;
   };
-  // A — strip lowercase junk fragments
+  // A, strip lowercase junk fragments
   const noJunk = toks.filter((t) => REPAIR_STOPWORDS.has(t.toLowerCase()) || t !== t.toLowerCase());
   if (noJunk.length !== toks.length) { const r = trySnap(noJunk); if (r) return r; }
-  // B — drop an adjacent ghost (try removing either side; the vocab decides which is real)
+  // B, drop an adjacent ghost (try removing either side; the vocab decides which is real)
   const base = noJunk.length >= 2 ? noJunk : toks;
   for (let i = 0; i < base.length - 1; i++) {
     if (!adjacentGhost(base[i], base[i + 1])) continue;
@@ -477,7 +477,7 @@ export function repairName(name, isKnown, canonicalize) {
   return name;
 }
 
-// ── PP-OCR detection adapter (pure) ───────────────────────────────────────────
+// PP-OCR detection adapter (pure)
 
 // A price-shaped token: digits with , . or space grouping (no letters). Used to place the
 // price at the right edge so `parseDetections` classifies it as the price column.
@@ -487,12 +487,12 @@ const PRICE_TOKEN_RE = /^[\d.,\s]*\d[\d.,\s]*$/;
 // `parseDetections` consumes, so all the downstream row-grouping / continuation-merge /
 // cleanName / canonicalize logic is reused unchanged. Each detection is `{ text, mean, box }`
 // with box = 4 corners [[x0,y0],[x1,y0],[x1,y1],[x0,y1]]. A detection may hold a name, a price,
-// or both ("Armor 55,555,555") — sometimes spanning the empty middle gap.
+// or both ("Armor 55,555,555"). Sometimes spanning the empty middle gap.
 //
 // The row's price is the LAST numeric token (auction prices are right-aligned); it snaps to the
 // detection's RIGHT edge (x1). Every other token is a name token at a char-interpolated x from the
-// LEFT (x0) — INCLUDING an earlier numeric, which is an in-name grade/level digit, not the price:
-// "Abyssal Shard Grade 1 104,103" — the "1" is the grade, "104,103" is the price. (Snapping every
+// LEFT (x0). INCLUDING an earlier numeric, which is an in-name grade/level digit, not the price:
+// "Abyssal Shard Grade 1 104,103", the "1" is the grade, "104,103" is the price. (Snapping every
 // numeric to x1, as before, pulled that "1" into the price column, dropping it from the name AND
 // misreading it as the price.) When the image width is known, a name token whose interpolated x
 // would fall in the price column (a wide spanning box distributes its chars across the gap) is
@@ -514,7 +514,7 @@ export function ppDetectionsToWords(detections, w = 0, priceXFrac = 0.75) {
     // separator (the level column is a bare 1–3 digit integer like "125") OR sits in the right
     // price column. Flag it explicitly so parseDetections isn't forced to re-derive price-ness from
     // the fixed 0.75·w x-fraction: on a narrow crop the whole row (name+level+price) can fall left
-    // of that fraction yet still hold a clean "340,000,000" — which the x-only rule silently drops.
+    // of that fraction yet still hold a clean "340,000,000", which the x-only rule silently drops.
     const isPriceTok = priceIdx >= 0 && (/[.,\s]/.test(toks[priceIdx]) || x1 >= priceX);
     let pos = 0;
     for (let i = 0; i < toks.length; i++) {
@@ -532,13 +532,13 @@ export function ppDetectionsToWords(detections, w = 0, priceXFrac = 0.75) {
   return words;
 }
 
-// ── row assembly + extraction (pure) ──────────────────────────────────────────
+// row assembly + extraction (pure)
 
 // Extract { name, price } rows from classified word boxes. `words` items are
 // { text, conf (0..1), cx, cy, bbox }. opts: { iconX, priceXFrac, retry } where retry is
 // an async (bbox) → Promise<int|null> high-quality re-OCR for prices the strict pass can't
 // read (null in tests → lenient fallback only). Returns cleaned, filtered rows (NOT yet
-// canonicalized — the caller applies that so this stays pure/testable).
+// canonicalized, the caller applies that so this stays pure/testable).
 export async function parseDetections(words, w, h, opts = {}) {
   const { iconX = 0, priceXFrac = 0.75, retry = null } = opts;
   const priceX = w * priceXFrac;
@@ -578,7 +578,7 @@ export async function parseDetections(words, w, h, opts = {}) {
     for (const d of row) { if (d.bbox) { top = Math.min(top, d.bbox.y0); bottom = Math.max(bottom, d.bbox.y1); } }
     if (!isFinite(top) || !(bottom > top)) { top = rowY; bottom = rowY; }
     const hasPriceToken = row.some((d) => d.isPrice);
-    // Order by READING order — line (a coarse y-bucket) then x — not pure x, so a wrapped name
+    // Order by READING order. Line (a coarse y-bucket) then x. Not pure x, so a wrapped name
     // whose 2nd line ("… Armor") shares the row isn't interleaved into the 1st ("Eriu Advancement
     // Stone: Head" + "Armor" → "…Head Armor", not "Eriu Armor Advancement…"). Single-line rows have
     // one bucket, so this is a no-op there.
@@ -603,8 +603,8 @@ export async function parseDetections(words, w, h, opts = {}) {
 
   // Merge wrapped-name continuation lines into the priced row they belong to. A wrapped name
   // can spill EITHER way: line 2 trailing line 1 ("The Watcher's Glowing" / "Mysterious Cat
-  // Statue") — a FORWARD merge into the previous item; or line 1 leading line 2 when the price
-  // sits on the second line ("The Winds of" / "Lochlann  1,222,222") — a BACKWARD merge into
+  // Statue"). A FORWARD merge into the previous item; or line 1 leading line 2 when the price
+  // sits on the second line ("The Winds of" / "Lochlann  1,222,222"). A BACKWARD merge into
   // the next item. A continuation has no parsed price, no level token, no price-column token,
   // and sits within one text line (gap < 2·ROW_TOL). `pending` holds a leading line until the
   // next priced row claims it (else it's dropped, as a priceless line always was).
@@ -655,7 +655,7 @@ export async function parseDetections(words, w, h, opts = {}) {
   return results;
 }
 
-// ── raid-drop chat-log parsing (pure, SPEC §16.8) ─────────────────────────────
+// raid-drop chat-log parsing (pure, SPEC §16.8)
 // The raid-drop tracker reads the SYSTEM chat log, not the auction table, so it has its own
 // line-oriented parse (the price-column row logic above doesn't apply). Each line looks like:
 //   "[SYSTEM] <Actor> [has] obtained [the] [Item Name] [× N]. (Optional Tag)"
@@ -664,7 +664,7 @@ export async function parseDetections(words, w, h, opts = {}) {
 
 // Group PP-OCR detections into visual text lines (by y), joined left-to-right (by x). PP-OCR
 // usually emits one detection per chat line, but a differently-coloured item name can be a separate
-// box on the same line — grouping re-joins them. `tol` scales with image height. Pure.
+// box on the same line, grouping re-joins them. `tol` scales with image height. Pure.
 export function detectionsToLines(detections, h = 0) {
   const tol = Math.max(h * 0.015, 10);
   const items = [];
@@ -685,15 +685,15 @@ export function detectionsToLines(detections, h = 0) {
 
 // A leading "[SYSTEM]" tag (brackets often OCR-garbled → tolerate any wrapping punctuation).
 const SYSTEM_PREFIX = /^\W*\[?\s*system\s*\]?\W*\s*/i;
-// Trailing "× N." quantity at the END of a line ("x 4.", "× 4", "X4") — used to strip the count off
+// Trailing "× N." quantity at the END of a line ("x 4.", "× 4", "X4"). Used to strip the count off
 // a bracket-less item name. The ×/x may be an OCR misread of either.
 const QTY_RE = /[x×✕╳]\s*(\d+)\s*\.?\s*$/i;
-// The "× N" quantity ANYWHERE (not end-anchored) — the count follows the item but a trailing
+// The "× N" quantity ANYWHERE (not end-anchored). The count follows the item but a trailing
 // "(Luck Effect)"/"(VVIP Service)" tag can sit AFTER it ("[Item] x2.(Luck Effect)"), so anchoring
 // to end would miss it and undercount to 1. Applied to the tail after the item bracket.
 const QTY_ANYWHERE = /[x×✕╳]\s*(\d+)/i;
 // "<Actor> [has|have] obtained [the] <rest>". Actor is lazy so it stops at the first "obtained".
-// Whitespace around the verb is optional — OCR squeezes it out both after has/have ("Droooo
+// Whitespace around the verb is optional. OCR squeezes it out both after has/have ("Droooo
 // hasobtained[…]") AND between the actor and a no-"has" "obtained" ("Drooooobtained[…]", where the
 // name's trailing letter runs straight into the verb). The leading `\s*` (not `\s+`) tolerates the
 // glued case; the lazy actor still stops at the first literal "obtained".
@@ -704,10 +704,10 @@ const EARNED_RE = /^(.*?)\s*(?:ha(?:s|ve)\s*)?earned\b\s*(.*)$/i;
 const REWARD_RE = /^reward\b[\s:.]*received\b\s*(.*)$/i;
 const GOLD_RE = /^(\d[\d,]*)\s+gold\b/i;
 
-// ── core-source tags (SPEC §16.9) ──────────────────────────────────────────────
-// A drop line's trailing "(…)" names WHY the extra core dropped — "(Campfire Effect)",
+// core-source tags (SPEC §16.9)
+// A drop line's trailing "(…)" names WHY the extra core dropped, "(Campfire Effect)",
 // "(Core Boost Plus Effect)", "(VVIP Service)", "(Pet Effect)", "(Guild Skill)",
-// "(Luck Effect)". No tag = a normal base core (incl. the base core-boost's drops — that
+// "(Luck Effect)". No tag = a normal base core (incl. the base core-boost's drops, that
 // boost upgrades drop QUALITY, adds no lines). Matched on letters only (lowercased,
 // non-letters stripped) so OCR-garbled parens/spacing still resolve. Order matters:
 // "boost" before the rest so "Core Boost Plus Effect" can't fall through, and "vip"
@@ -715,7 +715,7 @@ const GOLD_RE = /^(\d[\d,]*)\s+gold\b/i;
 export const CORE_SOURCES = ["base", "campfire", "plus", "vvip", "pet", "guild", "luck"];
 const CORE_SOURCE_KEYS = [
   ["campfire", "campfire"],
-  ["boost", "plus"], // ONLY Core Boost Plus tags its cores — any "boost" tag is Plus
+  ["boost", "plus"], // ONLY Core Boost Plus tags its cores, any "boost" tag is Plus
   ["plus", "plus"],
   ["vip", "vvip"],
   ["guild", "guild"],
@@ -734,7 +734,7 @@ export function coreSource(tagText) {
 // own ("You…" / "Reward: Received…"), so it's counted regardless of the actor filter. Item name =
 // the LAST bracketed group (the first "[…]" is always "[SYSTEM]"); falls back to the trailing text
 // with the qty/tag stripped when OCR dropped the brackets. `source` = core-source tag after the
-// item (SPEC §16.9), "base" when untagged. Names are NOT canonicalized here (kept pure — the
+// item (SPEC §16.9), "base" when untagged. Names are NOT canonicalized here (kept pure, the
 // caller resolves them against the price vocabulary for valuation).
 export function parseDropLine(raw) {
   if (!raw) return null;
@@ -766,7 +766,7 @@ export function parseDropLine(raw) {
     item = brs[brs.length - 1][1]; tail = rest.slice(rest.lastIndexOf("]") + 1);
     const tags = [...tail.matchAll(/\(([^)]*)\)/g)];
     // Tag = last paren group after the item; if OCR lost the parens, try the tail text itself
-    // (qty stripped) — letters-only matching in coreSource keeps this safe.
+    // (qty stripped). Letters-only matching in coreSource keeps this safe.
     source = coreSource(tags.length ? tags[tags.length - 1][1] : tail.replace(QTY_ANYWHERE, ""));
   } else {
     const tag = rest.match(/\(([^)]*)\)\s*$/);
@@ -785,7 +785,7 @@ export function parseDropLine(raw) {
 // core-source tag onto the next visual line ("…x 1.(Core Boost Plus" / "Effect)"), so per-line
 // parsing mis-reads both halves. Conservative join: the previous line has MORE "(" than ")"
 // (an unclosed paren group) AND the next line closes the balance AND the next line is not a
-// fresh chat message (no [SYSTEM] prefix — OCR keeps it on real message starts). Pure; run on
+// fresh chat message (no [SYSTEM] prefix. OCR keeps it on real message starts). Pure; run on
 // the merged (post-stitch) line list, where each wrapped pair appears once. SPEC §16.8.
 export function unwrapLines(lines) {
   const count = (s, ch) => (String(s).match(new RegExp(`\\${ch}`, "g")) || []).length;
@@ -810,7 +810,7 @@ export function unwrapLines(lines) {
 // Cluster raw OCR'd actor names so jittered reads of the same player ("Kaelin"/"Kaelim") share
 // one bucket. Greedy by frequency: the most-seen spelling becomes canonical; a later spelling
 // within the edit-distance cap (same scaling as makeActorMatcher) folds into it ONLY when it's
-// also clearly rarer (≤2 reads, or ≤half the canonical's) — two genuinely distinct players with
+// also clearly rarer (≤2 reads, or ≤half the canonical's). Two genuinely distinct players with
 // near-identical names ("Eira3"/"Eira5") each rack up many reads, while OCR jitter surfaces
 // once or twice, so frequency separates the cases the edit distance can't. Returns
 // Map(rawLowercased → canonical spelling). Pure. SPEC §16.11.
@@ -853,13 +853,13 @@ export function makeActorMatcher(charName) {
 
 // Parse a batch of OCR chat lines into the player's drops. `matchActor(name)` decides ownership
 // for actored lines; self lines always count. Returns aggregated-nothing here (the caller's store
-// accumulates) — just the per-line results: { drops:[{name,qty,source}], gold, foreign:[actor…],
+// accumulates). Just the per-line results: { drops:[{name,qty,source}], gold, foreign:[actor…],
 // party:[{actor,drops}] }, where `foreign` lists other players' actors seen (surfaced so the user
 // can confirm the filter worked) and `source` is the line's core-source tag ("base" when
 // untagged, SPEC §16.9). With `party: true` (SPEC §16.11), other players' ITEM drops are kept,
 // grouped per clustered actor (clusterActors folds OCR-jittered spellings of one player
-// together); their gold lines are deliberately ignored — gold is tracked self-only, the run
-// analysis assumes party members earned what you did — but still register the actor, so a
+// together); their gold lines are deliberately ignored, gold is tracked self-only, the run
+// analysis assumes party members earned what you did, but still register the actor, so a
 // player seen only via an "earned gold" line counts toward the party roster.
 export function parseDrops(lines, matchActor = () => true, { party = false } = {}) {
   const drops = []; let gold = 0; const foreign = new Set();
@@ -888,17 +888,17 @@ export function parseDrops(lines, matchActor = () => true, { party = false } = {
   return out;
 }
 
-// ── loot-box opening parsing (pure, SPEC §16.12) ──────────────────────────────
+// loot-box opening parsing (pure, SPEC §16.12)
 // The Tracker's Boxes subtab reads the SYSTEM chat log of opening loot boxes:
 //   "[SYSTEM] You used [Box Name]."
-//   "[SYSTEM] You obtained [Item Name] x N."   (one or more — multi-item boxes exist)
+//   "[SYSTEM] You obtained [Item Name] x N."   (one or more, multi-item boxes exist)
 //   "[SYSTEM] All items have been used."       (delimiter; may be missing/garbled)
-// Only the player's OWN lines are part of an opening — an obtained line reuses the
+// Only the player's OWN lines are part of an opening, an obtained line reuses the
 // drop-line parser (same bracket/qty/OCR tolerance), so a party member's pickup in
 // the same log window is ignored, and a "You have obtained N gold" box payout is
 // kept as a pseudo-item named "Gold" (qty = the gold amount, unit value 1).
 
-// "You [have] used <rest>" — same glued-whitespace tolerance as OBTAINED_RE
+// "You [have] used <rest>", same glued-whitespace tolerance as OBTAINED_RE
 // ("Youused[…]" still matches: \s* accepts the squeezed-out space).
 const USED_RE = /^you\s*(?:ha(?:ve|d)\s*)?used\b\s*(.*)$/i;
 // The "All items have been used." delimiter, tolerant of a dropped plural/verb garble.
@@ -951,10 +951,10 @@ export function parseBoxOpenings(lines) {
 
 // Aggregate a box-opening log (each record = ONE opening: { box, items:[{name,qty}] };
 // extra fields like id/at pass through untouched) into per-box stats: `opens`, and per
-// distinct item `times` (openings that contained it — drives the observed drop rate
+// distinct item `times` (openings that contained it, drives the observed drop rate
 // times/opens) + `totalQty` (avg qty when it hits = totalQty/times). Items sorted by
 // times desc, boxes by opens desc. Valuation is the CALLER's job (dropUnitValue at
-// render time — live prices, nothing frozen). Pure. SPEC §16.12.
+// render time, live prices, nothing frozen). Pure. SPEC §16.12.
 export function summarizeBoxes(records) {
   const byBox = new Map();
   for (const r of records || []) {
@@ -977,12 +977,12 @@ export function summarizeBoxes(records) {
     .sort((a, b) => b.opens - a.opens || a.box.toLowerCase().localeCompare(b.box.toLowerCase()));
 }
 
-// Expected value per open, per box, from the opening log — what one more open of this box is
+// Expected value per open, per box, from the opening log, what one more open of this box is
 // worth. `unitValue(name)` prices a payout item (caller passes dropUnitValue over live prices;
 // the Gold pseudo-item is worth 1). ev = Σ(unit × totalQty) / opens over the PRICED payouts;
 // null when nothing priced. `unpricedItems` counts the distinct payouts the EV had to skip
 // (surfaced so an undercounting EV is visible). Feeds the synthetic price injection (a logged
-// box then values like any drop — SPEC §16.12) and the Items-tab RNG rows. Pure.
+// box then values like any drop. SPEC §16.12) and the Items-tab RNG rows. Pure.
 export function boxExpectedValues(records, unitValue) {
   return summarizeBoxes(records).map((b) => {
     let v = 0, any = false, unpriced = 0;
@@ -995,28 +995,28 @@ export function boxExpectedValues(records, unitValue) {
   });
 }
 
-// ── GIF frame stitching (SPEC §16.8) ───────────────────────────────────────────
+// GIF frame stitching (SPEC §16.8)
 // A GIF of the SYSTEM chat log is a SCROLLING capture: the earliest frame is the top of the log and
 // each later frame has scrolled down, so consecutive frames overlap heavily (frame N's bottom lines
 // reappear at frame N+1's top, shifted up, with only a line or two of genuinely-new text at the
 // bottom). We reconstruct the full ordered log by OVERLAP-STITCHING: align each new frame's head
 // against the tail of what we've accumulated and append only the non-overlapping remainder. Each
-// message is then counted EXACTLY ONCE — unlike the old per-frame-max clustering, which (a) split a
+// message is then counted EXACTLY ONCE, unlike the old per-frame-max clustering, which (a) split a
 // line whose "× N" count jittered between frames into two counted buckets (overcount) and (b) capped
 // a repeated-line block at the most visible in any single frame (undercount). `frames` = array of
 // per-frame line arrays IN SCROLL ORDER; returns one merged line array to feed parseDrops. Pure.
-// KNOWN LIMIT (unfixable from text alone — CONFIRMED): a run of TRULY IDENTICAL lines (e.g. many
+// KNOWN LIMIT (unfixable from text alone. CONFIRMED): a run of TRULY IDENTICAL lines (e.g. many
 // "obtained [Uaithne Remnant]." in a row) that fills the ENTIRE visible window is inherently
-// ambiguous — with no distinct line to anchor the scroll offset, an all-identical window that
+// ambiguous, with no distinct line to anchor the scroll offset, an all-identical window that
 // scrolled by K lines is indistinguishable from a static one, so a block longer than the window can
 // undercount by the overflow. A partial identical block bounded by ANY distinct line above or below
 // IS resolved correctly (the anchor fixes the offset). The pixels do keep scrolling through such a
-// block, but this stitch is deliberately engine-agnostic (pure text — no frame images), so that
+// block, but this stitch is deliberately engine-agnostic (pure text, no frame images), so that
 // signal isn't available here; inferring K from an assumed scroll velocity would risk OVER-counting
 // (reviving the old N× bug), a worse failure than the mild, bounded undercount. Left as-is. Far
 // milder than the old per-frame-max summing.
 const normLine = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
-// Item-quality modifier words OCR intermittently drops mid-scroll — "Enhanced New Era Ore"
+// Item-quality modifier words OCR intermittently drops mid-scroll, "Enhanced New Era Ore"
 // read as plain "New Era Ore" in one frame. Ignored ONLY when TESTING whether two frames show
 // the same message, so the two reads align and the fuller (Enhanced) one is kept; the stored
 // text is untouched, and an all-frames-drop-it read stays plain (SPEC §16.8). The whole-word
@@ -1058,7 +1058,7 @@ export function mergeGifFrameLines(frames, { fuzz = 0.14 } = {}) {
     const overlap = bestScore > 0 ? bestL : 0; // no positive match → a jump/scene change; append all
     // Keep the fuller read for overlapping lines. NO sameLine gate here: the alignment already
     // decided these slots are the same message, and the case that matters is exactly the one
-    // sameLine can't pass — a line caught mid-scroll at a frame's bottom edge enters acc as an
+    // sameLine can't pass, a line caught mid-scroll at a frame's bottom edge enters acc as an
     // extreme garble ("SYSTEM Eraorblx3"), then the next frame reads it cleanly; the clean read
     // must win or the message is lost. Length asymmetry keeps this safe both ways: a clipped
     // TOP-edge read in the new frame is short → loses to acc's full line.
@@ -1071,13 +1071,13 @@ export function mergeGifFrameLines(frames, { fuzz = 0.14 } = {}) {
   return acc || [];
 }
 
-// ── run history & profit tracking (SPEC §16.8) ────────────────────────────────
+// run history & profit tracking (SPEC §16.8)
 // A saved run freezes a drop tally's value at save time (prices drift), while keeping
-// name+qty so a view can still recompute "value at today's prices". All pure — the UI
+// name+qty so a view can still recompute "value at today's prices". All pure, the UI
 // snapshots the session `dropStore` + character/raid/timer meta through these.
 
 // Build one run record from a drop tally. `items` = [[name, qty, source]…] (dropStore.items
-// entries; names already canonical; source = core-source key, defaults "base" — SPEC §16.9).
+// entries; names already canonical; source = core-source key, defaults "base". SPEC §16.9).
 // Each drop's `unit` is the rolling-avg price at save (null if unpriced → contributes null
 // value, not counted in the total). `luck` = the character's Luck stat at save time (null =
 // unrecorded), frozen so luck-core yield can be tallied per luck level later.
@@ -1094,7 +1094,7 @@ export function makeRunRecord({ items = [], gold = 0, prices = {}, character = "
   };
   const { drops, itemsValue } = priceDrops(items);
   // Party members' drops (SPEC §16.11): same [name, qty, source] triples, valued at the same
-  // snapshot prices. Their gold is NOT recorded — the pooled analysis assumes each member
+  // snapshot prices. Their gold is NOT recorded, the pooled analysis assumes each member
   // earned what the player did. An actor with no items still rides along (counts to partySize).
   const partyOut = (party || []).map((m) => {
     const p = priceDrops(m.items || []);
@@ -1103,7 +1103,7 @@ export function makeRunRecord({ items = [], gold = 0, prices = {}, character = "
   const g = Number(gold) || 0;
   return {
     id: id || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`),
-    name: String(name || "").trim() || `${raid || "Run"}`, // date lives in its own column — don't repeat it here
+    name: String(name || "").trim() || `${raid || "Run"}`, // date lives in its own column, don't repeat it here
     character: String(character || "").trim(),
     raid: String(raid || ""),
     mode: mode === "Hero" ? "Hero" : "Normal", // Hero = doubled HP + doubled drops; still ONE run
@@ -1114,13 +1114,13 @@ export function makeRunRecord({ items = [], gold = 0, prices = {}, character = "
     durationSec: durationSec == null ? null : Math.max(0, Math.round(durationSec)),
     gold: g,
     itemsValue,
-    total: itemsValue + g, // SELF-ONLY — the profit log means "what I made"; pooled value lives in summarizeRuns
+    total: itemsValue + g, // SELF-ONLY, the profit log means "what I made"; pooled value lives in summarizeRuns
     drops,
     ...(partyOut.length ? { party: partyOut, partySize: 1 + partyOut.length } : {}),
   };
 }
 
-// A drop is JUNK when its name contains any user-curated junk substring (case-insensitive) —
+// A drop is JUNK when its name contains any user-curated junk substring (case-insensitive):
 // untradeable buff drops (Waking Stones), event Seals, etc. Junk is filtered from the tally +
 // value and never fuzzy-matched to a priced item. `junk` = array of lowercased substrings.
 export function isJunk(name, junk = []) {
@@ -1133,7 +1133,7 @@ export function isJunk(name, junk = []) {
 
 // Which mode(s) a raid offers, and the default to preselect. A raid NAME containing
 // "hero"/"normal" is a single fixed mode (those are separately-listed variants where hero
-// changes the requirements — no toggle). Otherwise a raid with a Hero version offers both
+// changes the requirements, no toggle). Otherwise a raid with a Hero version offers both
 // and defaults to Hero (it's usually the faster farm); one without offers Normal only. No
 // raid selected → both offered, default Normal (availability unknown).
 export function raidModeOptions(raidName, hasHero) {
@@ -1178,7 +1178,7 @@ export function summarizeRuns(runs = []) {
   const total = base();
   const perRaid = {}, perCharacter = {};
   // Pooled per-player value (SPEC §16.11): items pooled across the whole party ÷ party size,
-  // plus the player's own gold (incl. live reward/core/level bonuses = total − itemsValue —
+  // plus the player's own gold (incl. live reward/core/level bonuses = total − itemsValue;
   // party gold is assumed equal, per design). A partyless run pools to its own total, so the
   // pooled average stays comparable across mixed histories while converging partySize× faster.
   // A ×N party run counts as N SAMPLES in the pooled view: `pooledCount` sums party sizes and
@@ -1195,7 +1195,7 @@ export function summarizeRuns(runs = []) {
     const size = r.partySize > 1 ? r.partySize : 1;
     const pv = pooled(r);
     const raidB = (perRaid[r.raid || "—"] ??= base());
-    // Per-raid Hero/Normal split (a Hero clear is still ONE run — this lets the By-raid view
+    // Per-raid Hero/Normal split (a Hero clear is still ONE run, this lets the By-raid view
     // list the two modes as separate rows, since Hero doubles drops but takes longer).
     const mode = r.mode === "Hero" ? "Hero" : "Normal";
     const mb = ((raidB.byMode ??= {})[mode] ??= base());
@@ -1218,7 +1218,7 @@ export function summarizeRuns(runs = []) {
   return {
     count: total.count,
     totalValue: total.value,
-    pooledCount: total.pooledCount,          // Σ party sizes — every player's run is a sample (SPEC §16.11)
+    pooledCount: total.pooledCount,          // Σ party sizes, every player's run is a sample (SPEC §16.11)
     totalPooledValue: total.pooledTotalValue, // Σ every player's assumed haul (pv × size)
     totalGold: total.gold,
     totalDurationSec: total.durationSec,
@@ -1232,29 +1232,29 @@ export function summarizeRuns(runs = []) {
   };
 }
 
-// ── core-source analysis (SPEC §16.9) ─────────────────────────────────────────
+// core-source analysis (SPEC §16.9)
 // Aggregate WHERE cores came from across saved runs, to answer "is each drop buff worth
 // its cost". Only runs whose drops ALL carry a `source` are analyzed (records saved before
-// source tracking exist but can't be attributed — they count in `runCount` only). Values
+// source tracking exist but can't be attributed, they count in `runCount` only). Values
 // are the runs' frozen save-time drop values (d.value; unpriced drops count cores, add 0).
 //
-// Costs are the CALLER's (config constants / live tracker prices) — this stays pure:
-//   campfireCost — gold per run (the buff is per-battle; tag presence ⇒ it was bought)
-//   vvipCost / cadetCost — gold per 30 days
-//   plusUSD — real-money price of Core Boost Plus (reported as gold-per-dollar, not a verdict)
+// Costs are the CALLER's (config constants / live tracker prices). This stays pure:
+//   campfireCost, gold per run (the buff is per-battle; tag presence ⇒ it was bought)
+//   vvipCost / cadetCost, gold per 30 days
+//   plusUSD, real-money price of Core Boost Plus (reported as gold-per-dollar, not a verdict)
 //
 // TWO separate readings (the user's design): CONTRIBUTION = what each buff's tagged cores were
 // actually worth (sources/campfire/vvip/plus/luck). WORTH-IT = EV-based: the marginal value of
 // one extra core at a raid ≈ that raid+mode's AVERAGE core value (common cores are cheap; rare
-// spikes carry the EV — a buff is worth it if avgCore beats its per-core cost, regardless of
+// spikes carry the EV, a buff is worth it if avgCore beats its per-core cost, regardless of
 // which items happened to carry the tag). Campfire's verdict is per raid+mode (`avgCore` on each
 // bucket vs campfireCost); VVIP (+1 core EVERY run) and Plus (+3 cores per BOOSTED run) aggregate
 // in `ev` across the window's runs.
 // `pooled` (SPEC §16.11): also fold every party member's tagged cores into the core-VALUE sample
-// — `perRaidMode` cores/value (→ a far larger, more reliable `avgCore`, which prices the worth-it
+//, `perRaidMode` cores/value (→ a far larger, more reliable `avgCore`, which prices the worth-it
 // EV) and the `sources` contribution cores/value (→ how much each buff yields at party scale).
 // Deliberately NOT pooled: `runsWith`, campfire spend, VVIP/Plus boost counts, and luck-by-level
-// — those are the PLAYER's own spend/luck (party members' costs + Luck stat are unknown), so the
+//, those are the PLAYER's own spend/luck (party members' costs + Luck stat are unknown), so the
 // worth-it decision stays anchored to your runs while the EV estimate benefits from everyone's
 // cores. Returns { runCount, trackedCount, sources, perRaidMode, campfire, vvip, plus, luck, ev }.
 export function summarizeCoreSources(runs = [], { now = new Date(), windowDays = 30, campfireCost = 65000, vvipCost = null, cadetCost = null, plusUSD = 19, pooled = false } = {}) {
@@ -1286,14 +1286,14 @@ export function summarizeCoreSources(runs = [], { now = new Date(), windowDays =
       if (!s.cores) continue;
       for (const b of [sources[src], rm.sources[src]]) { b.cores += s.cores; b.value += s.value; b.runsWith++; }
     }
-    // Luck yield per luck level (probabilistic 2nd+ cores — the data derives the odds).
+    // Luck yield per luck level (probabilistic 2nd+ cores, the data derives the odds).
     if (r.luck == null) luckUnrecorded++;
     else {
       const lb = (luckByLevel[r.luck] ??= { runs: 0, cores: 0, value: 0 });
       lb.runs++; lb.cores += runSrc.luck.cores; lb.value += runSrc.luck.value;
     }
     // Plus boost efficiency: every character gets 10 core boosts/day (free, sub or not);
-    // a boosted Hero run is believed to spend 2 of them, Normal 1 — the split lets the data
+    // a boosted Hero run is believed to spend 2 of them, Normal 1, the split lets the data
     // confirm. Only runs that actually yielded Plus cores count (a boosted run without the
     // sub proves nothing).
     if (r.coreBoost && runSrc.plus.cores > 0) {
@@ -1301,7 +1301,7 @@ export function summarizeCoreSources(runs = [], { now = new Date(), windowDays =
       pb.runs++; pb.boosts += mode === "Hero" ? 2 : 1; pb.cores += runSrc.plus.cores; pb.value += runSrc.plus.value;
     }
     // Pooled: add party members' tagged cores to the VALUE sample only (avgCore + contribution
-    // cores/value), never runsWith/luck/tokens (those stay the player's own — see header note).
+    // cores/value), never runsWith/luck/tokens (those stay the player's own, see header note).
     if (pooled) {
       for (const m of r.party || []) {
         for (const d of m.drops || []) {
@@ -1314,10 +1314,10 @@ export function summarizeCoreSources(runs = [], { now = new Date(), windowDays =
     }
   }
 
-  // Average core value per raid+mode bucket — the EV of one marginal core there.
+  // Average core value per raid+mode bucket, the EV of one marginal core there.
   for (const rm of Object.values(perRaidMode)) rm.avgCore = rm.cores > 0 ? rm.value / rm.cores : null;
   // EV worth-it aggregates: VVIP adds 1 core to EVERY run; Plus adds 3 to every BOOSTED run
-  // (whether or not the sub was active that run — this answers "would it be worth buying").
+  // (whether or not the sub was active that run, this answers "would it be worth buying").
   const ev = {
     vvip: { runs: 0, value: 0, cost: vvipCost, net: null },
     plus: { runs: 0, boosts: 0, value: 0, valuePerBoost: null, usd: plusUSD, goldPerUsd: null },
@@ -1380,7 +1380,7 @@ export function runsToTSV(runs = []) {
 
 const tsvCell = (s) => String(s).replace(/[\t\n]/g, " ");
 
-// ── price store (accumulates across screenshots) ──────────────────────────────
+// price store (accumulates across screenshots)
 
 // Outlier rejection: with ≥2 prices all ≥ 5M, drop any > 5× the median so one absurd
 // listing can't inflate the average. If everything would be filtered, keep the original.
