@@ -457,6 +457,27 @@
     /* ── Gear Builder ── */
     #builderPanel, #scannerPanel, #checklistPanel, #plannerPanel { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
       padding: 14px 16px; margin: 0; max-width: 1040px; }
+    /* Appraiser: the panel goes chromeless — each tool (composer / extraction rune) is its own
+       stand-alone section card, styled like the Tracker panel box. */
+    #builderPanel { background: none; border: none; padding: 0; }
+    .appr-section { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+    .appr-section + .appr-section { margin-top: 16px; }
+    /* Base-item picker: planner-style type-to-find search (click a row to compose it). */
+    .appr-search { max-width: 560px; }
+    .appr-search input { width: 100%; box-sizing: border-box; padding: 8px 10px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 6px; color: var(--fg); font-size: 13px; }
+    .appr-search input:focus { outline: none; border-color: var(--accent); }
+    .appr-qa-results { margin-top: 6px; display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
+    .appr-qa-row { display: flex; gap: 10px; align-items: baseline; padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+    .appr-qa-row:hover, .appr-qa-row.active { background: var(--surface); }
+    .appr-qa-row.active { box-shadow: inset 0 0 0 1px var(--accent); }
+    .appr-qa-name { color: var(--fg); flex: 1 1 auto; }
+    .appr-qa-slot { color: var(--fg-dim); flex: 0 0 auto; }
+    .appr-pick { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; flex-wrap: wrap; }
+    .appr-pick b { color: var(--head); font-size: 13px; }
+    /* Vs-equipped slot picker (rings): themed like the .bform selects above it. */
+    .appr-slot-sel { margin-left: 8px; padding: 3px 6px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--fg); font-size: 12px; font-weight: 400; }
     #plannerPanel { max-width: 1600px; } /* the two-column plan body (list + sticky materials) earns more room */
     #builderPanel h3, #scannerPanel h3, #checklistPanel h3, #plannerPanel h3 { margin: 0 0 4px; font-size: 14px; color: var(--head); }
     #builderPanel .hint, #scannerPanel .hint, #checklistPanel .hint, #plannerPanel .hint { color: var(--fg-dim); font-size: 12px; margin: 0 0 12px; }
@@ -5890,7 +5911,14 @@
       const row = accessories?.brackets?.[bracket]?.find((e) => e.level === level);
       return row ? { att: row.att || 0, defPen: row.defPen || 0 } : {};
     };
-    let bState = { base: "", prefix: "", suffix: "", level: 0, market: "" };
+    let bState = { base: "", prefix: "", suffix: "", level: 0, market: "", cmpSlot: "" };
+    let bQuery = "";       // composer base-item search text
+    let bShown = [];       // currently-listed search matches, indexed by data-appr-pick
+    let bActive = -1;      // keyboard-highlighted row in the search list (−1 = none)
+    let bQueryFocus = false; // one-shot: refocus the search input after the next full render
+
+    // Candidate loadout slots this item could replace (its slotIds, in sidebar order).
+    const apprCmpSlots = (item) => SIDEBAR_SLOT_ORDER.filter((s) => item.slotIds.includes(s));
 
     function builderOutput(item, enhanceable) {
       const pe = bState.prefix ? enchants[bState.prefix] : null;
@@ -5899,6 +5927,28 @@
       const total = addStats2(addStats2(addStats2(item.stats, enhStats), pe ? pe.stats : {}), se ? se.stats : {});
       const pts = score(total);
 
+      // Compare against YOUR equipped piece in the matching slot (SPEC §2 scored stats):
+      // the interesting number is the DELTA, not the item's raw line. Items that fit two
+      // slots (rings) get a picker; default = the weaker equipped slot (the one you'd replace).
+      // Infusion is excluded from the comparison: it lives on YOUR item and isn't part of a
+      // marketplace listing, so an identical piece must read as an even trade. Noted when present.
+      const cmpSlots = apprCmpSlots(item);
+      const eqCmpStats = (s) => { const e = loadout[s] ? { ...loadout[s], infusion: null } : null; return slotStats(e); };
+      if (!cmpSlots.includes(bState.cmpSlot))
+        bState.cmpSlot = cmpSlots.slice().sort((a, b) => score(eqCmpStats(a)) - score(eqCmpStats(b)))[0] || "";
+      const eq = bState.cmpSlot ? loadout[bState.cmpSlot] : null;
+      const eqStats = eqCmpStats(bState.cmpSlot);
+      const eqPts = score(eqStats);
+      const delta = statDelta(total, eqStats);
+      const dPts = pts - eqPts;
+      const eqLabel = eq?.base ? `${eq.enhance?.level ? `+${eq.enhance.level} ` : ""}${eq.base}` : "(empty slot)";
+      const slotPick = cmpSlots.length > 1
+        ? `<select data-b="cmpslot" class="appr-slot-sel">${cmpSlots.map((s) =>
+            `<option value="${s}" ${s === bState.cmpSlot ? "selected" : ""}>${planSlotLabel(s)}</option>`).join("")}</select>`
+        : "";
+      const infNote = eq?.infusion?.stat && eq.infusion.amount
+        ? `<div class="muted" style="font-size:11px;margin-top:2px">Your +${eq.infusion.amount} ${STAT_LABEL[eq.infusion.stat] || eq.infusion.stat} infusion is excluded</div>`
+        : "";
       const baseCost = cost(item.name);
       const pc = pe ? enchantCost(pe, prices) : { gold: 0 };
       const sc = se ? enchantCost(se, prices) : { gold: 0 };
@@ -5916,6 +5966,19 @@
         `<div class="k">${k}</div><div class="v gold">${v == null ? `<span class="muted">unpriced</span>` : fmt(v)}</div>`).join("");
 
       const market = bState.market === "" ? null : parseFloat(bState.market);
+
+      // Gold per point gained, at the CHEAPER acquisition price (listing vs DIY) — the same
+      // gold-per-point currency the Upgrades tab ranks by. Only meaningful on a point GAIN.
+      const acq = Math.min(market != null && !Number.isNaN(market) ? market : Infinity, diy ?? Infinity);
+      const goldPerPt = Number.isFinite(acq) && dPts > 0 ? acq / dPts : null;
+      const vsRows = bState.cmpSlot ? `
+        <h4 style="margin:12px 0 4px;font-size:12px;color:var(--head)">Vs your ${planSlotLabel(bState.cmpSlot)} — ${escTxt(eqLabel)}${slotPick}</h4>
+        <div class="row">
+          <div class="k">Stat change</div><div class="v pts">${diffLine(delta)}</div>
+          <div class="k">Point change</div><div class="v pts"><span class="${dPts >= 0 ? "pos" : "neg"}">${sfmt(dPts)}</span> <span class="muted">(${fmt(eqPts)} → ${fmt(pts)})</span></div>
+          <div class="k">Gold / point</div><div class="v gold">${goldPerPt != null ? fmt(goldPerPt) : `<span class="muted">${dPts > 0 ? "— unpriced —" : "— no point gain —"}</span>`}</div>
+        </div>${infNote}` : "";
+
       let cmp = "";
       if (market != null && !Number.isNaN(market) && diy != null) {
         cmp = market < diy
@@ -5925,9 +5988,13 @@
           : `<div class="cmp">Same price either way (${fmt(diy)}).</div>`;
       }
 
+      // The raw item stat line + points duplicate the vs-equipped block (its delta + the
+      // "old → new" points already carry them) — show the absolutes only when there's no
+      // equipped piece to compare against.
       return `<div class="boutput">
+        ${vsRows || `
         <div class="row"><div class="k">Stats</div><div class="v pts">${statLine(total)}</div></div>
-        <div class="row"><div class="k">Ranking points</div><div class="v pts">${fmt(pts)}</div></div>
+        <div class="row"><div class="k">Ranking points</div><div class="v pts">${fmt(pts)}</div></div>`}
         <h4 style="margin:12px 0 4px;font-size:12px;color:var(--head)">DIY cost</h4>
         <div class="row">${termRows}
           <div class="k" style="border-top:1px solid var(--border);padding-top:3px;margin-top:3px">Total (build yourself)</div>
@@ -5947,7 +6014,8 @@
     // those are editable here (seeded from the loadout slot, then overridable for what-ifs).
     // `seededFor` tracks the slot the current tuning/prefix/suffix were seeded from → reseed
     // on slot switch, keep edits sticky otherwise.
-    let xState = { slot: "weapon", tuning: {}, prefix: "", suffix: "", seededFor: null };
+    // No default slot — the tool stays neutral (no pre-highlighted verdict) until the user picks.
+    let xState = { slot: "", tuning: {}, prefix: "", suffix: "", seededFor: null };
 
     // Seed the editable tuning amounts + enchants from a loadout slot, defaulting each of the
     // DESTINATION's tunable stats to whatever that slot is tuned to today (you re-tune to the
@@ -6000,20 +6068,24 @@
     }
 
     function extractionToolHTML() {
-      const slotOpts = XTUNE_SLOTS.filter((s) => loadout[s])
-        .map((s) => `<option value="${s}" ${s === xState.slot ? "selected" : ""}>${s}</option>`).join("");
-      const dests = xDestOptions(xState.slot);
+      // No preselected slot: a "Choose a slot…" placeholder leads until the user commits,
+      // so no verdict/highlight shows by default.
+      const slotOpts = `<option value="" ${!xState.slot ? "selected" : ""}>Choose a slot…</option>` +
+        XTUNE_SLOTS.filter((s) => loadout[s])
+          .map((s) => `<option value="${s}" ${s === xState.slot ? "selected" : ""}>${planSlotLabel(s)}</option>`).join("");
+      const dests = xState.slot ? xDestOptions(xState.slot) : [];
       const dest = dests[0] || "";   // single immediate-next-system jump (per-rune scope)
       const lo = loadout[xState.slot] || {};
 
-      const head = `<hr style="border:none;border-top:1px solid var(--border);margin:34px 0 22px">
-        <h3 style="margin-top:0">Extraction rune — worth it?</h3>
-        <p class="hint">A system jump wipes your ENCHANTS and your base-stat tuning (only Destruction
-          carries; tuning can't be saved). A rune carries the enchants across — worth it only if it
-          beats re-enchanting the piece.</p>`;
+      const head = `<h3>Extraction Rune</h3>
+        <p class="hint">When jumping systems aka uaithne→eriu, your enchants are wiped. This calculates
+          if it is cheaper to buy an extraction rune or reenchant. Enchant price is the min of spamming
+          until success, using 4 scraps, or using a exquisite enchant rune.</p>`;
+
+      if (!xState.slot) return head + `<div class="bform"><label>Slot</label><select data-x="slot">${slotOpts}</select></div>`;
 
       if (!dest) return head + `<div class="bform"><label>Slot</label><select data-x="slot">${slotOpts}</select></div>
-        <p class="hint muted">No system-jump destination for this slot's base (${lo.base || "—"}) — already at the top system.</p>`;
+        <p class="hint muted">No further upgrades for this slot until further game updates.</p>`;
 
       // Seed enchants from the loadout when the slot changes (tuning no longer affects the verdict).
       if (xState.seededFor !== xState.slot) xSeed(xState.slot, dest);
@@ -6054,8 +6126,7 @@
         ${enchLine}
       </div>`;
       const runeBox = `<div class="wipe-opt${runeWon ? " wipe-win" : ""}">
-        <div class="wipe-opt-head"><span><b>Buy an extraction rune</b>${runeWon ? `<span class="wipe-opt-tag">✓ cheaper</span>` : ""}</span><span class="v gold${runeWon ? " best" : ""}">${cell(r.runeCost)}</span></div>
-        <div class="sub">Carries your enchants across the jump. (Base-stat tuning is wiped either way — the rune can't save it.)</div>
+        <div class="wipe-opt-head"><span><b>Buy Extraction Rune</b>${runeWon ? `<span class="wipe-opt-tag">✓ cheaper</span>` : ""}</span><span class="v gold${runeWon ? " best" : ""}">${cell(r.runeCost)}</span></div>
         ${r.runeCost != null ? `<div class="mats">${matLi(EXTRACTION_RUNE_NAME, 1)}</div>` : ""}
       </div>`;
 
@@ -6066,6 +6137,24 @@
       return head + form + `<div class="boutput">${verdict}${enchBox}${runeBox}
         ${notes.length ? `<p class="hint" style="margin-top:8px">${notes.join("<br>")}</p>` : ""}
       </div>`;
+    }
+
+    // The filtered base-item search rows (re-rendered alone on each keystroke so the input
+    // keeps focus/caret — same trick as the Planner quick-add). Clicking a row composes it
+    // IMMEDIATELY; no Enter needed.
+    function apprSearchResults() {
+      if (!bQuery.trim()) { bShown = []; return ""; }
+      const cands = items.map((it) => ({
+        name: it.name, label: it.name,
+        slots: it.slotIds.map(planSlotLabel).join(", "),
+        search: `${it.name} ${it.slotIds.map(planSlotLabel).join(" ")}`,
+        value: score(it.stats),
+      }));
+      bShown = quickAddFilter(cands, bQuery, 14);
+      if (!bShown.length) return `<div class="muted" style="font-size:12px;padding:6px 2px">No matches — try another word.</div>`;
+      if (bActive >= bShown.length) bActive = bShown.length - 1; // list shrank under the cursor
+      return bShown.map((c, i) =>
+        `<div class="appr-qa-row${i === bActive ? " active" : ""}" data-appr-pick="${i}" title="Appraise this item"><span class="appr-qa-name">${escTxt(c.name)}</span><span class="appr-qa-slot">${escTxt(c.slots)}</span></div>`).join("");
     }
 
     function renderBuilder() {
@@ -6081,29 +6170,47 @@
       if (!enhanceable) bState.level = 0;
 
       const esc = (s) => s.replace(/"/g, "&quot;");
-      // Base field is an autocomplete (type a few letters to filter), not a long select.
-      // The option's value === its label (the item name) so browsers that filter datalist by
-      // the LABEL (Chrome) and by the VALUE (Firefox) both match what the user types.
-      const baseList = items.slice()
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((it) => `<option value="${esc(it.name)}"></option>`).join("");
       const enchOpt = (list, curScroll) => `<option value="">(none)</option>` +
         list.slice().sort((a, b) => score(b.stats) - score(a.stats))
           .map((e) => `<option value="${esc(e.scroll)}" ${e.scroll === curScroll ? "selected" : ""}>${shortScroll(e.scroll)} (${fmt(score(e.stats))} pts)</option>`).join("");
 
-      const form = `<div class="bform">
-        <label>Base</label><input type="text" list="baseList" data-b="base" value="${esc(bState.base)}" placeholder="type to search a market item…" autocomplete="off" />
-        <datalist id="baseList">${baseList}</datalist>
-        ${item ? `<label>Prefix</label><select data-b="prefix">${enchOpt(prefixOpts, bState.prefix)}</select>
+      // Base picked → a chip with a "change" button; not picked → the type-to-find search.
+      const picker = item
+        ? `<div class="appr-pick"><b>${escTxt(item.name)}</b><span class="muted" style="font-size:12px">${item.slotIds.map(planSlotLabel).join(", ")}</span><button class="plan-ghost" data-appr-change>Change item…</button></div>`
+        : `<div class="appr-search">
+            <input type="text" data-appr-q placeholder="Search a marketplace item — name or slot…" value="${esc(bQuery)}" autocomplete="off" spellcheck="false">
+            <div class="appr-qa-results" id="apprQaResults">${apprSearchResults()}</div>
+          </div>`;
+
+      const form = item ? `<div class="bform">
+        <label>Prefix</label><select data-b="prefix">${enchOpt(prefixOpts, bState.prefix)}</select>
         <label>Suffix</label><select data-b="suffix">${enchOpt(suffixOpts, bState.suffix)}</select>
         ${enhanceable ? `<label>Enhance +</label><input type="number" data-b="level" min="0" max="20" value="${bState.level}">` : ""}
-        <label>Market price</label><input type="number" data-b="market" placeholder="optional — to compare" value="${bState.market}">` : ""}
-      </div>`;
+        <label>Market price</label><input type="number" data-b="market" placeholder="optional — to compare" value="${bState.market}">
+      </div>` : "";
 
-      builderPanel.innerHTML = `<h3>Appraiser</h3>
-        <p class="hint">Compose a marketplace piece — see what it would cost to build yourself and its point value. Enter the listing price to compare buying it pre-built vs DIY.</p>
-        ${form}${item ? builderOutput(item, enhanceable) : ""}
-        ${extractionToolHTML()}`;
+      // Search keyboard shortcuts — a "?" hover popover next to the heading, styled like the
+      // Planner's (SPEC §17.14).
+      const kbdRow = (keys, desc) =>
+        `<span class="keys">${keys.map((k) => `<kbd>${k}</kbd>`).join("")}</span><span>${desc}</span>`;
+      const kbdHelp = `<span class="plan-kbd-wrap"><span class="help-icon" tabindex="0" title="Keyboard shortcuts">?</span>` +
+        `<div class="plan-kbd-pop"><div class="plan-kbd-h">Search (this tab)</div><div class="plan-kbd-grid">` +
+        kbdRow(["↑", "↓"], "move through the results") +
+        kbdRow(["Tab"], "next result (Shift+Tab: previous)") +
+        kbdRow(["Enter"], "appraise the highlighted item") +
+        kbdRow(["Esc"], "clear the highlight") +
+        `</div></div></span>`;
+
+      builderPanel.innerHTML = `<div class="appr-section">
+        <h3 style="display:inline-flex;align-items:center;gap:7px">Appraiser${kbdHelp}</h3>
+        <p class="hint">This calculator compares the price of a marketplace item to the cost of building it yourself.</p>
+        ${picker}${form}${item ? builderOutput(item, enhanceable) : ""}
+      </div>
+      <div class="appr-section">
+        ${extractionToolHTML()}
+      </div>`;
+      // One-shot focus: keep typing after a keystroke-triggered full render (e.g. Change item…).
+      if (!item && bQueryFocus) { const q = builderPanel.querySelector("[data-appr-q]"); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } bQueryFocus = false; }
     }
 
     builderPanel.addEventListener("change", (e) => {
@@ -6119,11 +6226,65 @@
         renderBuilder(); return;
       }
       const k = t.dataset.b; if (!k) return;
-      if (k === "base") { bState.base = t.value; bState.level = 0; }
-      else if (k === "level") bState.level = Math.max(0, Math.min(20, parseInt(t.value) || 0));
+      if (k === "level") bState.level = Math.max(0, Math.min(20, parseInt(t.value) || 0));
       else if (k === "market") bState.market = t.value;
+      else if (k === "cmpslot") bState.cmpSlot = t.value; // vs-equipped slot picker (rings)
       else bState[k] = t.value;
       renderBuilder();
+    });
+    // Base-item search: filter on every keystroke (results list re-rendered ALONE so the
+    // input keeps focus/caret — a full renderBuilder would destroy it mid-word).
+    builderPanel.addEventListener("input", (e) => {
+      if (!e.target.closest("[data-appr-q]")) return;
+      bQuery = e.target.value;
+      bActive = -1;                                    // new query → clear the highlight
+      const box = builderPanel.querySelector("#apprQaResults");
+      if (box) box.innerHTML = apprSearchResults();
+    });
+    // Keyboard nav in the search box: ↓/↑ (or Tab/Shift+Tab) move the highlight through the
+    // list, Enter composes the highlighted row (or the top match if none), Escape clears it.
+    builderPanel.addEventListener("keydown", (e) => {
+      if (!e.target.closest("[data-appr-q]")) return;
+      if (e.key === "ArrowDown" || (e.key === "Tab" && !e.shiftKey && bShown.length)) {
+        e.preventDefault();
+        bActive = bShown.length ? (bActive + 1) % bShown.length : -1;
+        refreshApprResults();
+      } else if (e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey && bShown.length)) {
+        e.preventDefault();
+        bActive = bShown.length ? (bActive <= 0 ? bShown.length - 1 : bActive - 1) : -1;
+        refreshApprResults();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const pick = bShown[bActive >= 0 ? bActive : 0];
+        if (pick) apprPick(pick.name);
+      } else if (e.key === "Escape" && bActive >= 0) {
+        e.preventDefault();
+        bActive = -1;
+        refreshApprResults();
+      }
+    });
+    // Re-render just the results list + scroll the highlighted row into view (a full
+    // renderBuilder would blur the search input mid-keystroke).
+    function refreshApprResults() {
+      const box = builderPanel.querySelector("#apprQaResults");
+      if (!box) return;
+      box.innerHTML = apprSearchResults();
+      box.querySelector(".appr-qa-row.active")?.scrollIntoView({ block: "nearest" });
+    }
+    // Compose a picked item immediately: seed a fresh composition + default compare slot.
+    function apprPick(name) {
+      bState = { base: name, prefix: "", suffix: "", level: 0, market: "", cmpSlot: "" };
+      bQuery = ""; bActive = -1;
+      renderBuilder();
+    }
+    builderPanel.addEventListener("click", (e) => {
+      const row = e.target.closest("[data-appr-pick]");
+      if (row) { const c = bShown[Number(row.dataset.apprPick)]; if (c) apprPick(c.name); return; }
+      if (e.target.closest("[data-appr-change]")) {       // back to the search
+        bState = { base: "", prefix: "", suffix: "", level: 0, market: "", cmpSlot: "" };
+        bQuery = ""; bActive = -1; bQueryFocus = true;
+        renderBuilder();
+      }
     });
 
     // ── Scanner tab (SPEC §16): in-browser OCR of auction screenshots ──
