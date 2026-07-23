@@ -149,6 +149,8 @@
     .chg-count { color: var(--fg-dim); font-size: 11px; margin-left: auto; }
     .chg-rel[open] .chg-count { display: none; }
     .chg-notes { color: var(--fg-dim); font-size: 12px; margin: 4px 0 0; }
+    .chg-title { color: var(--fg); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chg-count { margin-left: auto; }
     .chg-rel ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
     .chg-rel li { margin: 3px 0; }
     /* Preset explainer (same modal chrome, narrower + a "what to do next" list). */
@@ -7652,8 +7654,7 @@
           // modal stays scannable once there are many of them.
           const n = (r.changes || []).length;
           return `<details class="chg-rel"${i === 0 ? " open" : ""}>
-          <summary><span class="chg-ver">v${escTxt(r.version)}</span><span class="chg-date">${escTxt(r.date || "")}</span><span class="chg-count">${n} change${n === 1 ? "" : "s"}</span></summary>
-          ${r.notes ? `<p class="chg-notes">${escTxt(r.notes)}</p>` : ""}
+          <summary><span class="chg-ver">v${escTxt(r.version)}</span><span class="chg-date">${escTxt(r.date || "")}</span>${r.notes ? `<span class="chg-title">${escTxt(r.notes)}</span>` : ""}<span class="chg-count">${n} change${n === 1 ? "" : "s"}</span></summary>
           <ul>${(r.changes || []).map((c) => `<li>${escTxt(c)}</li>`).join("")}</ul>
         </details>`;
         }).join("")}</div></div>`;

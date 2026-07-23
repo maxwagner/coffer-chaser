@@ -3,6 +3,19 @@
 // (index.html `renderChangelog`). Write entries in plain player language, not commit-speak.
 export const CHANGELOG = [
   {
+    version: "0.2",
+    date: "2026-07-23",
+    notes: "Added Esras; Changed initial gear/stats",
+    changes: [
+      "Added a new raid, Esras, and all the related items, recipes, etc.",
+      "First load now starts with empty equipment and stats.",
+      "New Character preset dropped temporary items and now has 0 stats.",
+      "Applying presets now opens a pop-up first to explain and verify.",
+      "Item information now automatically refreshes from the live spreadsheet.",
+      "Added this changelog: the version button in the header shows what's new.",
+    ],
+  },
+  {
     version: "0.1",
     date: "2026-07-21",
     notes: "First public build.",
