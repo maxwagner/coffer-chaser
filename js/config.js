@@ -20,24 +20,27 @@ export const RANKING_WEIGHTS = Object.freeze({
   defPen: 50,
 });
 
-// ── Current character totals (SPEC §2 fixture, as of the 2026-06-18 loadout) ──
+// ── Current character totals ─────────────────────────────────────────────────
 // Seeds Threshold mode's "current" column so absolute targets ("Crit ≥ 320")
 // compute a gap. The app can't fully DERIVE these from scratch (character base
 // stats / set bonuses / infusions aren't in the data), so they're a hand-entered
-// snapshot. The live totals are now editable in the SIDEBAR and persisted under
+// snapshot. The live totals are editable in the SIDEBAR and persisted under
 // CURRENT_STATS_STORAGE_KEY; editing a gear slot also applies that slot's stat
-// DELTA (old config → new config) on top of this seed. Update when the character
-// changes (or just edit in-app).
+// DELTA (old config → new config) on top of this seed.
+//
+// The SEED IS BLANK (all zero) — a first-time visitor starts with an empty
+// character, not someone else's stats. Fill it in via the sidebar, or apply a
+// GEAR_PRESETS kit (which brings its own stat snapshot).
 export const CURRENT_STATS = Object.freeze({
-  att: 61589,
-  def: 34731,
-  destruction: 7146,
-  addDmg: 7390,
-  crit: 300,
-  critRes: 274,
-  bal: 161,
-  attSpd: 84,
-  defPen: 340,
+  att: 0,
+  def: 0,
+  destruction: 0,
+  addDmg: 0,
+  crit: 0,
+  critRes: 0,
+  bal: 0,
+  attSpd: 0,
+  defPen: 0,
 });
 
 // ── Price feed (main pricing tab, one row per item, deduped from the log) ─────
@@ -538,40 +541,31 @@ export const WEEKLY_BOX_STORAGE_KEY = "vgu.weeklybox.v1";
 // "Complete <name>" variants — is time-gated/unpriceable, so it stays OUT of the
 // gold-per-point optimizer, informational flag only; see CLAUDE.md). Bracelets remain
 // out of scope.
+// The SEED IS BLANK — every slot empty (`{ base:null, prefix:null, suffix:null }`,
+// which still renders + stays editable). A first-time visitor should see their OWN
+// (empty) character, not a hardcoded one. Fill slots in via the sidebar editor, or
+// apply the GEAR_PRESETS starter kit below (which also seeds matching stat totals).
+// Note: with an empty weapon/armor slot the solver has no acquire move to offer for
+// that slot (base swaps exist only for accessories/specials, SPEC §6) — those slots
+// stay quiet until a base is set.
+const EMPTY_SLOT = Object.freeze({ prefix: null, suffix: null, base: null });
+
 export const LOADOUT = Object.freeze({
-  // ── Weapon ──
-  // base = current tier item (key into Items tab). The weapon is already in the
-  // Uaithne system (base tier, one step up); the armor is on the +12 Orna baseline
-  // (the default un-enhanced Orna piece) — one step BELOW Uaithne, whose first
-  // advance is a system jump that wipes enchants (auto-detected via the `+15 Orna`
-  // baseTier link) AND requires enhancing +12→+15 first (gearEnhanceCost, SPEC §12).
-  // `tuning` (SPEC §12): every NON-Destruction tunable stat is maxed by default (these
-  // base tunes are also the unlock gate), leaving the ATT Surplus / Destruction capstones
-  // at 0 — so the open decision the app surfaces is "is the expensive Destruction tune
-  // worth it?". Caps are per the Tuning tab for each slot's CURRENT base.
-  weapon:   { prefix: "Revenge Enchant Scroll",     suffix: "Enmity Enchant Scroll",    base: "Uaithne Weapon", tuning: { "ATT/M. ATT": 2000, BAL: 4, "CRIT RTE": 4 } },
-
-  // ── Armor (all on the +12 Orna baseline, one step below Uaithne — the first
-  // advance is a system jump that wipes enchants + enhances +12→+15; tierStep then
-  // climbs to Legendary) ──
-  helm:     { prefix: "Cool Enchant Scroll",         suffix: "Advance Enchant Scroll",   base: "+12 Orna Helm",      tuning: { DEF: 253, "CRIT RST": 3 } },
-  chest:    { prefix: "Dignified Enchant Scroll",    suffix: "Lament Enchant Scroll",    base: "+12 Orna Mail",      tuning: { DEF: 246, "CRIT RST": 5 } },
-  pant:     { prefix: "Cool Enchant Scroll",         suffix: "Advance Enchant Scroll",   base: "+12 Orna Greaves",   tuning: { DEF: 234, "CRIT RST": 7 } },
-  hand:     { prefix: "Stylish Enchant Scroll",      suffix: "Frenzy Enchant Scroll",    base: "+12 Orna Gauntlets", tuning: { DEF: 253, "CRIT RST": 3 } },
-  feet:     { prefix: "Sorrowful Enchant Scroll",    suffix: "Frenzy Enchant Scroll",    base: "+12 Orna Boots",     tuning: { DEF: 253, "CRIT RST": 3 } },
-
-  // ── Accessories ──
-  totem:    { prefix: "Sealed Enchant Scroll",       suffix: "Madness Enchant Scroll",   base: "The Book of Orna" },
-  earrings: { prefix: "Twisted Enchant Scroll",      suffix: "Passion Enchant Scroll",   base: "Dimensional Earrings",       enhance: { level: 20, bracket: 110 } },
-  necklace: { prefix: "Meaningful Enchant Scroll",   suffix: "Passion Enchant Scroll",   base: "Brilliant Kitty Necklace" },
-  belt:     { prefix: "Ancient Enchant Scroll",      suffix: "Irate Enchant Scroll",     base: "The Cursed Belt",            enhance: { level: 20, bracket: 120 } },
-  brooch:   { prefix: "Space Time Enchant Scroll",   suffix: "Passion Enchant Scroll",   base: "Gray Twilight Brooch" },
-  ring1:    { prefix: "The Dead Enchant Scroll",     suffix: "Wish Enchant Scroll",      base: "Fear of the Divide",         enhance: { level: 20, bracket: 110 } },
-  ring2:    { prefix: "Adversarial Enchant Scroll",  suffix: "Wish Enchant Scroll",      base: "Shrouded Shadow",            enhance: { level: 20, bracket: 115 } },
-
-  // ── Special (enchant-only; no enhance, no priced base swap) ──
-  artifact: { prefix: "Meaningful Enchant Scroll",   suffix: "Passion Enchant Scroll",   base: "Greater Mysterious Cat Statue" },
-  rhod:     { prefix: "Calm Enchant Scroll",         suffix: "Charging Enchant Scroll",  base: "Usurper's Rusty Rhod Compass" },
+  weapon:   { ...EMPTY_SLOT },
+  helm:     { ...EMPTY_SLOT },
+  chest:    { ...EMPTY_SLOT },
+  pant:     { ...EMPTY_SLOT },
+  hand:     { ...EMPTY_SLOT },
+  feet:     { ...EMPTY_SLOT },
+  totem:    { ...EMPTY_SLOT },
+  earrings: { ...EMPTY_SLOT },
+  necklace: { ...EMPTY_SLOT },
+  belt:     { ...EMPTY_SLOT },
+  brooch:   { ...EMPTY_SLOT },
+  ring1:    { ...EMPTY_SLOT },
+  ring2:    { ...EMPTY_SLOT },
+  artifact: { ...EMPTY_SLOT },
+  rhod:     { ...EMPTY_SLOT },
 });
 
 // localStorage key for the user's edited loadout (per-slot override of LOADOUT).
@@ -765,11 +759,12 @@ export const PREP_GOALS = [
 // character. Pure data — append more presets here as the game adds starter kits.
 //
 // The base kit: +12 Orna weapon + armor with their default enchants, the starter
-// accessories (belt/earrings/rings at +12), totem, and the free-30-day White Kitty
-// necklace + brooch — but artifact and rhod are EMPTY slots (base:null). No tuning on
-// anything. Stats seed a real fresh-character snapshot (the base-kit totals);
-// the player edits them after applying if their character differs. (An empty base slot is `{ base:null, prefix:null,
-// suffix:null }` so the slot still renders + stays editable.)
+// accessories (belt/earrings/rings at +12) and totem — necklace, brooch, artifact and
+// rhod are EMPTY slots (base:null). No tuning on anything. Stats seed to ZERO: the
+// totals include things the data can't model (character base stats by level, set
+// bonuses, infusions, buffs), so the kit ships no snapshot and the player enters their
+// own totals in the sidebar after applying. (An empty base slot is `{ base:null,
+// prefix:null, suffix:null }` so the slot still renders + stays editable.)
 const BASE_GEAR_LOADOUT = Object.freeze({
   weapon:   { prefix: "Chaotic Enchant Scroll",     suffix: "Spirited Enchant Scroll",  base: "+12 Orna Weapon" },
   helm:     { prefix: "Heartless Enchant Scroll",   suffix: "Capture Enchant Scroll",   base: "+12 Orna Helm" },
@@ -777,23 +772,33 @@ const BASE_GEAR_LOADOUT = Object.freeze({
   pant:     { prefix: "Heartless Enchant Scroll",   suffix: "Capture Enchant Scroll",   base: "+12 Orna Greaves" },
   hand:     { prefix: "Weeping Enchant Scroll",     suffix: "Soul Enchant Scroll",      base: "+12 Orna Gauntlets" },
   feet:     { prefix: "Weeping Enchant Scroll",     suffix: "Soul Enchant Scroll",      base: "+12 Orna Boots" },
-  totem:    { prefix: null,                         suffix: null,                       base: "The Book of Ardri" },
+  totem:    { prefix: null,                         suffix: null,                       base: "The Book of Legacy" },
   earrings: { prefix: "Significant Enchant Scroll", suffix: "Passion Enchant Scroll",   base: "Dimensional Earrings", enhance: { level: 12, bracket: 110 } },
   belt:     { prefix: "Petite Enchant Scroll",      suffix: "Passion Enchant Scroll",   base: "Dark Belt",            enhance: { level: 12, bracket: 110 } },
   ring1:    { prefix: "Sparkling Enchant Scroll",   suffix: "Berserker Enchant Scroll", base: "Rage of the Rift",     enhance: { level: 12, bracket: 110 } },
   ring2:    { prefix: "Sparkling Enchant Scroll",   suffix: "Passion Enchant Scroll",   base: "Fear of the Divide",   enhance: { level: 12, bracket: 110 } },
-  // White Kitty necklace + brooch: handed out free for 30 days to new characters.
-  necklace: { prefix: "Significant Enchant Scroll", suffix: "Passion Enchant Scroll",   base: "White Kitty Necklace" },
-  brooch:   { prefix: "Significant Enchant Scroll", suffix: "Passion Enchant Scroll",   base: "White Kitty Brooch" },
   // Empty slots (no gear equipped on a fresh character).
+  necklace: { prefix: null, suffix: null, base: null },
+  brooch:   { prefix: null, suffix: null, base: null },
   artifact: { prefix: null, suffix: null, base: null },
   rhod:     { prefix: null, suffix: null, base: null },
 });
 
+// `blurb` (optional) drives the post-apply explainer modal (same chrome as the
+// changelog popup): `goal` = what this template is for, `steps` = what to do next.
+// Plain strings, rendered escaped — no markup.
 export const GEAR_PRESETS = Object.freeze([
   { name: "New character — base +12 Orna", loadout: BASE_GEAR_LOADOUT, stats: {
-    att: 46775, def: 25561, crit: 211, critRes: 189, addDmg: 6000,
-    defPen: 176, bal: 97, attSpd: 60, destruction: 0,
+    att: 0, def: 0, crit: 0, critRes: 0, addDmg: 0,
+    defPen: 0, bal: 0, attSpd: 0, destruction: 0,
+  }, blurb: {
+    goal: "This preset applies a full new character setup after finishing leveling. "
+      + "It has a full +12 Orna, and the permanent accessories that come from the Lvl 115 box.",
+    steps: [
+      "The temporary accessories are excluded and have to be added manually.",
+      "Stats will also have to be added manually.",
+      "Visit the Checklist tab to tick off the one-time progression goals you've already completed.",
+    ],
   } },
 ]);
 

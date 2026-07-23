@@ -151,6 +151,22 @@
     .chg-notes { color: var(--fg-dim); font-size: 12px; margin: 4px 0 0; }
     .chg-rel ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
     .chg-rel li { margin: 3px 0; }
+    /* Preset explainer (same modal chrome, narrower + a "what to do next" list). */
+    .preset-modal { max-width: 460px; }
+    .preset-modal .mbody { padding-top: 10px; }
+    /* Section labels read like the sidebar's h3 headers; the prose below them sits at
+       full --fg so the two never blur together. */
+    .preset-sec { margin: 14px 0 0; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--head); }
+    .preset-sec:first-child { margin-top: 0; }
+    .preset-goal { margin: 5px 0 0; font-size: 13px; line-height: 1.5; color: var(--fg); }
+    .preset-modal ul { margin: 5px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: var(--fg); }
+    .preset-modal li { margin: 4px 0; }
+    .preset-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;
+      padding-top: 12px; border-top: 1px solid var(--border); }
+    .preset-acts button { background: var(--surface); border: 1px solid var(--border); border-radius: 5px;
+      color: var(--fg); font-size: 12px; padding: 6px 12px; cursor: pointer; }
+    .preset-acts button:hover { border-color: var(--head); color: var(--head); }
+    .preset-acts .preset-apply { border-color: var(--head); color: var(--head); font-weight: 600; }
     /* While booting: show only the header icon/title/subtitle + the spinner. Hide the tabs,
        controls, table, sidebar, and the freshness badge until the first render completes. */
     body.booting .tabs, body.booting #controls, body.booting #maintable,
@@ -1312,6 +1328,14 @@
       profiles.active = null;
       persistProfiles();
       loadWorkingState({ loadout: preset.loadout, stats: preset.stats });
+    }
+    // Picking a preset opens an explainer FIRST (what it does + what's left to do by hand);
+    // it only lands on Apply. Presets without a `blurb` apply straight away.
+    function requestPreset(name) {
+      const preset = GEAR_PRESETS.find((x) => x.name === name);
+      if (!preset) return;
+      if (!preset.blurb) { applyPreset(name); return; }
+      openPresetInfo(preset, () => applyPreset(name));
     }
     function deleteProfile(id) {
       profiles.list = removeProfile(profiles.list, id);
@@ -5812,7 +5836,9 @@
       if (psel) { psel.value ? switchProfile(psel.value) : (profiles.active = null, persistProfiles(), renderSidebar()); return; }
       // Preset picker: apply a base-gear template (working state overwritten, unsaved).
       const preset = e.target.closest(".presetsel");
-      if (preset) { if (preset.value) applyPreset(preset.value); return; }
+      // Reset the picker back to the "Preset…" placeholder immediately: the confirm modal
+      // owns the decision, and a re-render (on Apply) rebuilds the select anyway.
+      if (preset) { const v = preset.value; preset.value = ""; if (v) requestPreset(v); return; }
       // Infusion stat change: repopulate the amount select for the new stat (or blank it
       // when cleared to None), then refresh the preview like the other fields.
       const infStat = editingSlot && e.target.closest(`li.editing[data-slot="${editingSlot}"] [data-inf="stat"]`);
@@ -7638,6 +7664,34 @@
       document.body.appendChild(back);
     }
     document.getElementById("verBtn").addEventListener("click", openChangelog);
+
+    // Pre-apply explainer for a gear preset (GEAR_PRESETS `blurb`, SPEC §9.1): what it
+    // does + what's left to enter by hand, with Apply / Cancel. Same chrome as the
+    // changelog modal; × / backdrop / Escape / Cancel all dismiss WITHOUT applying.
+    function openPresetInfo(preset, onApply) {
+      const b = preset.blurb || {};
+      const back = document.createElement("div");
+      back.className = "modal-back";
+      back.innerHTML = `<div class="modal preset-modal" role="dialog" aria-modal="true" aria-label="About this preset">
+        <div class="mhead"><h2>${escTxt(preset.name)}</h2><button type="button" class="mclose" title="Close">&times;</button></div>
+        <div class="mbody">
+          ${b.goal ? `<h3 class="preset-sec">What this does</h3><p class="preset-goal">${escTxt(b.goal)}</p>` : ""}
+          ${(b.steps || []).length ? `<h3 class="preset-sec">What to do next</h3><ul>${b.steps.map((s) => `<li>${escTxt(s)}</li>`).join("")}</ul>` : ""}
+          <div class="preset-acts">
+            <button type="button" class="preset-cancel">Cancel</button>
+            <button type="button" class="preset-apply">Apply preset</button>
+          </div>
+        </div></div>`;
+      const close = () => { back.remove(); document.removeEventListener("keydown", onKey); };
+      const onKey = (e) => { if (e.key === "Escape") close(); };
+      back.addEventListener("click", (e) => {
+        if (e.target.closest(".preset-apply")) { close(); onApply?.(); return; }
+        if (e.target === back || e.target.closest(".mclose") || e.target.closest(".preset-cancel")) close();
+      });
+      document.addEventListener("keydown", onKey);
+      document.body.appendChild(back);
+      back.querySelector(".preset-apply").focus();
+    }
 
     renderStatus();
     renderTabs();
