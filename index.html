@@ -2476,13 +2476,18 @@
         const { pts, detail } = enchantInfo(e);
         const tagPill = e.tag ? ` <span class="pill">${e.tag}</span>` : "";
         const sch = cost(e.scroll);
+        // Legacy scrolls (appliesTo empty) are catalog-only: name + rank + the Legacy
+        // pill, every numeric column blank. Prices keep logging in the sheet; the row
+        // just doesn't display them (and no affix pill, it can't be applied anyway).
+        const legacy = e.appliesTo.length === 0;
         entries.push({
           kind: "enchant", name: e.scroll, famKey: ` ${e.scroll}`,
-          slotHtml: `<span class="pill">${e.affix}</span>${tagPill}`,
+          slotHtml: legacy ? tagPill.trim() : `<span class="pill">${e.affix}</span>${tagPill}`,
           slotText: `${e.affix} ${e.tag} ${e.appliesTo.join(", ")}`,
           lvlNum: typeof e.rank === "number" ? e.rank : null, lvlText: e.rank ?? "—",
-          pts, mk: null, cr: null, ch: sch, trend: prices[e.scroll]?.trend ?? null,
-          gpp: sch != null && pts > 0 ? sch / pts : null, detail,
+          pts: legacy ? null : pts, mk: null, cr: null, ch: legacy ? null : sch,
+          trend: legacy ? null : prices[e.scroll]?.trend ?? null,
+          gpp: !legacy && sch != null && pts > 0 ? sch / pts : null, detail,
         });
       }
 
