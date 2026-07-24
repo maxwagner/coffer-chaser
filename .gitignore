@@ -189,3 +189,7 @@ CLAUDE.md
 SPEC.md
 .claude/
 .githooks/
+
+# clasp (Apps Script sync) — script id + local auth stay private
+scripts/sheets/.clasp.json
+.clasprc.json

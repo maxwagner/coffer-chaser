@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      color: #333;
+      padding: 12px;
+      background: #fafafa;
+    }
+    h2 {
+      font-size: 14px;
+      font-weight: bold;
+      color: #263238;
+      margin-bottom: 4px;
+    }
+    p.desc {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+    .section {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      color: #444;
+      margin-bottom: 4px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #1a73e8;
+    }
+    button {
+      width: 100%;
+      padding: 7px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 2px;
+    }
+    .btn-remove { background: #f44336; color: #fff; }
+    .btn-remove:hover { background: #d32f2f; }
+    .btn-merge  { background: #1a73e8; color: #fff; }
+    .btn-merge:hover  { background: #1558b0; }
+    .btn-push { background: #2e7d32; color: #fff; }
+    .btn-push:hover { background: #1b5e20; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1.4;
+      display: none;
+    }
+    .msg.ok    { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .msg.error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+    .hint {
+      font-size: 11px;
+      color: #888;
+      margin-top: -6px;
+      margin-bottom: 8px;
+    }
+    datalist option { font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <!-- Item list for autocomplete -->
+  <datalist id="itemList"></datalist>
+
+  <!-- REMOVE -->
+  <div class="section">
+    <h2>🗑 Remove Item</h2>
+    <p class="desc">Permanently deletes all PriceLog history for this item and removes it from PriceInfo.</p>
+    <label for="removeInput">Item name</label>
+    <input type="text" id="removeInput" list="itemList" placeholder="Paste or type item name…" autocomplete="off">
+    <p class="hint">You can copy names from PriceInfo — the sheet stays interactive while this sidebar is open.</p>
+    <button class="btn-remove" id="removeBtn" onclick="doRemove()">Remove Item</button>
+    <div class="msg" id="removeMsg"></div>
+  </div>
+
+  <!-- MERGE -->
+  <div class="section">
+    <h2>🔀 Merge Items</h2>
+    <p class="desc">Rewrites all PriceLog entries for the <strong>source</strong> name to the <strong>target</strong> name, then rebuilds PriceInfo.</p>
+    <label for="mergeSource">Source (the one to remove)</label>
+    <input type="text" id="mergeSource" list="itemList" placeholder="e.g. Semias Essence" autocomplete="off">
+    <label for="mergeTarget">Target (the one to keep)</label>
+    <input type="text" id="mergeTarget" list="itemList" placeholder="e.g. Semias' Essence" autocomplete="off">
+    <p class="hint">Copy names from PriceInfo while the sidebar is open.</p>
+    <button class="btn-merge" id="mergeBtn" onclick="doMerge()">Merge Items</button>
+    <div class="msg" id="mergeMsg"></div>
+  </div>
+
+  <!-- PUSH TO SITE -->
+  <div class="section">
+    <h2>🚀 Push to Site</h2>
+    <p class="desc">Sends the sheet data to GitHub now instead of waiting for the 10-minute idle timer. The site updates ~2–3 minutes later.</p>
+    <button class="btn-push" id="pushBtn" onclick="doPush()">Push Now</button>
+    <div class="msg" id="pushMsg"></div>
+  </div>
+
+  <script>
+    // (Re)load item names into the autocomplete datalist. Called on open and again
+    // after any successful remove/merge so dead names stop suggesting.
+    function loadItemNames() {
+      google.script.run
+        .withSuccessHandler(function(names) {
+          const dl = document.getElementById('itemList');
+          dl.innerHTML = '';
+          names.forEach(function(n) {
+            const opt = document.createElement('option');
+            opt.value = n;
+            dl.appendChild(opt);
+          });
+        })
+        .getItemNames();
+    }
+    loadItemNames();
+
+    function showMsg(id, ok, text) {
+      const el = document.getElementById(id);
+      el.className = 'msg ' + (ok ? 'ok' : 'error');
+      el.textContent = text;
+      el.style.display = 'block';
+    }
+
+    // Generic busy state: remembers the button's own label instead of hardcoding it.
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      btn.disabled = loading;
+      if (loading) {
+        btn.dataset.label = btn.textContent;
+        btn.textContent = 'Working…';
+      } else {
+        btn.textContent = btn.dataset.label;
+      }
+    }
+
+    function doRemove() {
+      const name = document.getElementById('removeInput').value.trim();
+      if (!name) { showMsg('removeMsg', false, 'Please enter an item name.'); return; }
+      if (!confirm('Permanently remove all history for:\n\n"' + name + '"\n\nThis cannot be undone.')) return;
+      setLoading('removeBtn', true);
+      document.getElementById('removeMsg').style.display = 'none';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          setLoading('removeBtn', false);
+          showMsg('removeMsg', res.ok, res.msg);
+          if (res.ok) {
+            document.getElementById('removeInput').value = '';
+            loadItemNames();
+          }
+        })
+        .withFailureHandler(function(err) {
+          setLoading('removeBtn', false);
+          showMsg('removeMsg', false, 'Error: ' + err.message);
+        })
+        .removeItemByName(name);
+    }
+
+    function doMerge() {
+      const source = document.getElementById('mergeSource').value.trim();
+      const target = document.getElementById('mergeTarget').value.trim();
+      if (!source || !target) { showMsg('mergeMsg', false, 'Both fields are required.'); return; }
+      if (source === target)   { showMsg('mergeMsg', false, 'Source and target must be different.'); return; }
+      if (!confirm('Merge:\n\n"' + source + '"\n→ "' + target + '"\n\nAll history for the source will be rewritten to the target. This cannot be undone.')) return;
+      setLoading('mergeBtn', true);
+      document.getElementById('mergeMsg').style.display = 'none';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          setLoading('mergeBtn', false);
+          showMsg('mergeMsg', res.ok, res.msg);
+          if (res.ok) {
+            document.getElementById('mergeSource').value = '';
+            document.getElementById('mergeTarget').value = '';
+            loadItemNames();
+          }
+        })
+        .withFailureHandler(function(err) {
+          setLoading('mergeBtn', false);
+          showMsg('mergeMsg', false, 'Error: ' + err.message);
+        })
+        .mergeItems(source, target);
+    }
+    
+    function doPush() {
+      setLoading('pushBtn', true);
+      document.getElementById('pushMsg').style.display = 'none';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          setLoading('pushBtn', false);
+          showMsg('pushMsg', res.ok, res.msg);
+        })
+        .withFailureHandler(function(err) {
+          setLoading('pushBtn', false);
+          showMsg('pushMsg', false, 'Error: ' + err.message);
+        })
+        .pushNow();
+    }
+  </script>
+</body>
+</html>

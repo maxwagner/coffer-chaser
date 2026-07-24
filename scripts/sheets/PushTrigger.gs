@@ -1,25 +1,23 @@
 // Google Apps Script: push sheet edits to GitHub, debounced.
 //
-// Lives IN THE SPREADSHEET (Extensions > Apps Script), not in this repo's runtime.
-// This file is the reference copy. Paste it into the sheet's script editor.
+// Edited locally in the repo (scripts/sheets/) and deployed with
+// `npm run sheets:push` (clasp). Do not paste by hand.
 //
 // What it does: every edit resets a 10-minute timer; when the sheet has been quiet
 // for 10 straight minutes, it fires ONE repository_dispatch to GitHub, which runs
 // .github/workflows/refresh-data.yml (fetch tabs, commit data/*.csv if changed,
 // Pages redeploys). A slow hour-long editing session = one push at the end.
+// Manual pushes: sidebar "Push Now" button and the menu's "Push to Site".
 //
-// One-time setup:
-// 1. Create a GitHub fine-grained personal access token:
-//    github.com > Settings > Developer settings > Fine-grained tokens.
-//    Repository access: only maxwagner/coffer-chaser.
-//    Permissions: Contents: Read and write (repository_dispatch needs it).
-// 2. In the sheet: Extensions > Apps Script, paste this file.
-// 3. Project Settings (gear icon) > Script Properties > add:
+// One-time setup (already done for this sheet; here for rebuild-from-scratch):
+// 1. GitHub fine-grained personal access token, repository access ONLY
+//    maxwagner/coffer-chaser, permission Contents: Read and write. "Public
+//    repositories" access mode is read-only and 403s repository_dispatch.
+// 2. Apps Script Project Settings (gear icon) > Script Properties:
 //      GH_TOKEN = <the token>
-// 4. Back in the editor: run `setup` once (grants permissions, installs the
-//    onChange trigger). Approve the authorization prompts.
-// 5. Test: edit a cell, wait ~10 min, check the repo's Actions tab for a
-//    "Refresh data snapshots" run. Or run `firePush` manually for an instant test.
+// 3. Run `setup` once in the script editor (installs the onChange trigger).
+// 4. Test with the sidebar's Push Now: expect a "Refresh data snapshots" run
+//    in the repo's Actions tab.
 
 const REPO = "maxwagner/coffer-chaser";
 const DEBOUNCE_MINUTES = 10;
@@ -52,6 +50,23 @@ function queuePush() {
   } finally {
     lock.releaseLock();
   }
+}
+
+// Manual push for the sidebar: fire immediately, cancel any pending debounce timer
+// (firePush deletes them), and return a result object for the sidebar to display.
+function pushNow() {
+  try {
+    firePush();
+    return { ok: true, msg: "Push sent. The refresh workflow is starting; data lands in ~2-3 min." };
+  } catch (e) {
+    return { ok: false, msg: String(e.message || e) };
+  }
+}
+
+// Same manual push, but for the 🪙 menu (menu items can't render a sidebar msg box).
+function pushToSiteMenu() {
+  const res = pushNow();
+  SpreadsheetApp.getUi().alert(res.ok ? "✓ " + res.msg : "Push failed: " + res.msg);
 }
 
 // The debounced payload: one repository_dispatch, then clean up our own trigger.

@@ -6,9 +6,9 @@
 //
 // The tab list is NOT maintained here: it is read straight out of js/config.js by
 // pairing each `*_CSV_URL` export with its `*_CSV_FALLBACK` sibling, so a tab added
-// to config is picked up automatically. The snapshots are only the offline fallback
-// (js/sheet.js prefers the live sheet), so the point of refreshing is mainly SHAPE:
-// new columns/rows must exist in the snapshot or an offline load reads a stale schema.
+// to config is picked up automatically. The snapshots are the app's ONLY runtime data
+// (js/sheet.js is snapshot-only; the Sheet pushes edits here via repository_dispatch),
+// so this script is the sole bridge between the Sheet and what users see.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -38,15 +38,32 @@ if (!wanted.length) {
 const norm = (s) => s.replace(/\r\n/g, "\n").replace(/\s+$/, "");
 const rowCount = (s) => norm(s).split("\n").length;
 
+// The publish endpoint sometimes stalls a request without erroring (the same
+// behavior that made the app go snapshot-only). Abort at 30s and retry once so
+// one hung tab costs a minute, not the workflow's whole job budget.
+const FETCH_TIMEOUT_MS = 30_000;
+async function fetchCsv(url) {
+  let lastErr;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      // A published sheet that 404s inside Google still answers 200 with HTML.
+      if (/^\s*</.test(text)) throw new Error("got HTML, not CSV (bad gid or unpublished tab?)");
+      return text;
+    } catch (err) {
+      lastErr = err.name === "TimeoutError" ? new Error(`timed out after ${FETCH_TIMEOUT_MS}ms`) : err;
+    }
+  }
+  throw lastErr;
+}
+
 let changed = 0, failed = 0;
 for (const tab of wanted) {
   let live;
   try {
-    const res = await fetch(tab.url, { redirect: "follow" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    live = await res.text();
-    // A published sheet that 404s inside Google still answers 200 with HTML.
-    if (/^\s*</.test(live)) throw new Error("got HTML, not CSV (bad gid or unpublished tab?)");
+    live = await fetchCsv(tab.url);
   } catch (err) {
     console.error(`  FAIL ${tab.name}: ${err.message}`);
     failed++;

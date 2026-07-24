@@ -15,7 +15,7 @@ on:
   schedule:
     - cron: "0 9 * * 1" # Mondays 09:00 UTC, backstop in case the sheet trigger breaks
   workflow_dispatch: # and on demand from the Actions tab
-  repository_dispatch: # and pushed from the Sheet itself (scripts/sheet-push-trigger.gs)
+  repository_dispatch: # and pushed from the Sheet itself (scripts/sheets/PushTrigger.gs)
     types: [sheet-updated]
 
 permissions:
@@ -24,6 +24,9 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    # The refresh script aborts stalled fetches itself (30s x2 per tab); this is the
+    # backstop so a surprise hang can never burn the default 6h of Actions minutes.
+    timeout-minutes: 15
     steps:
       # v5 of both actions runs on Node 24; the v4 pair still declares Node 20, which
       # the runners now force-upgrade with a deprecation warning.
