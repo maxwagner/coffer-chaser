@@ -19,6 +19,14 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 
 class NoCacheHandler(SimpleHTTPRequestHandler):
+    # HTTP/1.1 keep-alive: the default HTTP/1.0 closes the TCP connection after
+    # every file, so the ~24 JS modules load in 6-connection waves with ~300ms of
+    # connection churn each — that alone made local boot ~2s slower than it should be.
+    protocol_version = "HTTP/1.1"
+    # Send small responses immediately instead of letting Nagle + delayed-ACK
+    # stall each one ~200ms on Windows loopback.
+    disable_nagle_algorithm = True
+
     def end_headers(self):
         self.send_header("Cache-Control", "no-store, must-revalidate")
         self.send_header("Expires", "0")

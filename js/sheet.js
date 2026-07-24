@@ -63,32 +63,15 @@ export function headerIndex(headerRow, names, width = headerRow.length) {
   return idx;
 }
 
-// How long to wait on a live Sheet fetch before giving up and using the snapshot.
-// The published-CSV endpoint can STALL (not error). Slow/rate-limited/hung. And a
-// bare `await fetch` would then never resolve, hanging the whole boot (loaders run in
-// one Promise.all, so one stuck tab blocks the app forever). Abort past this and fall
-// back to the committed data/*.csv snapshot instead.
-const LIVE_FETCH_TIMEOUT_MS = 8000;
-
-// Fetch a tab's CSV rows, falling back to a committed snapshot when the live
-// fetch fails, times out, or is offline. Returns { rows, source, liveError }.
+// Fetch a tab's CSV rows from the committed data/*.csv snapshot. Snapshot-only by
+// design: the Sheet pushes edits into the repo itself (scripts/sheet-push-trigger.gs
+// fires .github/workflows/refresh-data.yml, weekly cron as backstop), so the app has
+// no runtime dependency on Google's publish endpoint. That endpoint throttles and
+// occasionally hangs a request, and boot used to block on the slowest of 12 tabs.
+// `liveUrl` is unused at runtime; it stays in the signature because the loaders pass
+// config's *_CSV_URL / *_CSV_FALLBACK pairs, which scripts/refresh-data.mjs discovers.
 export async function fetchSheetRows(liveUrl, fallbackPath) {
-  try {
-    if (!liveUrl) throw new Error("no live URL (snapshot-only tab)");
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), LIVE_FETCH_TIMEOUT_MS);
-    let res;
-    try {
-      res = await fetch(liveUrl, { cache: "no-store", signal: ctrl.signal });
-    } finally {
-      clearTimeout(timer);
-    }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return { rows: parseCsv(await res.text()), source: "live" };
-  } catch (liveError) {
-    const reason = liveError?.name === "AbortError" ? `timed out after ${LIVE_FETCH_TIMEOUT_MS}ms` : String(liveError);
-    const res = await fetch(fallbackPath);
-    if (!res.ok) throw new Error(`Live: ${reason}. Fallback: HTTP ${res.status}.`);
-    return { rows: parseCsv(await res.text()), source: "fallback", liveError: reason };
-  }
+  const res = await fetch(fallbackPath);
+  if (!res.ok) throw new Error(`Snapshot ${fallbackPath}: HTTP ${res.status}`);
+  return { rows: parseCsv(await res.text()), source: "snapshot" };
 }

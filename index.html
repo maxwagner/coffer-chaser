@@ -1212,7 +1212,7 @@
       return keys.map((k) => `<span class="${diff[k] > 0 ? "pos" : "neg"}">${STAT_LABEL[k]} ${diff[k] > 0 ? "+" : ""}${diff[k]}</span>`).join(", ");
     };
 
-    const [{ prices, source }, { enchants }, { recipes }, { items, bySlot }, { accessories }, { bonuses: setBonuses }, { tuning }, { enhancement }, { raids }, { raidDrops }, { sealShop, totals: sealTotals }, { weeklyBoxes }] =
+    const [{ prices }, { enchants }, { recipes }, { items, bySlot }, { accessories }, { bonuses: setBonuses }, { tuning }, { enhancement }, { raids }, { raidDrops }, { sealShop, totals: sealTotals }, { weeklyBoxes }] =
       await Promise.all([loadPrices(), loadEnchants(), loadRecipes(), loadItems(), loadAccessories(), loadSetBonuses(), loadTuning(), loadEnhancement(), loadRaids(), loadRaidDrops(), loadSealShop(), loadWeeklyBoxes()]);
     // Crafting now includes the weapon/armor tier-chain recipes (SPEC §4), so the
     // recursive craftCost rolls up the whole chain straight from one recipe map.
@@ -7955,11 +7955,19 @@
     });
     renderThresholdForm();
 
-    // Header badge shows only data freshness (live Sheet vs cached snapshot).
+    // Header badge shows data freshness: the newest price date in the snapshot.
+    // Data is snapshot-only; the Sheet pushes edits into the repo automatically
+    // (debounced Apps Script trigger + weekly cron backstop), so "how fresh" is
+    // simply the latest scan date the pricing tab carries.
     function renderStatus() {
-      const live = source === "live";
-      document.getElementById("status").innerHTML =
-        `<span class="badge ${live ? "live" : "fallback"}" title="${live ? "Live prices from the Sheet" : "Offline snapshot, live fetch failed"}">${live ? "LIVE" : "CACHED"}</span>`;
+      let latest = null;
+      for (const p of Object.values(prices)) if (p.date && (!latest || p.date > latest)) latest = p.date;
+      const label = latest
+        ? new Date(latest + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })
+        : null;
+      document.getElementById("status").innerHTML = label
+        ? `<span class="badge live" title="Newest marketplace scan in the data: ${latest}. Snapshots push automatically from the Sheet.">DATA ${label.toUpperCase()}</span>`
+        : `<span class="badge fallback" title="No dated price rows in the snapshot">NO DATA</span>`;
     }
     // Header version button → changelog modal (js/changelog.js is the single source of truth).
     document.getElementById("verBtn").textContent = "v" + VERSION;

@@ -13,8 +13,10 @@ name: Refresh data snapshots
 
 on:
   schedule:
-    - cron: "0 9 * * 1" # Mondays 09:00 UTC
+    - cron: "0 9 * * 1" # Mondays 09:00 UTC, backstop in case the sheet trigger breaks
   workflow_dispatch: # and on demand from the Actions tab
+  repository_dispatch: # and pushed from the Sheet itself (scripts/sheet-push-trigger.gs)
+    types: [sheet-updated]
 
 permissions:
   contents: write
