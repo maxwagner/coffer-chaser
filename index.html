@@ -1027,14 +1027,16 @@
     .dmg-sec-h .muted { font-weight: 400; text-transform: none; letter-spacing: 0; }
     /* Marginals as planner-style cards: stat | value | bar | %/+1, ranked best-first. */
     .dmg-list { display: flex; flex-direction: column; gap: 8px; }
-    .dmg-mcard { display: grid; grid-template-columns: 96px 76px 1fr max-content; gap: 14px; align-items: center;
+    /* Fixed-width % column (not max-content) so every row's bar track ends at the
+       same edge regardless of how long the % text is. */
+    .dmg-mcard { display: grid; grid-template-columns: 96px 76px 1fr 110px; gap: 14px; align-items: center;
       background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent);
       border-radius: 6px; padding: 8px 12px; }
     .dmg-mcard.capped { border-left-color: var(--border); }
     .dmg-mcard.capped .mname { color: var(--fg-dim); }
     .dmg-mcard .mname { font-size: 13px; color: var(--fg); }
     .dmg-mcard .mval { font-family: var(--font-mono); font-size: 12px; color: var(--fg-dim); text-align: right; }
-    .dmg-mcard .mmarg { font-family: var(--font-mono); font-size: 13px; color: var(--gold); text-align: right; min-width: 86px; }
+    .dmg-mcard .mmarg { font-family: var(--font-mono); font-size: 13px; color: var(--gold); text-align: right; white-space: nowrap; }
     .dmg-mcard .mmarg .muted { font-size: 10px; font-family: var(--font-sans); }
     .dmg-bar { position: relative; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
     .dmg-bar > i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 3px; }
@@ -1070,7 +1072,7 @@
     .dmg-tldr .tv { color: var(--fg-dim); }
     .dmg-tldr .n { font-family: var(--font-mono); font-size: 11px; color: var(--fg); }
     /* Example hit: what a 100,000 hit with your real stats becomes with the what-if stats. */
-    .dmg-hit { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 8px 0 10px; padding: 8px 12px;
+    .dmg-hit { display: flex; align-items: baseline; gap: 8px; margin: 8px 0 10px; padding: 8px 12px;
       background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; }
     .dmg-hit.up { border-left-color: var(--good); }
     .dmg-hit.down { border-left-color: var(--bad); }
@@ -1078,7 +1080,6 @@
     .dmg-hit-n.new { color: var(--good); } .dmg-hit.down .dmg-hit-n.new { color: var(--bad); }
     .dmg-hit-arrow { color: var(--fg-dim); }
     .dmg-hit-pct { font-family: var(--font-mono); font-size: 12px; }
-    .dmg-hit-txt { font-size: 12px; color: var(--fg-dim); }
     /* Stage explainer blocks: numbered header (name + value, base → what-if when tweaked),
        then the math with this character's numbers substituted in. */
     .dmg-stage { padding: 10px 0 8px; border-bottom: 1px solid var(--border); }
@@ -5442,9 +5443,6 @@
             <span class="dmg-hit-n">100,000</span>
             ${hitAfter != null ? `<span class="dmg-hit-arrow">→</span><span class="dmg-hit-n new">${fmt(Math.round(hitAfter))}</span>
               <span class="dmg-hit-pct ${hitAfter >= 100000 ? "pos" : "neg"}">${hitAfter >= 100000 ? "+" : ""}${Number((hitAfter / 1000 - 100).toPrecision(3))}%</span>` : ""}
-            <span class="dmg-hit-txt">${hitAfter != null
-              ? "a hit that lands for 100,000 with your real stats, and what it lands for with the what-if stats"
-              : "example hit with these stats. Tweak a stat in the panel to see what it becomes"}</span>
           </div>`;
         // Stage 1: the in-game Applied-ATT curve, piecewise on gap = ATT − boss DEF.
         const att = eff.att || 0, gap = att - b.def;
