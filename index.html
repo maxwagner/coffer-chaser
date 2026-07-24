@@ -976,35 +976,55 @@
     #damagePanel .hint { color: var(--fg-dim); font-size: 12px; margin: 0 0 12px; max-width: 760px; }
     .dmg-body { display: flex; gap: 16px; align-items: flex-start; }
     .dmg-main { flex: 1 1 auto; min-width: 0; }
+    /* Left-column section cards, same chrome as the Appraiser/Tracker panels. */
+    .dmg-sec { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+    .dmg-sec + .dmg-sec { margin-top: 16px; }
     /* Right rail reuses the .plan-mats panel look; narrower, it holds controls, not a pile. */
     .plan-mats.dmg-side { flex: 0 0 330px; }
     @media (max-width: 900px) { .dmg-body { flex-direction: column; } .plan-mats.dmg-side { flex-basis: auto; width: 100%; order: -1; } }
-    /* Control rows in the rail: same rhythm as .plan-stat / .plan-mat rows. */
-    .dmg-srow { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 3px 0; font-size: 12px; }
-    .dmg-srow-name { color: var(--fg); flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 7px; }
-    .dmg-srow-ctl { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
-    .dmg-srow input[type="text"] { width: 80px; padding: 3px 7px; font-size: 12px; font-family: var(--font-mono);
-      text-align: right; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: var(--fg); }
-    .dmg-srow input[type="text"]:focus { outline: none; border-color: var(--head); }
-    .dmg-srow input.tweaked { border-color: var(--accent); color: var(--accent); }
+    /* Rail section headers: title left, its control (raid picker / reset pill) right. */
+    .dmg-rail-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; }
+    .dmg-rail-h h4 { margin: 0; }
+    .dmg-rail-h.stats { margin-top: 20px; }
+    .dmg-raid-sel { max-width: 200px; min-width: 0; padding: 4px 8px; font-size: 12px; font-family: inherit;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: var(--fg); cursor: pointer; }
+    .dmg-raid-sel:focus { outline: none; border-color: var(--head); }
+    .dmg-raid-sel:hover { border-color: var(--head); }
+    /* Boss fields + what-if stats as labeled tiles (label on top, mono value below),
+       the same inset-box language as the marginal cards' value wells. */
+    .dmg-tile-grid { display: grid; gap: 8px; }
+    .dmg-tile-grid.boss { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+    .dmg-tile-grid.stats { grid-template-columns: repeat(auto-fill, minmax(122px, 1fr)); }
+    .dmg-tile { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px 7px; min-width: 0; }
+    .dmg-tile:focus-within { border-color: var(--head); }
+    .dmg-tile:has(input.tweaked) { border-color: var(--accent); }
+    /* Boss-tile states: manual override (accent), no sheet value yet (dashed). */
+    .dmg-tile.override { border-color: var(--accent); }
+    .dmg-tile.override .dmg-tile-l { color: var(--accent); }
+    .dmg-tile.nosheet { border-style: dashed; }
+    .dmg-tile-l { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .04em; color: var(--fg-dim); margin-bottom: 4px; white-space: nowrap; }
+    .dmg-tile-l .dmg-delta { margin-left: auto; }
+    .dmg-tile input[type="text"] { width: 100%; min-width: 0; padding: 0; font-size: 13px; font-family: var(--font-mono);
+      text-align: right; background: transparent; border: none; color: var(--fg); }
+    .dmg-tile.stat input[type="text"] { text-align: center; }
+    .dmg-tile input[type="text"]:focus { outline: none; }
+    .dmg-tile input.tweaked { color: var(--accent); }
+    .dmg-tile-ctl { display: flex; align-items: center; gap: 6px; }
     /* Square ±1 steppers, hold to repeat (accelerating), so no per-stat step sizes. */
-    .dmg-step { width: 22px; flex: 0 0 auto; text-align: center; background: var(--surface2); border: 1px solid var(--border);
+    .dmg-step { width: 20px; height: 20px; flex: 0 0 auto; text-align: center; background: var(--surface); border: 1px solid var(--border);
       border-radius: 5px; color: var(--fg-dim); cursor: pointer; font-size: 13px;
-      padding: 2px 0; line-height: 1.4; user-select: none; touch-action: none; }
+      padding: 0; line-height: 1; user-select: none; touch-action: none; }
     .dmg-step:hover { color: var(--fg); border-color: var(--head); }
-    /* Live tweak delta ("+9") beside the steppers; grows leftward so nothing shifts. */
-    .dmg-delta { font-family: var(--font-mono); font-size: 11px; margin-right: 4px; white-space: nowrap; }
-    /* Small status pills: cap state on stat rows, override / no-sheet-value on boss fields.
-       Same shape language as the planner's .plan-weekly-note / .plan-mat-tool pills. */
+    /* Live tweak delta ("+9") in the tile's label row; grows leftward so nothing shifts. */
+    .dmg-delta { font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
+    /* Cap pill on stat tiles, same shape language as the planner's pills. */
     .dmg-capflag { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
       padding: 1px 7px; border-radius: 8px; white-space: nowrap;
       background: rgba(95,184,122,0.12); color: var(--good); }
-    .dmg-flag { font-size: 10px; color: var(--fg-dim); border: 1px solid var(--border); border-radius: 8px; padding: 0 7px; white-space: nowrap; }
-    .dmg-flag.override { color: var(--accent); border-color: var(--accent); }
     /* Left column: section headers in the app's uppercase table-head voice. */
     .dmg-sec-h { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--head); text-transform: uppercase; letter-spacing: .03em; }
     .dmg-sec-h .muted { font-weight: 400; text-transform: none; letter-spacing: 0; }
-    .dmg-main .dmg-sec-h:not(:first-child) { margin-top: 26px; }
     /* Marginals as planner-style cards: stat | value | bar | %/+1, ranked best-first. */
     .dmg-list { display: flex; flex-direction: column; gap: 8px; }
     .dmg-mcard { display: grid; grid-template-columns: 96px 76px 1fr max-content; gap: 14px; align-items: center;
@@ -1027,27 +1047,60 @@
     .dmg-whatif-pct { font-family: var(--font-mono); font-size: 17px; color: var(--good); flex: 0 0 auto; }
     .dmg-whatif.down .dmg-whatif-pct { color: var(--bad); }
     .dmg-whatif-txt { font-size: 12px; color: var(--fg); }
-    /* Per-stat contribution breakdown, each stat's tweak applied alone. */
+    /* Per-stat contribution breakdown, each stat's tweak applied alone. Chips, so a
+       tweak and its % stay visibly paired instead of drifting apart in a grid. */
     .dmg-whatif-break { margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--border);
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 18px; }
-    .dmg-wb-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12px; }
+      display: flex; flex-wrap: wrap; gap: 6px; }
+    .dmg-wb-row { display: inline-flex; align-items: baseline; gap: 7px; font-size: 12px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 2px 9px; }
     .dmg-wb-name { color: var(--fg-dim); }
     .dmg-wb-pct { font-family: var(--font-mono); font-size: 11px; }
-    /* Factor pipeline (verifiable vs the in-game graph): a collapsed expandable section,
-       laid out as a vertical equation, operator | factor | value, rules before results. */
-    .dmg-pipe { margin-top: 26px; }
-    .dmg-pipe summary.dmg-sec-h { margin: 0; cursor: pointer; user-select: none; list-style: none; }
-    .dmg-pipe summary.dmg-sec-h::-webkit-details-marker { display: none; }
-    .dmg-pipe summary.dmg-sec-h::before { content: "▸"; display: inline-block; width: 14px; color: var(--fg-dim); }
-    .dmg-pipe[open] summary.dmg-sec-h::before { content: "▾"; }
-    .dmg-eq { display: grid; grid-template-columns: max-content max-content max-content; gap: 3px 14px; align-items: baseline;
-      margin-top: 8px; padding: 10px 14px; width: fit-content; font-size: 12px;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
-    .dmg-eq .op { color: var(--fg-dim); font-weight: 700; text-align: center; }
-    .dmg-eq .k { color: var(--fg-dim); }
-    .dmg-eq .v { font-family: var(--font-mono); text-align: right; color: var(--fg); }
-    .dmg-eq .v.gold { color: var(--gold); }
-    .dmg-eq .rule { grid-column: 1 / -1; height: 1px; background: var(--border); margin: 2px 0; }
+    /* Factor pipeline (verifiable vs the in-game graph): a collapsed expandable section
+       card. Inside: a 100k example-hit banner, per-stage explainer blocks with the actual
+       numbers plugged in, then the vertical summary equation. */
+    .dmg-pipe { margin-top: 4px; }
+    .dmg-pipe summary { font-size: 12px; color: var(--fg-dim); cursor: pointer; user-select: none; list-style: none; }
+    .dmg-pipe summary:hover { color: var(--fg); }
+    .dmg-pipe summary::-webkit-details-marker { display: none; }
+    .dmg-pipe summary::before { content: "▸"; display: inline-block; width: 14px; }
+    .dmg-pipe[open] summary::before { content: "▾"; }
+    /* Always-visible TLDR under the example hit: one line per stat, live numbers inline. */
+    .dmg-tldr { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; margin: 0 0 10px; font-size: 12px; }
+    .dmg-tldr .tk { color: var(--head); font-weight: 600; white-space: nowrap; }
+    .dmg-tldr .tv { color: var(--fg-dim); }
+    .dmg-tldr .n { font-family: var(--font-mono); font-size: 11px; color: var(--fg); }
+    /* Example hit: what a 100,000 hit with your real stats becomes with the what-if stats. */
+    .dmg-hit { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 8px 0 10px; padding: 8px 12px;
+      background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; }
+    .dmg-hit.up { border-left-color: var(--good); }
+    .dmg-hit.down { border-left-color: var(--bad); }
+    .dmg-hit-n { font-family: var(--font-mono); font-size: 16px; color: var(--fg); }
+    .dmg-hit-n.new { color: var(--good); } .dmg-hit.down .dmg-hit-n.new { color: var(--bad); }
+    .dmg-hit-arrow { color: var(--fg-dim); }
+    .dmg-hit-pct { font-family: var(--font-mono); font-size: 12px; }
+    .dmg-hit-txt { font-size: 12px; color: var(--fg-dim); }
+    /* Stage explainer blocks: numbered header (name + value, base → what-if when tweaked),
+       then the math with this character's numbers substituted in. */
+    .dmg-stage { padding: 10px 0 8px; border-bottom: 1px solid var(--border); }
+    .dmg-stage:last-of-type { border-bottom: none; }
+    .dmg-stage-h { display: flex; align-items: baseline; gap: 9px; font-size: 13px; }
+    .dmg-stage-h .num { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; align-self: center;
+      background: var(--surface); border: 1px solid var(--border); color: var(--head); font-size: 10px;
+      display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); }
+    .dmg-stage-h .sname { font-weight: 600; color: var(--head); }
+    .dmg-stage-h .sval { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--gold); white-space: nowrap; }
+    .dmg-stage-h .sval .old { color: var(--fg-dim); }
+    .dmg-stage-x { margin: 4px 0 0 27px; font-size: 12px; color: var(--fg-dim); max-width: 680px; }
+    .dmg-stage-x p { margin: 3px 0; }
+    /* Per-stage math block: one equation per row, name | = expression | result, results
+       right-aligned in gold. Rows never wrap; the block scrolls sideways if starved. */
+    .dmg-math { display: grid; grid-template-columns: max-content 1fr max-content; gap: 1px 10px; align-items: baseline;
+      margin-top: 6px; padding: 7px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+      font-family: var(--font-mono); font-size: 11px; overflow-x: auto; }
+    .dmg-math .mk { color: var(--head); white-space: nowrap; }
+    .dmg-math .me { color: var(--fg); white-space: nowrap; }
+    .dmg-math .mv { color: var(--gold); text-align: right; white-space: nowrap; }
+    .dmg-math .mnote { grid-column: 1 / -1; color: var(--fg-dim); }
     .dmg-hint { color: var(--fg-dim); font-size: 12px; margin: 2px 0 14px; max-width: 760px; }
   </style>
 </head>
@@ -5318,11 +5371,16 @@
       const raidSel = damagePrefs.raid ?? b.raid; // effective selection shown in the picker
       const raidOpts = [`<option value="">Custom boss</option>`]
         .concat(list.map((r) => `<option value="${esc(r.raid)}"${r.raid === raidSel ? " selected" : ""}>${esc(r.raid)}</option>`)).join("");
-      const bossField = (key, label, val, fromSheet) =>
-        `<div class="dmg-srow"><span class="dmg-srow-name">${label}
-            ${damagePrefs.custom[key] != null ? `<span class="dmg-flag override" title="Manual override. Re-pick the raid to restore sheet values">override</span>`
-              : fromSheet ? "" : `<span class="dmg-flag">no sheet value</span>`}</span>
-          <span class="dmg-srow-ctl"><input type="text" data-dmg-boss="${key}" value="${val ?? ""}" placeholder="—"></span></div>`;
+      // Boss fields as labeled tiles. Override state = accent border (hover explains),
+      // missing sheet value = dashed border, instead of the old text pills.
+      const bossField = (key, label, val, fromSheet) => {
+        const over = damagePrefs.custom[key] != null;
+        const title = over ? "Manual override. Re-pick the raid to restore sheet values"
+          : !fromSheet ? "No sheet value for this raid. Type one here to fill it in" : "";
+        return `<div class="dmg-tile${over ? " override" : fromSheet ? "" : " nosheet"}"${title ? ` title="${title}"` : ""}>
+            <span class="dmg-tile-l">${label}</span>
+            <input type="text" data-dmg-boss="${key}" value="${val ?? ""}" placeholder="—"></div>`;
+      };
       const capFlag = (k) => {
         const cap = k === "bal" ? b.balCap : k === "crit" ? b.critCap : null;
         return cap && eff[k] >= cap ? `<span class="dmg-capflag">capped</span>` : "";
@@ -5330,10 +5388,10 @@
       const statRow = (k) => {
         const tweak = damagePrefs.tweaks[k] || 0;
         // The delta span always renders (empty at 0) so the hold-to-repeat loop can
-        // update it in place without a re-render.
-        return `<div class="dmg-srow"><span class="dmg-srow-name">${STAT_LABEL[k]}${capFlag(k)}</span>
-          <span class="dmg-srow-ctl">
-            <span class="dmg-delta${tweak > 0 ? " pos" : tweak < 0 ? " neg" : ""}" data-dmg-delta="${k}">${tweak ? `${tweak > 0 ? "+" : ""}${fmt(tweak)}` : ""}</span>
+        // update it in place without a re-render. It sits in the tile's label row.
+        return `<div class="dmg-tile stat">
+          <span class="dmg-tile-l">${STAT_LABEL[k]}${capFlag(k)}<span class="dmg-delta${tweak > 0 ? " pos" : tweak < 0 ? " neg" : ""}" data-dmg-delta="${k}">${tweak ? `${tweak > 0 ? "+" : ""}${fmt(tweak)}` : ""}</span></span>
+          <span class="dmg-tile-ctl">
             <button type="button" class="dmg-step" data-dmg-step="${k}" data-dir="-1" title="−1 (hold to repeat)">−</button>
             <input type="text"${tweak ? ` class="tweaked"` : ""} data-dmg-stat="${k}" value="${eff[k] ?? 0}">
             <button type="button" class="dmg-step" data-dmg-step="${k}" data-dir="1" title="+1 (hold to repeat)">+</button>
@@ -5357,24 +5415,122 @@
         }).join("");
       }
       const bossName = b.raid ? esc(b.raid) : "custom boss";
-      // Pipeline as a collapsed expandable, laid out as a vertical equation (SPEC §19.4).
-      const eqRow = (op, k, v, gold) =>
-        `<span class="op">${op}</span><span class="k">${k}</span><span class="v${gold ? " gold" : ""}">${v}</span>`;
-      const chain = brk ? `<details class="dmg-pipe"${dmgPipeOpen ? " open" : ""}>
-          <summary class="dmg-sec-h">Damage pipeline<span class="muted">, one hit vs ${bossName}</span></summary>
-          <div class="dmg-eq">
-            ${eqRow("", "Applied ATT", fmt(brk.applied))}
-            ${eqRow("→", "Effective ATT", fmt(brk.endATT))}
-            ${eqRow("+", `Add Dmg × ${brk.adm.toFixed(2)}`, fmt(brk.adTerm))}
-            <span class="rule"></span>
-            ${eqRow("=", "Final ATT", fmt(brk.finalATT), true)}
-            ${eqRow("×", "Balance", `${brk.balFac.toFixed(3)}×`)}
-            ${eqRow("×", "Critical", `${brk.critFac.toFixed(3)}×`)}
-            ${eqRow("×", "Destruction", `${brk.destFac.toFixed(3)}×`)}
-            <span class="rule"></span>
-            ${eqRow("=", "Damage rating", fmt(Math.round(brk.rating)), true)}
-          </div>
-        </details>` : "";
+      // Pipeline (SPEC §19.4): a collapsed expandable section card. A 100k example hit
+      // (real stats → what-if stats), per-stage explainers with this character's numbers
+      // substituted into the actual formulas (coefficients mirror js/damage.js), then the
+      // vertical summary equation. Stage values show "real → what-if" while tweaks exist.
+      let chain = "";
+      if (brk) {
+        const brkBase = damageBreakdown(currentStats, b);
+        const tweaked = Object.keys(damagePrefs.tweaks).length > 0 && !!brkBase;
+        // Math blocks: one equation per row (name | = expression | result), prose kept out.
+        const mrow = (k, e, v) => `<span class="mk">${k}</span><span class="me">${e}</span><span class="mv">${v}</span>`;
+        const mnote = (t) => `<span class="mnote">${t}</span>`;
+        const math = (...rows) => `<div class="dmg-math">${rows.filter(Boolean).join("")}</div>`;
+        const sv = (get, f = (n) => fmt(Math.round(n))) => {
+          const now = f(get(brk));
+          if (!tweaked) return now;
+          const was = f(get(brkBase));
+          return was !== now ? `<span class="old">${was}</span> → ${now}` : now;
+        };
+        const stage = (n, name, val, body) =>
+          `<div class="dmg-stage"><div class="dmg-stage-h"><span class="num">${n}</span><span class="sname">${name}</span><span class="sval">${val}</span></div>
+            <div class="dmg-stage-x">${body}</div></div>`;
+        // Example hit: anchor 100,000 to the real-stats rating, scale by the what-if rating.
+        const hitAfter = tweaked && brkBase.rating > 0 ? 100000 * brk.rating / brkBase.rating : null;
+        const hitRow = `<div class="dmg-hit${hitAfter == null ? "" : hitAfter >= 100000 ? " up" : " down"}">
+            <span class="dmg-hit-n">100,000</span>
+            ${hitAfter != null ? `<span class="dmg-hit-arrow">→</span><span class="dmg-hit-n new">${fmt(Math.round(hitAfter))}</span>
+              <span class="dmg-hit-pct ${hitAfter >= 100000 ? "pos" : "neg"}">${hitAfter >= 100000 ? "+" : ""}${Number((hitAfter / 1000 - 100).toPrecision(3))}%</span>` : ""}
+            <span class="dmg-hit-txt">${hitAfter != null
+              ? "a hit that lands for 100,000 with your real stats, and what it lands for with the what-if stats"
+              : "example hit with these stats. Tweak a stat in the panel to see what it becomes"}</span>
+          </div>`;
+        // Stage 1: the in-game Applied-ATT curve, piecewise on gap = ATT − boss DEF.
+        const att = eff.att || 0, gap = att - b.def;
+        const s1prose = gap <= 4000
+          ? "Below DEF + 4,000 there is no falloff: ATT counts in full."
+          : gap <= 22000
+            ? "This gap is in the falloff band (DEF + 4,000 to DEF + 22,000), where each extra ATT point applies at less than 1 and keeps shrinking."
+            : "This gap is past DEF + 22,000: the curve is spent, every further ATT point applies at 0.1.";
+        // The seam rows show why the constants exist: the quadratic evaluates to exactly
+        // 4,000 and 13,900 at the two breakpoints, so the three pieces join with no jump.
+        const s1 = `<p>The in-game Applied ATT curve, piecewise on the gap between raw ATT and the boss's DEF. ${s1prose}</p>` + math(
+          mrow("gap", `= ATT − DEF = ${fmt(att)} − ${fmt(b.def)}`, fmt(gap)),
+          gap <= 4000 ? mrow("applied", "= ATT", fmt(brk.applied))
+            : gap <= 22000 ? mrow("applied", "= DEF + floor(1.2·gap − 0.000025·gap² − 400)", fmt(brk.applied))
+            : mrow("applied", "= DEF + 13,900 + 0.1 × (gap − 22,000)", fmt(brk.applied)),
+          gap > 4000 && gap <= 22000
+            ? mrow("per +1 ATT", `= 1.2 − 0.00005 × gap = 1.2 − 0.00005 × ${fmt(gap)}`, (1.2 - 0.00005 * gap).toFixed(2))
+            : "",
+          mrow("seam 4,000", "= 1.2·4,000 − 0.000025·4,000² − 400 = 4,800 − 400 − 400", "4,000"),
+          mrow("seam 22,000", "= 1.2·22,000 − 0.000025·22,000² − 400 = 26,400 − 12,100 − 400", "13,900"),
+          mnote("the −400 stitches the pieces: the quadratic meets the 1:1 line at gap 4,000 and hands off to the 13,900 + 0.1 tail at 22,000"));
+        // Stage 2: DEF Pen, then the legacy pre-rework polynomial on the applied ATT.
+        const x2 = (brk.applied - brk.endDef + 900) / (brk.endDef + 900);
+        const s2 = `<p>DEF Pen ignores 8 DEF per point, then the legacy pre-rework formula runs on the applied ATT. An x under 1 takes the quintic branch; 1 or over is flat 1:1.</p>` + math(
+          mrow("endDEF", `= DEF − 8 × DEF Pen = ${fmt(b.def)} − 8 × ${fmt(eff.defPen || 0)}`, fmt(brk.endDef)),
+          mrow("x", "= (applied − endDEF + 900) / (endDEF + 900)", x2.toFixed(3)),
+          x2 >= 1 ? "" : mrow("f(x)", "= 0.1856 + 0.5525x + 0.4214x² − 0.3094x³ + 0.3643x⁴ − 0.2144x⁵", (brk.endATT / (brk.endDef + 900)).toFixed(4)),
+          x2 >= 1
+            ? mrow("effective", "= applied − endDEF + 900", fmt(brk.endATT))
+            : mrow("effective", `= (endDEF + 900) × f(x) = ${fmt(brk.endDef + 900)} × ${(brk.endATT / (brk.endDef + 900)).toFixed(4)}`, fmt(brk.endATT)));
+        // Stage 3: Additional Damage multiplier, keyed on applied − endDEF.
+        const diff = brk.applied - brk.endDef;
+        const s3 = `<p>Additional Damage rides a multiplier keyed on how far the applied ATT clears the effective DEF, then lands on top of the effective ATT.</p>` + math(
+          mrow("diff", "= applied − endDEF", fmt(diff)),
+          diff <= 3000 ? mrow("mult", "= 1.875 (the floor: diff ≤ 3,000)", brk.adm.toFixed(3))
+            : diff <= 10000 ? mrow("mult", `= diff / 1,600 = ${fmt(diff)} / 1,600`, brk.adm.toFixed(3))
+            : mrow("mult", `= 6.25 + (diff − 10,000) / 2,400 = 6.25 + ${fmt(diff - 10000)} / 2,400`, brk.adm.toFixed(3)),
+          mnote("mult bands: diff ≤ 3,000 → 1.875 · up to 10,000 → diff / 1,600 · past 10,000 → 6.25 + (diff − 10,000) / 2,400"),
+          mrow("AD term", `= Add Dmg × mult = ${fmt(eff.addDmg || 0)} × ${brk.adm.toFixed(3)}`, fmt(Math.round(brk.adTerm))),
+          mrow("final ATT", `= effective + AD term = ${fmt(brk.endATT)} + ${fmt(Math.round(brk.adTerm))}`, fmt(Math.round(brk.finalATT))));
+        // Stage 4: the three final multipliers.
+        const effBal = b.balCap > 0 ? Math.min(eff.bal || 0, b.balCap) : (eff.bal || 0);
+        const critChance = b.critCap > 0 ? Math.min(eff.crit || 0, b.critCap) / b.critCap * 0.5 : 0;
+        const s4 = `<p>Three independent multipliers finish the hit: Balance sets the average roll between your minimum and the max, Critical folds the 1.95× crit bonus in by chance, and Destruction adds 0.0022% per point.</p>` + math(
+          b.balCap > 0
+            ? mrow("balance", `= (100 × min(Bal, cap) / cap + 100) / 200 = (100 × ${fmt(effBal)} / ${fmt(b.balCap)} + 100) / 200`,
+                `${brk.balFac.toFixed(3)}×${(eff.bal || 0) >= b.balCap ? " (capped)" : ""}`)
+            : mrow("balance", "= 1 (no cap value for this boss)", "1.000×"),
+          b.critCap > 0
+            ? mrow("chance", `= min(Crit, cap) / cap × 50% = min(${fmt(eff.crit || 0)}, ${fmt(b.critCap)}) / ${fmt(b.critCap)} × 50%`,
+                `${(critChance * 100).toFixed(1)}%`)
+            : "",
+          b.critCap > 0
+            ? mrow("critical", `= 1 + chance × 0.95 = 1 + ${critChance.toFixed(3)} × 0.95`,
+                `${brk.critFac.toFixed(3)}×${(eff.crit || 0) >= b.critCap ? " (capped)" : ""}`)
+            : mrow("critical", "= 1 (no cap value: chance treated as 0%)", "1.000×"),
+          mrow("destruction", `= 1 + Dest × 0.0022% = 1 + ${fmt(eff.destruction || 0)} × 0.0022%`, `${brk.destFac.toFixed(4)}×`));
+        // Always-visible TLDR: one line per stat, what it does to the formula, with the
+        // live values against this boss. The stage-by-stage math hides in the expandable.
+        const tn = (s) => `<span class="n">${s}</span>`;
+        const trow = (k, txt) => `<span class="tk">${STAT_LABEL[k]}</span><span class="tv">${txt}</span>`;
+        const tldr = `<div class="dmg-tldr">
+          ${trow("att", `raw attack vs boss DEF: full value up to DEF + 4,000 over, curving down to ${tn("0.1")} per point past DEF + 22,000.`)}
+          ${trow("addDmg", `skips the DEF curve, lands at a multiplier that grows with applied ATT: ${tn(`× ${brk.adm.toFixed(2)}`)} vs this boss right now.`)}
+          ${trow("bal", b.balCap > 0
+            ? `raises the average roll between your min and max hit: ${tn(`×${brk.balFac.toFixed(3)}`)} now, maxing at the boss's ${tn(fmt(b.balCap))} cap.`
+            : `no cap value for this boss: ${tn("×1")}.`)}
+          ${trow("crit", b.critCap > 0
+            ? `crit chance scales to 50% at the boss's ${tn(fmt(b.critCap))} cap; crits deal ${tn("1.95×")}: ${tn(`×${brk.critFac.toFixed(3)}`)} on average now.`
+            : `no cap value for this boss: treated as 0% crit chance.`)}
+          ${trow("destruction", `flat ${tn("+0.0022%")} final damage per point: ${tn(`×${brk.destFac.toFixed(3)}`)} now.`)}
+          ${trow("defPen", `each point ignores ${tn("8")} boss DEF before anything else runs: ${tn(fmt((eff.defPen || 0) * 8))} DEF ignored now.`)}
+        </div>`;
+        chain = `<div class="dmg-sec">
+          <h4 class="dmg-sec-h">Damage pipeline<span class="muted">, one hit vs ${bossName}</span></h4>
+          ${hitRow}
+          ${tldr}
+          <details class="dmg-pipe"${dmgPipeOpen ? " open" : ""}>
+            <summary>Full math, stage by stage</summary>
+            ${stage(1, "Applied ATT", sv((r) => r.applied), s1)}
+            ${stage(2, "Effective ATT", sv((r) => r.endATT), s2)}
+            ${stage(3, "Final ATT", sv((r) => r.finalATT), s3)}
+            ${stage(4, "Final multipliers", sv((r) => r.balFac * r.critFac * r.destFac, (n) => `${n.toFixed(3)}×`), s4)}
+          </details>
+        </div>`;
+      }
       // What-if banner: overall damage of the tweaked stats vs the character's REAL stats,
       // then a per-stat contribution breakdown, each line is that ONE stat's tweak applied
       // alone (isolated), so "+X% from Crit" reads as a standalone truth. They combine
@@ -5408,22 +5564,23 @@
           Tweak them freely in the panel (your real stats don't change). The picked boss also prices the Upgrades tab's DPS columns.</p>
         <div class="dmg-body">
           <div class="dmg-main">
-          ${brk ? `${whatif}<h4 class="dmg-sec-h">Damage per stat point<span class="muted">, vs ${bossName}</span></h4>
-            <div class="dmg-list">${margRows}</div>
+          ${brk ? `<div class="dmg-sec">${whatif}<h4 class="dmg-sec-h">Damage per stat point<span class="muted">, vs ${bossName}</span></h4>
+            <div class="dmg-list">${margRows}</div></div>
             ${chain}`
-          : `<p class="dmg-hint">Pick a raid with a Def value (or enter a custom Boss DEF) to compute damage.</p>`}
+          : `<div class="dmg-sec"><p class="dmg-hint" style="margin:0">Pick a raid with a Def value (or enter a custom Boss DEF) to compute damage.</p></div>`}
           </div>
           <div class="plan-mats dmg-side">
-            <h4>Boss</h4>
-            <div class="plan-raid-ctl"><select data-dmg-raid>${raidOpts}</select></div>
-            ${bossField("def", "Boss DEF", b.def, damagePrefs.custom.def == null && b.def != null)}
-            ${bossField("balCap", "Bal cap", b.balCap, damagePrefs.custom.balCap == null && b.balCap != null)}
-            ${bossField("critCap", "Crit cap", b.critCap, damagePrefs.custom.critCap == null && b.critCap != null)}
+            <div class="dmg-rail-h"><h4>Boss</h4><select class="dmg-raid-sel" data-dmg-raid>${raidOpts}</select></div>
+            <div class="dmg-tile-grid boss">
+              ${bossField("def", "Boss DEF", b.def, damagePrefs.custom.def == null && b.def != null)}
+              ${bossField("balCap", "Bal cap", b.balCap, damagePrefs.custom.balCap == null && b.balCap != null)}
+              ${bossField("critCap", "Crit cap", b.critCap, damagePrefs.custom.critCap == null && b.critCap != null)}
+            </div>
             ${b.def == null ? `<p class="dmg-hint" style="margin:8px 0 0">No Def for this raid yet. Fill the sheet's bare <b>Def</b> column (from the in-game Battle (N) window) or type one here.</p>` : ""}
-            <div class="plan-mats-head"><h4>Your stats</h4>
+            <div class="dmg-rail-h stats"><h4>Your stats</h4>
               ${Object.keys(damagePrefs.tweaks).length ? `<button type="button" class="plan-mat-tool" data-dmg-reset title="Clear every what-if tweak, back to your character's real stats">reset to character</button>` : ""}
             </div>
-            ${DAMAGE_STAT_KEYS.map(statRow).join("")}
+            <div class="dmg-tile-grid stats">${DAMAGE_STAT_KEYS.map(statRow).join("")}</div>
           </div>
         </div>`;
     }
