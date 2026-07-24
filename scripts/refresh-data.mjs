@@ -38,6 +38,30 @@ if (!wanted.length) {
 const norm = (s) => s.replace(/\r\n/g, "\n").replace(/\s+$/, "");
 const rowCount = (s) => norm(s).split("\n").length;
 
+// Order-insensitive comparison. Sorting (or un-filtering) the Sheet reorders
+// the published CSV without changing its content; comparing the two sides as
+// sorted record sets makes a pure reorder a no-op, so no churn commit. Used
+// ONLY for the compare: written snapshots stay verbatim in Sheet order.
+// Records, not lines: a quoted field may contain a newline, so a line with an
+// odd quote count is glued to the next until quotes balance.
+const canon = (s) => {
+  const records = [];
+  let buf = null;
+  for (const line of norm(s).split("\n")) {
+    buf = buf == null ? line : buf + "\n" + line;
+    if (((buf.match(/"/g) || []).length) % 2 === 0) { records.push(buf); buf = null; }
+  }
+  if (buf != null) records.push(buf); // unbalanced tail: keep rather than drop
+  const [head, ...rows] = records;
+  rows.sort();
+  return [head, ...rows].join("\n");
+};
+
+// Tabs where row POSITION carries meaning (accessories = blank-row-separated
+// blocks with per-block headers): moving rows there is a real change, so they
+// get the plain byte compare. Never sort/filter these sheets.
+const ORDER_SENSITIVE = new Set(["accessories"]);
+
 // The publish endpoint sometimes stalls a request without erroring (the same
 // behavior that made the app go snapshot-only). Abort at 30s and retry once so
 // one hung tab costs a minute, not the workflow's whole job budget.
@@ -70,7 +94,8 @@ for (const tab of wanted) {
     continue;
   }
   const old = await readFile(tab.file, "utf8").catch(() => null);
-  if (old != null && norm(old) === norm(live)) {
+  const cmp = ORDER_SENSITIVE.has(tab.name) ? norm : canon;
+  if (old != null && cmp(old) === cmp(live)) {
     console.log(`  same ${tab.name} (${rowCount(live)} rows)`);
     continue;
   }

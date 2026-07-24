@@ -266,8 +266,8 @@ export const tuneStatCanon = (label) => TUNING_STAT_CANON[label] || label;
 // level (no downgrade) → each step is a finite EV series (gearEnhanceCost in
 // cost.js). Rates are community-sourced (Nexon hides them in-game) so they live in
 // the Sheet, editable without a code change. Materials must be in the price feed.
-export const ENHANCEMENT_CSV_URL = tabCsv(2053049296);
-export const ENHANCEMENT_CSV_FALLBACK = "data/enhancement.csv";
+export const ENHANCEMENT_CSV_URL = tabCsv(2053049296); // the Sheet's "Orna" tab
+export const ENHANCEMENT_CSV_FALLBACK = "data/orna.csv";
 export const ENHANCEMENT_COLUMNS = Object.freeze({
   from: "From", to: "To", base: "Base", gold: "Gold",
 });
