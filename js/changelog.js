@@ -3,6 +3,15 @@
 // (index.html `renderChangelog`). Write entries in plain player language, not commit-speak.
 export const CHANGELOG = [
   {
+    version: "0.3",
+    date: "2026-07-24",
+    notes: "Updated damage and appraiser tabs",
+    changes: [
+      "Updated damage and appraiser tabs",
+      "Rewrote most hint/helper text",
+    ],
+  },
+  {
     version: "0.2",
     date: "2026-07-23",
     notes: "Added Esras; Changed initial gear/stats",
