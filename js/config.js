@@ -122,6 +122,10 @@ export const TAG_TO_SLOT_IDS = Object.freeze({
   Rings: ["ring1", "ring2"],
   Brooch: ["brooch"],
   Totem: ["totem"],
+  // Legacy scrolls tracked for pricing/catalog only: classified as Enchant in the
+  // Items tab but applicable to no slot, so they never surface as upgrade moves,
+  // in scroll dropdowns, or in the Appraiser/Planner candidates.
+  Legacy: [],
 });
 
 // Crafting tab (recipe per craftable item, now incl. advancement tier chains)
