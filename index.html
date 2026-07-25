@@ -2389,13 +2389,18 @@
 
     // Tier-family grouping (shared by Crafting + Items)
     // A weapon/armor tier item's chain family = its name minus a leading tier adjective
-    // (ITEM_TIER_WORDS), so "Uaithne Helm" and its five advances share a key (and items
-    // without a leading tier word, e.g. "The Cursed Belt", key on their full name → no
-    // over-grouping). Multi-member families render as a contiguous bracketed group.
+    // (ITEM_TIER_WORDS) or a leading "+N" enhancement token, so "Uaithne Helm" gathers its
+    // five advances and "Orna Helm" gathers +12…+15 (an Orna piece is likewise a CHAIN: +15
+    // is reached only by enhancing through +13 and +14, orna.csv, so it reads like the
+    // craft chains rather than four independent items). Items without either prefix, e.g.
+    // "The Cursed Belt", key on their full name → no over-grouping. Multi-member families
+    // render as a contiguous bracketed group.
     const ITEM_TIER_SET = new Set(ITEM_TIER_WORDS);
     const itemFamilyKey = (name) => {
-      const w = name.trim().split(/\s+/);
-      return (w.length > 1 && ITEM_TIER_SET.has(w[0].toLowerCase()) ? w.slice(1) : w).join(" ");
+      let w = name.trim().split(/\s+/);
+      if (w.length > 1 && /^\+?\d+$/.test(w[0])) w = w.slice(1);          // "+15 Orna Helm" → "Orna Helm"
+      if (w.length > 1 && ITEM_TIER_SET.has(w[0].toLowerCase())) w = w.slice(1);
+      return w.join(" ");
     };
     // Gear names (have a stat line on the Items tab). Only these form crafting families,
     // so raw materials / consumables stay ungrouped.
