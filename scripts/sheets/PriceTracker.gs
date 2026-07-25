@@ -1,11 +1,14 @@
 // ============================================================
-//  PRICE HISTORY TRACKER v7 — Google Apps Script
+//  PRICE HISTORY TRACKER v8 — Google Apps Script
 //  Sheets:
-//    PriceDump  → staging (auto-cleared after each run)
-//    PriceLog   → append-only ledger (never touch manually)
+//    PriceDump  → staging, Item | Min (auto-cleared after each run)
+//    PriceLog   → append-only ledger, Date | Item | Min (never touch manually)
 //    PriceInfo  → summary dashboard (auto-updated)
 //    Config     → user-editable settings
 //    IgnoreList → items to hide from PriceInfo (still logged)
+//
+//  Dates: one per row, the Eastern calendar day the screenshots were dumped.
+//  There is no separate observation date — see _todayET / _dateKey.
 //
 //  Edited locally in the repo (scripts/sheets/) and deployed
 //  with `npm run sheets:push` (clasp). Do not paste by hand.
@@ -18,10 +21,23 @@ const INFO_SHEET   = "PriceInfo";
 const CONFIG_SHEET = "Config";
 const IGNORE_SHEET = "IgnoreList";
 
-// PriceDump column positions (1-based): Date | Item | Min
-const COL_DATE = 1;
-const COL_ITEM = 2;
-const COL_MIN  = 3;
+// Every date in this project is an Eastern-time calendar day. Never build one
+// from toISOString() or a bare Date object handed to a cell: the first is UTC,
+// the second renders in the *spreadsheet's* timezone, which need not match the
+// script's. Always go through _todayET() / _dateKey().
+const TZ = "America/New_York";
+
+// PriceDump column positions (1-based): Item | Min
+// There is no date column — a screenshot is dated by the day it's uploaded.
+const COL_ITEM = 1;
+const COL_MIN  = 2;
+const DUMP_COLS = 2;
+
+// PriceLog column positions (0-based): Date | Item | Min
+const LOG_DATE = 0;
+const LOG_ITEM = 1;
+const LOG_MIN  = 2;
+const LOG_COLS = 3;
 
 const INFO_COLS          = 8;
 const INFO_TIMESTAMP_COL = 10; // column J
@@ -73,31 +89,30 @@ function updateHistory() {
   }
 
   // Build dupe fingerprint from existing PriceLog
-  // PriceLog cols: 0=Logged At | 1=Date | 2=Item | 3=Min
   const logData    = log.getDataRange().getValues();
   const loggedKeys = new Set();
   for (let r = 1; r < logData.length; r++) {
     const row = logData[r];
-    loggedKeys.add(_dupeKey(row[1], row[2], row[3]));
+    loggedKeys.add(_dupeKey(row[LOG_DATE], row[LOG_ITEM], row[LOG_MIN]));
   }
 
-  // Process PriceDump rows
-  const newRows  = [];
-  const loggedAt = new Date();
-  let dupeCount  = 0;
+  // Process PriceDump rows. Every row in this batch is stamped with today's
+  // Eastern date: the screenshots are assumed to be from the day they're dumped.
+  const newRows = [];
+  const today   = _todayET();
+  let dupeCount = 0;
 
   for (let r = 1; r < dumpData.length; r++) {
     const row  = dumpData[r];
-    const date = row[COL_DATE - 1];
     const name = String(row[COL_ITEM - 1]).trim();
     const min  = parseFloat(row[COL_MIN - 1]) || 0;
     if (!name) continue;
 
-    const key = _dupeKey(date, name, min);
+    const key = _dupeKey(today, name, min);
     if (loggedKeys.has(key)) { dupeCount++; continue; }
 
     loggedKeys.add(key);
-    newRows.push([loggedAt, date, name, min]);
+    newRows.push([today, name, min]);
   }
 
   if (newRows.length === 0 && dupeCount === 0) {
@@ -107,7 +122,7 @@ function updateHistory() {
 
   // ── Append to PriceLog ────────────────────────────────────
   if (newRows.length > 0) {
-    log.getRange(log.getLastRow() + 1, 1, newRows.length, 4).setValues(newRows);
+    log.getRange(log.getLastRow() + 1, 1, newRows.length, LOG_COLS).setValues(newRows);
   }
 
   // ── Clear PriceDump (keep header) ─────────────────────────
@@ -118,7 +133,7 @@ function updateHistory() {
         dump.deleteRows(2, lastRow - 1);
       }
       // Always clear row 2 content whether we deleted above or not
-      dump.getRange(2, 1, 1, 3).clearContent();
+      dump.getRange(2, 1, 1, DUMP_COLS).clearContent();
     }
   } catch(e) {
     console.warn("PriceDump clear failed: " + e.message);
@@ -186,7 +201,7 @@ function removeItemByName(name) {
   // call per entry, which crawls once an item has real history.
   const logData = log.getDataRange().getValues();
   const header  = logData[0];
-  const kept    = logData.slice(1).filter((row) => String(row[2]).trim() !== name);
+  const kept    = logData.slice(1).filter((row) => String(row[LOG_ITEM]).trim() !== name);
   const removed = logData.length - 1 - kept.length;
 
   if (removed === 0) return { ok: false, msg: "No entries found for \"" + name + "\"." };
@@ -224,8 +239,8 @@ function mergeItems(sourceName, targetName) {
   const logData = log.getDataRange().getValues();
   let merged = 0;
   for (let r = 1; r < logData.length; r++) {
-    if (String(logData[r][2]).trim() === sourceName) {
-      logData[r][2] = targetName;
+    if (String(logData[r][LOG_ITEM]).trim() === sourceName) {
+      logData[r][LOG_ITEM] = targetName;
       merged++;
     }
   }
@@ -233,7 +248,8 @@ function mergeItems(sourceName, targetName) {
   if (merged === 0)
     return { ok: false, msg: "No entries found for \"" + sourceName + "\" in PriceLog." };
 
-  log.getRange(2, 3, logData.length - 1, 1).setValues(logData.slice(1).map((row) => [row[2]]));
+  log.getRange(2, LOG_ITEM + 1, logData.length - 1, 1)
+     .setValues(logData.slice(1).map((row) => [row[LOG_ITEM]]));
 
   updateHistory_silent(existingItems);
   return {
@@ -268,15 +284,14 @@ function updateHistory_silent(existingItems) {
 //  SHARED BUILD LOGIC
 // ============================================================
 function _buildOutputRows(log, existingItems, cfg) {
-  // PriceLog cols: 0=Logged At | 1=Date | 2=Item | 3=Min
   const logData = log.getDataRange().getValues();
   const itemMap = {};
 
   for (let r = 1; r < logData.length; r++) {
     const row  = logData[r];
-    const date = row[1];
-    const name = String(row[2]).trim();
-    const min  = parseFloat(row[3]) || 0;
+    const date = _dateKey(row[LOG_DATE]);
+    const name = String(row[LOG_ITEM]).trim();
+    const min  = parseFloat(row[LOG_MIN]) || 0;
     if (!name) continue;
     if (!itemMap[name]) itemMap[name] = [];
     itemMap[name].push({ date, min });
@@ -347,13 +362,34 @@ function _getIgnoreList() {
   return ignore;
 }
 
+// Today's Eastern calendar day as "yyyy-MM-dd". This is the only date the log
+// carries: PriceLog rows are stamped with the day their screenshots were dumped.
+function _todayET() {
+  return Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd");
+}
+
+let _ssTz = null;
+function _sheetTZ() {
+  if (!_ssTz) _ssTz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+  return _ssTz;
+}
+
+// Normalize whatever a date cell holds to a "yyyy-MM-dd" key.
+//
+// Rows written by _todayET() are already ET "yyyy-MM-dd" text and fall through
+// the string branch untouched. The Date branch is for cells edited by hand:
+// type a date into one and Sheets stores a real Date. Those are formatted in the
+// SPREADSHEET's timezone, not ET — a date cell is a wall-clock day in the
+// spreadsheet's zone, so that's the only zone that reproduces the day shown in
+// the cell. Formatting one in ET, or worse UTC via toISOString, can shift it a
+// day when the two zones disagree.
+function _dateKey(date) {
+  if (date instanceof Date) return Utilities.formatDate(date, _sheetTZ(), "yyyy-MM-dd");
+  return String(date).trim().slice(0, 10);
+}
+
 function _dupeKey(date, name, min) {
-  // Format Dates in the script's timezone, not UTC (toISOString): an evening entry
-  // would fingerprint as the next UTC day and dodge dupe detection.
-  let d = (date instanceof Date)
-    ? Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy-MM-dd")
-    : String(date).trim().slice(0, 10);
-  return d + "|" + String(name).trim() + "|" + min;
+  return _dateKey(date) + "|" + String(name).trim() + "|" + min;
 }
 
 function _trendLabel(current, rollingAvg) {
@@ -417,8 +453,10 @@ function _writeTimestamp(sheet) {
   labelCell.setFontWeight("bold");
   labelCell.setBackground("#263238");
   labelCell.setFontColor("#FFFFFF");
-  valueCell.setValue(new Date());
-  valueCell.setNumberFormat("yyyy-mm-dd hh:mm");
+  // Written as text, not a Date: a Date cell renders in the spreadsheet's
+  // timezone, which is not necessarily Eastern.
+  valueCell.setNumberFormat("@");
+  valueCell.setValue(Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd HH:mm") + " ET");
 }
 
 function _applyInfoFormatting(sheet, numRows, newItemRows, staleRows, cfg) {
@@ -490,7 +528,7 @@ function clearPriceDump() {
   if (lastRow <= 1) { SpreadsheetApp.getUi().alert("PriceDump is already empty."); return; }
   try {
     if (lastRow > 2) dump.deleteRows(2, lastRow - 1);
-    dump.getRange(2, 1, 1, 3).clearContent();
+    dump.getRange(2, 1, 1, DUMP_COLS).clearContent();
     SpreadsheetApp.getUi().alert("✓ PriceDump cleared.");
   } catch(e) {
     SpreadsheetApp.getUi().alert("Clear failed: " + e.message);
