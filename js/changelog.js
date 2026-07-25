@@ -3,6 +3,17 @@
 // (index.html `renderChangelog`). Write entries in plain player language, not commit-speak.
 export const CHANGELOG = [
   {
+    version: "0.4",
+    date: "2026-07-25",
+    notes: "Faster loading; filtered out legacy items; fixed Orna upgrade pricing",
+    changes: [
+      "The app loads in half a second instead of 8. Fix comes from using cached data, and loading snapshotted data from the pricing spreadsheet.",
+      "Added a new legacy section in the Items tab. Tagged many items and scrolls legacy so they don't show up as upgrades or sidegrades. They are still price tracked.",
+      "Orna upgrading now looks more like Uaithne and Eriu upgrading. The items chain from +12 to +15 like how Uaithne and Eriu chain from base to Legendary.",
+      "Backend improvements to price logging from the in game marketplace",
+    ],
+  },
+  {
     version: "0.3",
     date: "2026-07-24",
     notes: "Updated damage and appraiser tabs",
