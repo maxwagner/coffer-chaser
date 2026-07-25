@@ -123,7 +123,7 @@ export const TAG_TO_SLOT_IDS = Object.freeze({
   Brooch: ["brooch"],
   Totem: ["totem"],
   // Legacy scrolls tracked for pricing/catalog only: classified as Enchant in the
-  // Items tab but applicable to no slot, so they never surface as upgrade moves,
+  // Gear tab but applicable to no slot, so they never surface as upgrade moves,
   // in scroll dropdowns, or in the Appraiser/Planner candidates.
   Legacy: [],
 });
@@ -139,7 +139,7 @@ export const TAG_TO_SLOT_IDS = Object.freeze({
 // requires "Beginner Uaithne Helm"). NOTE: only the COST side is live, tierStep
 // move-generation is still blocked on other data (system-jump enchant-wipe flag,
 // unpriced Premium Enhancement Runes, partial chain), even though some tier items
-// now carry stat lines on the Items tab (SPEC §4 / §12).
+// now carry stat lines on the Gear tab (SPEC §4 / §12).
 export const CRAFTING_CSV_URL = tabCsv(1517243497);
 export const CRAFTING_CSV_FALLBACK = "data/crafting.csv";
 export const CRAFTING_COLUMNS = Object.freeze({
@@ -153,14 +153,14 @@ export const CRAFTING_MAX_MATERIALS = 8; // "Item 1..8" each followed by "#"
 // (else it would be an unpriceable material that breaks the whole chain's cost).
 export const CRAFTING_BASELINE_RE = /^\+?\s*15\s+orna\b/i;
 
-// Items tab (full candidate stat lines per slot)
+// Gear tab (full candidate stat lines per slot)
 // Slot labels map through SLOT_NAME_TO_ID. A single Slot cell may list more than
 // one slot ("Ring 1, Ring 2"). The loader splits on commas. HP/Stam are present
 // in the sheet but intentionally not parsed (not scored, SPEC §2). Stat columns
 // use the long headers (ITEM_STAT_COLUMNS). The Enchants tab now uses short ones,
 // so the two no longer share a column map.
-export const ITEMS_CSV_URL = tabCsv(1054482569);
-export const ITEMS_CSV_FALLBACK = "data/items.csv";
+export const GEAR_CSV_URL = tabCsv(1054482569);
+export const GEAR_CSV_FALLBACK = "data/gear.csv";
 export const ITEMS_COLUMNS = Object.freeze({
   name: "Item",   // marketplace name; key into the price feed
   level: "Level", // item level (informational / within-slot ordering)
@@ -168,7 +168,7 @@ export const ITEMS_COLUMNS = Object.freeze({
   effect: "Effect",
 });
 
-// Items-tab stat column → scored-stat key (SPEC §2). Distinct from
+// Gear-tab stat column → scored-stat key (SPEC §2). Distinct from
 // ENCHANT_STAT_COLUMNS: this tab still carries the long headers and a Def Pen col.
 export const ITEM_STAT_COLUMNS = Object.freeze({
   Attack: "att",
@@ -218,7 +218,7 @@ export const GEAR_SYSTEMS = Object.freeze(["Uaithne", "Eriu", "Orna"]);
 // baseline prefix via tuningKey() in utils.js). Material name/qty pairs reuse the
 // Crafting convention. `Unlock` gates the cumulative climb: 0 = base stats (tune
 // freely), 1 = ATT Surplus I (only after every 0 stat is maxed), 2 = ATT Surplus II
-// (after 1 maxed). Items tab holds UNTUNED stats; tuning layers on top.
+// (after 1 maxed). Gear tab holds UNTUNED stats; tuning layers on top.
 export const TUNING_CSV_URL = tabCsv(1326632211);
 export const TUNING_CSV_FALLBACK = "data/tuning.csv";
 export const TUNING_COLUMNS = Object.freeze({
@@ -552,9 +552,9 @@ export const WEEKLY_BOX_STORAGE_KEY = "vgu.weeklybox.v1";
 // loadout; SQLite via the `.pyw` path remains a later option. SPEC §9/§12.)
 //
 // Current gear per slot. prefix/suffix = scroll name (key into Enchants tab) or
-// null (empty affix). base = base item name (key into Items tab). enhance = current
+// null (empty affix). base = base item name (key into Gear tab). enhance = current
 // enhancement level + item-level bracket for enhanceable accessories (ring1/ring2/
-// belt/earrings); bracket is derived from the item's level in the Items tab.
+// belt/earrings); bracket is derived from the item's level in the Gear tab.
 // Weapon/armor `base` drives BOTH enchantSwap and tierStep (now LIVE for the full
 // Uaithne system, every weapon/armor slot climbs Orna→Legendary). Artifact + Rhod
 // are enchant-only (enchantSwap coverage; never enhanced, and their upgrade path

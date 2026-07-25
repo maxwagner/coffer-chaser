@@ -1,4 +1,4 @@
-// Items loader: the Items tab → the full candidate menu per slot. Each row is one
+// Items loader: the Sheet's Gear tab → the full candidate menu per slot. Each row is one
 // purchasable/craftable base item with its point-giving stat line (SPEC §8).
 //
 //   item = {
@@ -14,7 +14,7 @@
 // exist in the sheet but are deliberately not parsed, not part of the score.
 
 import {
-  ITEMS_CSV_URL, ITEMS_CSV_FALLBACK, ITEMS_COLUMNS,
+  GEAR_CSV_URL, GEAR_CSV_FALLBACK, ITEMS_COLUMNS,
   ITEM_STAT_COLUMNS, SLOT_NAME_TO_ID,
 } from "./config.js";
 import { fetchSheetRows, headerIndex, toInt } from "./sheet.js";
@@ -73,7 +73,7 @@ export function itemsBySlot(items) {
 
 // Returns { items, bySlot, source, liveError? }.
 export async function loadItems() {
-  const { rows, source, liveError } = await fetchSheetRows(ITEMS_CSV_URL, ITEMS_CSV_FALLBACK);
+  const { rows, source, liveError } = await fetchSheetRows(GEAR_CSV_URL, GEAR_CSV_FALLBACK);
   const items = rowsToItems(rows);
   return { items, bySlot: itemsBySlot(items), source, liveError };
 }

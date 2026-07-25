@@ -2402,7 +2402,7 @@
       if (w.length > 1 && ITEM_TIER_SET.has(w[0].toLowerCase())) w = w.slice(1);
       return w.join(" ");
     };
-    // Gear names (have a stat line on the Items tab). Only these form crafting families,
+    // Gear names (have a stat line on the Gear tab). Only these form crafting families,
     // so raw materials / consumables stay ungrouped.
     const gearNames = new Set(items.map((it) => it.name));
 
