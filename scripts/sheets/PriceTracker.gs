@@ -31,6 +31,14 @@ const COL_ITEM = 1;
 const COL_MIN  = 2;
 const DUMP_COLS = 2;
 
+// PriceDump idles at exactly this many rows (1 header + blanks). Pasting a dump
+// taller than the grid makes Sheets add the rows it needs; every successful run
+// snaps the grid back down. The size is the invariant that makes stray content
+// impossible rather than merely detectable: there is no row 600 to survive in.
+// Raise it if a paste is ever truncated instead of expanding the sheet — the
+// "N rows logged" count in the summary is the tell.
+const DUMP_IDLE_ROWS = 10;
+
 // PriceLog column positions (0-based): Date | Item | Min
 const LOG_DATE = 0;
 const LOG_ITEM = 1;
@@ -80,10 +88,47 @@ function updateHistory() {
     return;
   }
 
-  const dumpData = dump.getDataRange().getValues();
-  if (dumpData.length < 2) {
-    SpreadsheetApp.getUi().alert("Nothing in " + DUMP_SHEET + " to process.");
+  const ui = SpreadsheetApp.getUi();
+
+  if (dump.getLastRow() < 2) {
+    _clearDump(dump); // nothing to log, but normalize the header and grid size
+    ui.alert("Nothing in " + DUMP_SHEET + " to process.");
     return;
+  }
+
+  const dumpData = dump.getDataRange().getValues();
+
+  // Audit the layout before touching anything. A dump is only ever supposed to
+  // be a header plus one contiguous Item | Min block; anything else (a stray
+  // row 600 down, a third column, a price with no name) gets named out loud
+  // instead of being silently logged or silently swept away.
+  const audit = _auditDump(dump, dumpData);
+  const notes = audit.warnings.slice();
+
+  const headerCell = String(dumpData[0][0]).trim();
+  if (headerCell.toLowerCase() !== "item") {
+    notes.push('Row 1 held "' + headerCell + '" instead of the "Item" header, so it was ' +
+               "skipped. Re-paste that row if it was real data.");
+  }
+
+  if (audit.named.length === 0) {
+    ui.alert("No item names found in " + DUMP_SHEET + ". Nothing logged, nothing cleared." +
+             (notes.length ? "\n\n" + notes.join("\n\n") : ""));
+    return;
+  }
+
+  // Any note at all means a row is about to be dropped or a stray one picked up.
+  // Confirm rather than guess — this is the step that used to happen silently.
+  if (notes.length > 0) {
+    const go = ui.alert(
+      DUMP_SHEET + " looks off",
+      notes.join("\n\n") + "\n\nLog " + audit.named.length + " row(s) anyway?",
+      ui.ButtonSet.YES_NO
+    );
+    if (go !== ui.Button.YES) {
+      ui.alert("Cancelled. " + DUMP_SHEET + " left untouched.");
+      return;
+    }
   }
 
   // Build dupe fingerprint from existing PriceLog
@@ -113,29 +158,15 @@ function updateHistory() {
     newRows.push([today, name, min]);
   }
 
-  if (newRows.length === 0 && dupeCount === 0) {
-    SpreadsheetApp.getUi().alert("No valid rows found in " + DUMP_SHEET + ".");
-    return;
-  }
-
   // ── Append to PriceLog ────────────────────────────────────
   if (newRows.length > 0) {
     log.getRange(log.getLastRow() + 1, 1, newRows.length, LOG_COLS).setValues(newRows);
   }
 
-  // ── Clear PriceDump (keep header) ─────────────────────────
-  try {
-    const lastRow = dump.getLastRow();
-    if (lastRow > 1) {
-      if (lastRow > 2) {
-        dump.deleteRows(2, lastRow - 1);
-      }
-      // Always clear row 2 content whether we deleted above or not
-      dump.getRange(2, 1, 1, DUMP_COLS).clearContent();
-    }
-  } catch(e) {
-    console.warn("PriceDump clear failed: " + e.message);
-  }
+  // ── Clear PriceDump ───────────────────────────────────────
+  // Unconditional, and verified: every row that made it past the audit is now
+  // in PriceLog, so the dump must come back empty. Anything left is reported.
+  const cleared = _clearDump(dump);
 
   // Detect existing items before rebuild
   const existingItems = _getExistingItems(ss);
@@ -153,13 +184,16 @@ function updateHistory() {
   _writeTimestamp(info);
 
   // Summary
-  let msg = "✓ Done!\n" +
+  let msg = (cleared.ok ? "✓ Done!\n" : "⚠️ Logged, but " + DUMP_SHEET + " did not clear.\n") +
     newRows.length + " rows logged  |  " + items.length + " items in PriceInfo";
   if (dupeCount > 0)       msg += "\n⚠️ " + dupeCount + " duplicate row(s) skipped.";
+  if (!cleared.ok)         msg += "\n\n❌ " + cleared.msg;
+  if (cleared.note)        msg += "\n\n⚠️ " + cleared.note;
+  if (notes.length > 0)    msg += "\n\n" + notes.join("\n");
   if (newItemRows.length > 0) msg += "\n\n🆕 " + newItemRows.length + " new item(s) highlighted in yellow.";
   if (staleRows.length > 0)   msg += "\n🕒 " + staleRows.length + " item(s) stale (>" + cfg.stale + " days).";
 
-  SpreadsheetApp.getUi().alert(msg);
+  ui.alert(msg);
 }
 
 
@@ -333,6 +367,114 @@ function _buildOutputRows(log, existingItems, cfg) {
 
 
 // ============================================================
+//  PRICEDUMP: HEADER, AUDIT, CLEAR
+// ============================================================
+// The header is written, not merely preserved. The old code kept row 1 by never
+// touching it, which meant that once a paste landed on A1 the dump carried a
+// data row as its "header" forever: skipped by the reader, skipped by the clear,
+// invisible in every summary.
+function _writeDumpHeader(dump) {
+  dump.getRange(1, 1, 1, DUMP_COLS).setValues([["Item", "Min"]]);
+  _styleHeader(dump, DUMP_COLS);
+  if (dump.getFrozenRows() < 1) dump.setFrozenRows(1);
+}
+
+// Report anything about the dump's shape that a human would want to know before
+// 600 rows of it get logged. Returns { warnings, named }, where `named` is the
+// 1-based row numbers carrying an item name.
+function _auditDump(dump, dumpData) {
+  const warnings = [];
+
+  const lastCol = dump.getLastColumn();
+  if (lastCol > DUMP_COLS) {
+    warnings.push("Content past column " + _colLetter(DUMP_COLS) + " — the sheet extends to " +
+                  _colLetter(lastCol) + ". Only Item | Min is read; the rest is discarded.");
+  }
+
+  const named  = []; // rows with an item name
+  const orphan = []; // rows holding something, but no name — never logged
+  for (let r = 1; r < dumpData.length; r++) {
+    const row = dumpData[r];
+    if (String(row[COL_ITEM - 1]).trim()) { named.push(r + 1); continue; }
+    if (row.some((c) => String(c).trim() !== "")) orphan.push(r + 1);
+  }
+
+  // A gap is the tell for content stranded far below the block you pasted.
+  for (let i = 1; i < named.length; i++) {
+    if (named[i] !== named[i - 1] + 1) {
+      warnings.push("Gap: rows " + named[0] + "-" + named[i - 1] + " are contiguous, then " +
+                    "content resumes at row " + named[i] + " (dump ends at row " +
+                    named[named.length - 1] + ").");
+      break;
+    }
+  }
+
+  if (orphan.length > 0) {
+    warnings.push(orphan.length + " row(s) hold a value but no item name, so nothing will be " +
+                  "logged for them: " + _rowList(orphan) + ".");
+  }
+
+  return { warnings, named };
+}
+
+// Clear every row below the header across the FULL grid width, then verify.
+// clearContent (not deleteRows) keeps the grid the size it is: deleting rows
+// shrank PriceDump a little on every run, and once it was down to one row the
+// old clear threw out of bounds — into a catch that only wrote to the log.
+function _clearDump(dump) {
+  try {
+    const maxRows = dump.getMaxRows();
+    const maxCols = dump.getMaxColumns();
+    if (maxRows > 1) dump.getRange(2, 1, maxRows - 1, maxCols).clearContent();
+    _writeDumpHeader(dump);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    return { ok: false, msg: "Clear threw: " + (e.message || e) };
+  }
+
+  const left = dump.getLastRow();
+  if (left > 1) {
+    // Deliberately no trim here: something unlogged is still down there and
+    // resizing the grid would delete it before it could be looked at.
+    return { ok: false, msg: DUMP_SHEET + " still has content down at row " + left +
+                            " after clearing. Check that row." };
+  }
+
+  // Verified empty — safe to snap the grid back to its idle size.
+  try {
+    _resizeDump(dump);
+  } catch (e) {
+    return { ok: true, msg: "", note: "Cleared, but resizing to " + DUMP_IDLE_ROWS +
+                                      " rows failed: " + (e.message || e) };
+  }
+  return { ok: true, msg: "" };
+}
+
+// Pin the grid to DUMP_IDLE_ROWS. Grows as well as shrinks, so a sheet the old
+// deleteRows-based clear had whittled down to one row heals on the next run.
+function _resizeDump(dump) {
+  const rows = dump.getMaxRows();
+  if (rows > DUMP_IDLE_ROWS) dump.deleteRows(DUMP_IDLE_ROWS + 1, rows - DUMP_IDLE_ROWS);
+  else if (rows < DUMP_IDLE_ROWS) dump.insertRowsAfter(rows, DUMP_IDLE_ROWS - rows);
+}
+
+function _rowList(rows) {
+  const shown = rows.slice(0, 8).join(", ");
+  return rows.length > 8 ? shown + ", … (+" + (rows.length - 8) + " more)" : shown;
+}
+
+function _colLetter(n) {
+  let s = "";
+  while (n > 0) {
+    const m = (n - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    n = (n - m - 1) / 26;
+  }
+  return s;
+}
+
+
+// ============================================================
 //  HELPERS
 // ============================================================
 // Current PriceInfo item names, used to flag NEW items (yellow rows) after a rebuild.
@@ -502,21 +644,31 @@ function rebuildPriceInfo() {
 
 
 // ============================================================
-//  CLEAR PRICEDUMP — manual fallback if auto-clear fails
+//  CLEAR PRICEDUMP — manual fallback; discards rows without logging them
 // ============================================================
 function clearPriceDump() {
   const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const ui   = SpreadsheetApp.getUi();
   const dump = ss.getSheetByName(DUMP_SHEET);
-  if (!dump) { SpreadsheetApp.getUi().alert("PriceDump sheet not found."); return; }
+  if (!dump) { ui.alert(DUMP_SHEET + " sheet not found."); return; }
+
   const lastRow = dump.getLastRow();
-  if (lastRow <= 1) { SpreadsheetApp.getUi().alert("PriceDump is already empty."); return; }
-  try {
-    if (lastRow > 2) dump.deleteRows(2, lastRow - 1);
-    dump.getRange(2, 1, 1, DUMP_COLS).clearContent();
-    SpreadsheetApp.getUi().alert("✓ PriceDump cleared.");
-  } catch(e) {
-    SpreadsheetApp.getUi().alert("Clear failed: " + e.message);
+  if (lastRow <= 1) {
+    _writeDumpHeader(dump);
+    ui.alert(DUMP_SHEET + " is already empty.");
+    return;
   }
+
+  // This throws data away without logging it, so say how much and how far down.
+  const go = ui.alert(
+    "Clear " + DUMP_SHEET + "?",
+    "Rows 2-" + lastRow + " will be discarded without being logged to " + LOG_SHEET + ".",
+    ui.ButtonSet.YES_NO
+  );
+  if (go !== ui.Button.YES) return;
+
+  const cleared = _clearDump(dump);
+  ui.alert(cleared.ok ? "✓ " + DUMP_SHEET + " cleared." : "Clear failed: " + cleared.msg);
 }
 
 
