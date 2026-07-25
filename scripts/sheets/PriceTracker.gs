@@ -5,7 +5,6 @@
 //    PriceLog   → append-only ledger, Date | Item | Min (never touch manually)
 //    PriceInfo  → summary dashboard (auto-updated)
 //    Config     → user-editable settings
-//    IgnoreList → items to hide from PriceInfo (still logged)
 //
 //  Dates: one per row, the Eastern calendar day the screenshots were dumped.
 //  There is no separate observation date — see _todayET / _dateKey.
@@ -19,7 +18,6 @@ const DUMP_SHEET   = "PriceDump";
 const LOG_SHEET    = "PriceLog";
 const INFO_SHEET   = "PriceInfo";
 const CONFIG_SHEET = "Config";
-const IGNORE_SHEET = "IgnoreList";
 
 // Every date in this project is an Eastern-time calendar day. Never build one
 // from toISOString() or a bare Date object handed to a cell: the first is UTC,
@@ -303,8 +301,7 @@ function _buildOutputRows(log, existingItems, cfg) {
 
   const now         = new Date();
   const staleMs     = cfg.stale * 24 * 60 * 60 * 1000;
-  const ignore      = _getIgnoreList();
-  const items       = Object.keys(itemMap).filter(n => !ignore.has(n)).sort();
+  const items       = Object.keys(itemMap).sort();
   const outputRows  = [];
   const newItemRows = [];
   const staleRows   = [];
@@ -347,19 +344,6 @@ function _getExistingItems(ss) {
         .forEach(([n]) => { if (n) items.add(String(n).trim()); });
   }
   return items;
-}
-
-function _getIgnoreList() {
-  const ss     = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet  = ss.getSheetByName(IGNORE_SHEET);
-  const ignore = new Set();
-  if (!sheet || sheet.getLastRow() < 2) return ignore;
-  sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues()
-       .forEach(([n]) => {
-         const t = String(n).trim();
-         if (t) ignore.add(t);
-       });
-  return ignore;
 }
 
 // Today's Eastern calendar day as "yyyy-MM-dd". This is the only date the log
