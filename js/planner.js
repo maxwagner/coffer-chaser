@@ -13,8 +13,8 @@
 //   kind:"move"  { slot, type, ...identity, onItem? }, one ATOMIC move:
 //     enchantSwap  { affix, scroll }, put `scroll` on `slot`'s affix
 //     baseSwap     { item, toLevel? }, equip `item` (re-enhance to toLevel)
-//     tierStep     { item }, advance ONE hop to tier output `item`
-//     gearEnhance  { item, toLevel }. Orna +N variant `item` (one level)
+//     tierStep     { item }, advance ONE hop to tier output `item` (this spans the Orna
+//                  +N levels too: "+13 Orna Helm" is an ordinary hop on the chain)
 //     enhanceStep  { toLevel }, accessory enhance to +toLevel (one level)
 //     tuneStep     { stat, capstone, maxes:[{stat,amount}], partial? }, partial:true =
 //                  a tick-limited tune to `maxes[0].amount` (below the cap), priced by
@@ -26,8 +26,8 @@
 
 import { initStates, slotMoves, applyMove, compositionOf, ringsOf, tunePartialMove } from "./solver.js";
 import { score } from "./score.js";
-import { tuneStatCanon, ENHANCEABLE_SLOT_IDS, TIER_SLOT_IDS, ENHANCE_TARGET_LEVEL } from "./config.js";
-import { tuningKey, itemSystem } from "./utils.js";
+import { tuneStatCanon, ENHANCEABLE_SLOT_IDS, TIER_SLOT_IDS } from "./config.js";
+import { tuningKey } from "./utils.js";
 
 export const PATH_VERSION = 1;
 export const EXPORT_APP = "coffer-chaser";
@@ -89,11 +89,10 @@ export const moveBuys = (ctx, m) => {
   if (m.type === "tierStep" || m.type === "baseSwap") {
     if (!m.to) return null;
     const buys = { ...expandBOM(ctx, m.to, m.from).buys };
-    // A jump tierStep's gold also spans the enhancement EV (per-attempt qty × expected
-    // tries) and the tuning prerequisite, weigh their materials too; on an Orna jump
-    // they often dominate the move's gold, so a craft-only trend would mislead.
-    for (const s of m.enhanceSteps || [])
-      for (const [n, q] of Object.entries(s.materials)) addLeafBuys(ctx, buys, n, q * s.tries);
+    // A jump tierStep's gold also spans the tuning prerequisite, weigh its materials too;
+    // on an Orna jump it often dominates the move's gold, so a craft-only trend would
+    // mislead. (The enhancement materials come through expandBOM now, being ordinary
+    // recipe lines on the "+N Orna <slot>" tiers.)
     for (const b of m.tunePrereqBreakdown || [])
       for (const { material, qty } of b.materials) addLeafBuys(ctx, buys, material, qty);
     return buys;
@@ -106,12 +105,6 @@ export const moveBuys = (ctx, m) => {
     const buys = {};
     for (const b of m.breakdown) for (const { material, qty } of b.materials)
       addLeafBuys(ctx, buys, material, qty); // crafted tuning mat → the leaves you buy
-    return buys;
-  }
-  if (m.type === "gearEnhance" && m.enhanceSteps) {
-    const buys = {};
-    for (const s of m.enhanceSteps) for (const [n, q] of Object.entries(s.materials))
-      addLeafBuys(ctx, buys, n, q * s.tries); // expected enhancement materials
     return buys;
   }
   return null;
@@ -130,8 +123,6 @@ export const moveBuysShallow = (ctx, m) => {
     if (!r) add(buys, m.to, 1); // no recipe → you buy the item itself
     else for (const { material, qty } of r.materials)
       if (material !== m.from) add(buys, material, qty); // owned base → not gathered
-    for (const s of m.enhanceSteps || [])
-      for (const [n, q] of Object.entries(s.materials)) add(buys, n, q * s.tries);
     for (const b of m.tunePrereqBreakdown || [])
       for (const { material, qty } of b.materials) add(buys, material, qty);
     return buys;
@@ -143,11 +134,6 @@ export const moveBuysShallow = (ctx, m) => {
   if (m.type === "tuneStep" && m.breakdown) {
     const buys = {};
     for (const b of m.breakdown) for (const { material, qty } of b.materials) add(buys, material, qty);
-    return buys;
-  }
-  if (m.type === "gearEnhance" && m.enhanceSteps) {
-    const buys = {};
-    for (const s of m.enhanceSteps) for (const [n, q] of Object.entries(s.materials)) add(buys, n, q * s.tries);
     return buys;
   }
   return null;
@@ -224,11 +210,30 @@ const MOVE_FIELDS = {
   enchantSwap: ["affix", "scroll", "onItem"],
   baseSwap: ["item", "toLevel"],
   tierStep: ["item"],
-  gearEnhance: ["item", "toLevel"],
   enhanceStep: ["toLevel", "onItem"],
   tuneStep: ["stat", "capstone", "maxes", "partial", "onItem"],
   infuse: ["stat", "amount", "onItem"],
 };
+
+// Legacy step-type migration
+// The Orna +N climb used to be its own `gearEnhance` move, before the +12→+15 steps became
+// ordinary Crafting-tab tiers. Its identity was already the +level variant NAME, exactly a
+// tierStep's, so an old path migrates by renaming the type and dropping the now-meaningless
+// `toLevel`. Applied on BOTH entry points: `parsePath` (import / paste) and the raw
+// localStorage + profile-snapshot loads, which never run parsePath's validation.
+const LEGACY_MOVE_TYPES = { gearEnhance: "tierStep" };
+export const migrateStepType = (type) => LEGACY_MOVE_TYPES[type] || type;
+
+export const migratePath = (path) => ({
+  v: PATH_VERSION,
+  steps: (path?.steps || []).map((s) => {
+    if (s?.kind !== "move") return s;
+    const type = migrateStepType(s.type);
+    if (type === s.type) return s;
+    const { toLevel, ...rest } = s;
+    return { ...rest, type };
+  }),
+});
 
 export const serializePath = (path) =>
   JSON.stringify({ app: EXPORT_APP, kind: EXPORT_KIND, v: PATH_VERSION, steps: path.steps }, null, 2);
@@ -264,17 +269,17 @@ export function parsePath(text) {
       if (typeof s.goalId !== "string" || !s.goalId) return bad("goal without a goal id.");
       steps.push(withComment({ id: newStepId(), kind: "goal", goalId: s.goalId }));
     } else if (s.kind === "move") {
-      const fields = MOVE_FIELDS[s.type];
+      const type = migrateStepType(s.type); // legacy gearEnhance → tierStep (see migratePath)
+      const fields = MOVE_FIELDS[type];
       if (!fields) return bad(`unknown move type "${s.type}".`);
       if (typeof s.slot !== "string" || !s.slot) return bad("move without a slot.");
-      const step = { id: newStepId(), kind: "move", slot: s.slot, type: s.type };
+      const step = { id: newStepId(), kind: "move", slot: s.slot, type };
       for (const f of fields) if (s[f] !== undefined) step[f] = s[f];
-      if (s.type === "enchantSwap" && (!step.scroll || !step.affix)) return bad("enchant without scroll/affix.");
-      if ((s.type === "baseSwap" || s.type === "tierStep" || s.type === "gearEnhance") && !step.item) return bad(`${s.type} without an item.`);
-      if (s.type === "enhanceStep" && typeof step.toLevel !== "number") return bad("enhance without a level.");
-      if (s.type === "gearEnhance" && typeof step.toLevel !== "number") return bad("gearEnhance without a level.");
-      if (s.type === "tuneStep" && !Array.isArray(step.maxes)) return bad("tune without maxes.");
-      if (s.type === "infuse" && (!step.stat || typeof step.amount !== "number")) return bad("infuse without a stat/amount.");
+      if (type === "enchantSwap" && (!step.scroll || !step.affix)) return bad("enchant without scroll/affix.");
+      if ((type === "baseSwap" || type === "tierStep") && !step.item) return bad(`${type} without an item.`);
+      if (type === "enhanceStep" && typeof step.toLevel !== "number") return bad("enhance without a level.");
+      if (type === "tuneStep" && !Array.isArray(step.maxes)) return bad("tune without maxes.");
+      if (type === "infuse" && (!step.stat || typeof step.amount !== "number")) return bad("infuse without a stat/amount.");
       steps.push(withComment(step));
     } else return bad(`unknown kind "${s.kind}".`);
   }
@@ -291,7 +296,6 @@ export function stepLabel(step, slotLabel = (s) => s) {
     case "enchantSwap": return `Add a ${step.scroll} to your ${at}'s ${step.affix === "prefix" ? "Prefix" : "Suffix"} slot`;
     case "baseSwap": return `Equip a ${step.item} in your ${at} slot${step.toLevel ? ` and enhance it to +${step.toLevel}` : ""}`;
     case "tierStep": return `Advance your ${at} to ${step.item}`;
-    case "gearEnhance": return `Enhance your ${at} to ${step.item}`;
     case "enhanceStep": return `Enhance your ${at} to +${step.toLevel}`;
     case "tuneStep": return step.partial && step.maxes?.length === 1
       ? `Tune your ${at}'s ${step.stat} to ${step.maxes[0].amount}`
@@ -316,14 +320,11 @@ export function pathToTSV(entries, slotLabel = (s) => s) {
 
 // Move → steps decomposition (the single entry-point normalizer)
 // Every "Add to plan" source funnels through this: a display-merged row explodes to its
-// underlying steps, a CUMULATIVE tierStep explodes to one step per hop, and a tierStep
-// that bundles an Orna +N→+15 enhance prerequisite emits those levels as their own
-// gearEnhance steps first (decision: every prereq is its own visible step). `baseName`
-// (optional) stamps `onItem` on enchant/enhance/tune steps so an importer with different
-// gear gets a useful gap prompt.
-const plusLevel = (name) => { const m = /^\+?(\d+)/.exec(name || ""); return m ? +m[1] : null; };
-const bumpPlus = (name, lvl) => name.replace(/^\+?\d+/, `+${lvl}`);
-
+// underlying steps and a CUMULATIVE tierStep explodes to one step per hop (decision: every
+// prereq is its own visible step). Since the Orna +N levels are ordinary chain hops, a
+// +12 Orna → Uaithne climb decomposes to +13, +14, +15, Uaithne with no special casing.
+// `baseName` (optional) stamps `onItem` on enchant/enhance/tune steps so an importer with
+// different gear gets a useful gap prompt.
 export function moveToSteps(move, ctx, baseName = null) {
   if (move.merged && Array.isArray(move.steps))
     return move.steps.flatMap((m) => moveToSteps(m, ctx, baseName));
@@ -331,19 +332,10 @@ export function moveToSteps(move, ctx, baseName = null) {
   const onItem = baseName ? { onItem: baseName } : {};
   switch (move.type) {
     case "tierStep": {
-      const out = [];
-      // Orna enhance prerequisite bundled into the jump → per-level gearEnhance steps.
-      if (move.enhanceSteps?.length && move.enhanceFrom != null && plusLevel(move.from) != null) {
-        for (const s of move.enhanceSteps)
-          out.push(mkStep("gearEnhance", { item: bumpPlus(move.from, s.to), toLevel: s.to }));
-      }
       const hops = tierPath(ctx.tierChain, move.from, move.to);
-      if (hops.length) for (const h of hops) out.push(mkStep("tierStep", { item: h }));
-      else out.push(mkStep("tierStep", { item: move.to })); // chain unresolvable → keep the intent
-      return out;
+      if (!hops.length) return [mkStep("tierStep", { item: move.to })]; // chain unresolvable → keep the intent
+      return hops.map((h) => mkStep("tierStep", { item: h }));
     }
-    case "gearEnhance":
-      return [mkStep("gearEnhance", { item: move.to, toLevel: move.toLevel })];
     case "enhanceStep":
       return [mkStep("enhanceStep", { toLevel: move.apply.level, ...onItem })];
     case "enchantSwap":
@@ -385,7 +377,7 @@ export function slotUpgradeOptions(loadout, slot, ctx, statesOverride = null) {
   for (const m of slotMoves(state, lctx)) {
     const part = m.type === "enchantSwap" ? m.affix
       : m.type === "tuneStep" ? "tuning"
-      : "base"; // tierStep / baseSwap / gearEnhance / enhanceStep (incl. empty-slot acquire)
+      : "base"; // tierStep / baseSwap / enhanceStep (incl. empty-slot acquire)
     if (groups[part]) groups[part].push(m);
   }
   const affixApplies = (affix) => Object.values(ctx.enchants || {})
@@ -425,35 +417,6 @@ export function enhanceTargetOptions(loadout, slot, ctx, statesOverride = null) 
   return opts;
 }
 
-// Multi-level GEAR enhance targets (SPEC §17.7)
-// The Orna analogue of enhanceTargetOptions: slotMoves only ever offers the single next
-// "+N → +N+1" gearEnhance, so a +12 piece heading for +15 needed three separate adds (and
-// the builder, working off the live loadout, never even showed +14/+15). One option per
-// reachable target level; each expands to the per-level gearEnhance run. The +level variant
-// item must exist in bySlot for every intermediate level (the walk stops at the first gap:
-// levels beyond it can't be priced or applied). Empty for non-Orna, non-tier, or maxed gear.
-export function gearEnhanceTargetOptions(loadout, slot, ctx, statesOverride = null) {
-  if (!TIER_SLOT_IDS.includes(slot)) return [];
-  const state = (statesOverride || initStates(loadout, ctx))[slot];
-  if (!state?.base || itemSystem(state.base.name) !== "Orna") return [];
-  const lvl = plusLevel(state.base.name);
-  if (lvl == null || lvl >= ENHANCE_TARGET_LEVEL) return [];
-  const opts = [];
-  const steps = [];
-  for (let target = lvl + 1; target <= ENHANCE_TARGET_LEVEL; target++) {
-    const name = bumpPlus(state.base.name, target);
-    if (!(ctx.bySlot[slot] || []).some((it) => it.name === name)) break; // variant gap → stop
-    steps.push({ id: newStepId(), kind: "move", slot, type: "gearEnhance", item: name, toLevel: target });
-    opts.push({
-      label: `to +${target}${target - lvl > 1 ? ` (${target - lvl} levels)` : ""}`,
-      // Each option owns its steps (fresh ids). Sharing step objects across options would
-      // collide ids when two options are ever inserted.
-      steps: steps.map((s) => ({ ...s, id: newStepId() })),
-    });
-  }
-  return opts;
-}
-
 // Satisfied-or-better (the derived "done" test, SPEC §17)
 // A step is done when the slot's state already IS the target, or something strictly
 // better: a base further UP the tier chain, a higher enhance level, a higher-scoring
@@ -468,16 +431,6 @@ export function satisfiedOrBetter(state, step, ctx) {
       if (cur === step.scroll) return true;
       const a = ctx.enchants[cur], b = ctx.enchants[step.scroll];
       return !!(a && b && a.family && a.family === b.family && score(a.stats) >= score(b.stats));
-    }
-    case "gearEnhance": {
-      const cur = state.base?.name;
-      if (!cur) return false;
-      if (cur === step.item) return true;
-      // Same piece at a higher +level satisfies; anything upstream on the chain does too.
-      const curLvl = plusLevel(cur), tgtLvl = plusLevel(step.item);
-      if (curLvl != null && tgtLvl != null && bumpPlus(cur, 0) === bumpPlus(step.item, 0))
-        return curLvl >= tgtLvl;
-      return tierPath(ctx.tierChain, step.item, cur).length > 0;
     }
     case "tierStep": case "baseSwap": {
       const cur = state.base?.name;
@@ -516,7 +469,6 @@ export function findLiveMove(state, step, lctx) {
     switch (step.type) {
       case "enchantSwap": if (m.affix === step.affix && m.to === step.scroll) return m; break;
       case "tierStep": case "baseSwap": if (m.to === step.item) return m; break;
-      case "gearEnhance": if (m.to === step.item) return m; break;
       case "enhanceStep": if (m.apply.level === step.toLevel) return m; break;
       case "tuneStep": if (m.stat === step.stat) return m; break;
     }
@@ -567,15 +519,6 @@ export function gapProposal(state, step, ctx, expected = null) {
     for (let l = cur + 1; l < step.toLevel; l++) steps.push(mkStep("enhanceStep", { toLevel: l }));
     return { steps, reason: `your ${step.slot} is +${cur}, the levels in between are missing` };
   }
-  if (step.type === "gearEnhance") {
-    const curLvl = plusLevel(state.base?.name), tgtLvl = step.toLevel;
-    if (curLvl == null || tgtLvl == null || curLvl >= tgtLvl - 1) return null;
-    if (bumpPlus(state.base.name, 0) !== bumpPlus(step.item, 0)) return null;
-    const steps = [];
-    for (let l = curLvl + 1; l < tgtLvl; l++)
-      steps.push(mkStep("gearEnhance", { item: bumpPlus(step.item, l), toLevel: l }));
-    return { steps, reason: `your ${step.slot} is +${curLvl}, the levels in between are missing` };
-  }
   // enchant/tune (and a disconnected tier/base): the step expects a different base.
   const want = expected ?? step.onItem ?? (step.type === "tierStep" || step.type === "baseSwap" ? step.item : null);
   const cur = state.base?.name;
@@ -602,7 +545,7 @@ export function gapProposal(state, step, ctx, expected = null) {
 export function reconcilePath(path, loadout, checklistDone, ctx) {
   const states = initStates(loadout, ctx);
   const entries = [];
-  const expectedBase = {}; // slot → the base the path itself established (last tier/base/gearEnhance step)
+  const expectedBase = {}; // slot → the base the path itself established (last tier/base step)
   for (const step of path.steps) {
     if (step.kind === "note") { entries.push({ step, status: "info", warnings: [] }); continue; }
     if (step.kind === "goal") {
@@ -632,7 +575,7 @@ export function reconcilePath(path, loadout, checklistDone, ctx) {
       states[step.slot] = { ...state, infusion: { stat: step.stat, amount: step.amount } };
       continue;
     }
-    const tracksBase = step.type === "tierStep" || step.type === "baseSwap" || step.type === "gearEnhance";
+    const tracksBase = step.type === "tierStep" || step.type === "baseSwap";
     if (satisfiedOrBetter(state, step, ctx)) {
       if (tracksBase) delete expectedBase[step.slot]; // the real gear is at/past this point
       entries.push({ step, status: "done", warnings: [] });
@@ -719,8 +662,7 @@ export const REORDER_MODES = ["deps", "cheapest", "value", "smart"];
 const slotRank = (step) => {
   switch (step.type) {
     case "baseSwap": return 0;      // acquire the item
-    case "tierStep": return 1;      // advance tiers
-    case "gearEnhance": return 2;   // Orna +N (level-ordered below)
+    case "tierStep": return 1;      // advance tiers (incl. the Orna +N levels)
     case "enhanceStep": return 3;   // accessory +N (level-ordered below)
     default: return 5;              // enchantSwap / tuneStep / infuse, need the base
   }

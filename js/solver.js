@@ -23,15 +23,11 @@
 import { score } from "./score.js";
 import { statDelta, itemFamily, itemSystem, tuningKey, moveVetoed } from "./utils.js";
 import { setBonusDelta, ringSetDelta } from "./setbonuses.js";
-import { enchantCost, enhanceStepCost, reEnhanceCost, gearEnhanceBreakdown } from "./cost.js";
+import { enchantCost, enhanceStepCost, reEnhanceCost } from "./cost.js";
 import {
   ACCESSORY_SLOT_IDS, ENHANCEABLE_SLOT_IDS, SPECIAL_SLOT_IDS, COMPLETE_VARIANT_RE,
   TIER_SLOT_IDS, RING_SLOT_IDS, EXTRACTION_RUNE_NAME, tuneStatCanon, TUNING_STAT_TO_KEY,
-  ENHANCE_TARGET_LEVEL,
 } from "./config.js";
-
-// Leading "+N" enhancement level of an item name ("+12 Orna Helm" → 12), else null.
-const plusLevel = (name) => { const m = /^\+?(\d+)\b/.exec(name || ""); return m ? +m[1] : null; };
 
 const AFFIXES = ["prefix", "suffix"];
 
@@ -205,15 +201,17 @@ function accumTuningPrereq(jumpBases, startByCanon, ctx) {
 //                                  wipe:false, prevName:"Uaithne Helm", prevQty:1 }
 // A recipe's "previous tier" is the first material that is itself an equipment item
 // in the SAME slot (e.g. Beginner Uaithne Helm lists Uaithne Helm; the advancement
-// stones/essences aren't equippable). The orna baseline link comes from `baseTier`
-// (recipes.js stripped it from `materials` but kept it as the chain link) and marks
-// a SYSTEM JUMP (`wipe:true`, enchants are wiped, so the step pays a re-enchant).
-// `prevQty` is how many of the previous tier the recipe consumes, 0 for a baseline
-// jump (it's not in `materials`/craftCost, being owned/free), so the marginal cost
-// subtracts the right amount of the already-owned current tier.
-// `wipe` is also DERIVED whenever the step crosses gear systems (itemSystem differs),
-// so uaithne→eriu (Legendary Uaithne Helm → Eriu Helm) is correctly a wipe like
-// orna→uaithne, even though it links via a normal material rather than `baseTier`.
+// stones/essences aren't equippable). `prevQty` is how many of the previous tier the
+// recipe consumes, so the marginal cost subtracts the right amount of the
+// already-owned current tier.
+// `wipe` is DERIVED whenever the step crosses gear systems (itemSystem differs), so
+// both orna→uaithne (+15 Orna Helm → Uaithne Helm) and uaithne→eriu (Legendary
+// Uaithne Helm → Eriu Helm) are wipes and pay a re-enchant.
+// The Orna +12→+15 climb is an ordinary link in this chain: each "+N Orna <slot>"
+// recipe lists "+N−1 Orna <slot>" as a material, with the expected number of
+// enhancement attempts already baked into its gold + material quantities (see
+// docs/orna-enhancement.md). Same system on both sides → wipe:false, since enhancing
+// keeps your enchants.
 export function buildTierChain(recipes, items) {
   const itemByName = Object.fromEntries(items.map((it) => [it.name, it]));
   const nextOf = new Map();
@@ -221,36 +219,14 @@ export function buildTierChain(recipes, items) {
     const out = itemByName[name];
     const slot = out?.slotIds?.[0];
     if (!slot || !TIER_SLOT_IDS.includes(slot)) continue; // recipe output isn't tiered gear
-    let prevName = null, prevQty = 0, wipe = false, isBaseline = false;
-    if (recipe.baseTier && itemByName[recipe.baseTier]) {
-      prevName = recipe.baseTier; wipe = true; isBaseline = true; // orna→system baseline jump
-    } else {
-      for (const { material, qty } of recipe.materials) {
-        const mi = itemByName[material];
-        if (mi && mi.slotIds.includes(slot)) { prevName = material; prevQty = qty; break; }
-      }
+    let prevName = null, prevQty = 0;
+    for (const { material, qty } of recipe.materials) {
+      const mi = itemByName[material];
+      if (mi && mi.slotIds.includes(slot)) { prevName = material; prevQty = qty; break; }
     }
     if (prevName) {
-      const sysJump = itemSystem(prevName) !== itemSystem(name); // uaithne→eriu etc.
-      const entry = { name, item: out, slot, wipe: wipe || sysJump, prevName, prevQty };
-      // `enhanceFrom` = the +level of the piece this entry is keyed on (null when the
-      // name has no "+N"). On a baseline (Orna) jump the recipe assumes a +15 Orna is
-      // owned; a loadout piece at a LOWER enhancement (+12..+14) reaches the SAME next
-      // tier but must first be enhanced up to +15, the tierStep adds that EV via
-      // `enhanceFrom` (SPEC §12). Register the lower variants so a sub-+15 base still
-      // generates the advance (the chain would otherwise only be keyed on "+15 Orna X").
-      nextOf.set(prevName, { ...entry, enhanceFrom: plusLevel(prevName) });
-      if (isBaseline) {
-        const m = prevName.match(/^\+?(\d+)\s+(.*)$/);
-        if (m) {
-          for (const it of items) {
-            const v = it.name.match(/^\+?(\d+)\s+(.*)$/);
-            if (v && v[2] === m[2] && +v[1] < +m[1]) {
-              nextOf.set(it.name, { ...entry, prevName: it.name, enhanceFrom: +v[1] });
-            }
-          }
-        }
-      }
+      const wipe = itemSystem(prevName) !== itemSystem(name); // orna→uaithne, uaithne→eriu
+      nextOf.set(prevName, { name, item: out, slot, wipe, prevName, prevQty });
     }
   }
   return nextOf;
@@ -638,18 +614,9 @@ export function slotMoves(state, ctx) {
       const bareBase = state.base?.stats || {};
       const jumpBase = tunedBaseStats(state);
       // own-tier credit (constant across targets): the currently-owned tier's cost is
-      // counted once at the bottom of craftCost(target). The orna baseline is stripped/
-      // free (prevQty 0) → credit 0.
+      // counted once at the bottom of craftCost(target). The free-issue +12 Orna piece
+      // costs 0, so a climb starting there gets no credit, which is correct.
       const ownCredit = first.prevQty > 0 ? first.prevQty * (cost(state.base.name) ?? 0) : 0;
-      // Orna baseline pieces below +15 must first be enhanced up to the +15 the craft
-      // recipe assumes owned/free (SPEC §12). This EV is constant across targets (paid
-      // once, on the jump out of Orna). Unpriceable/missing steps → 0 (don't drop the
-      // whole advance over an enhancement-cost gap). `enhanceSteps` backs the detail.
-      const eb = (first.enhanceFrom != null && first.enhanceFrom < ENHANCE_TARGET_LEVEL)
-        ? gearEnhanceBreakdown(first.enhanceFrom, ENHANCE_TARGET_LEVEL, ctx.enhancement, ctx.prices, opts?.basis, ctx.freeItems)
-        : { gold: 0, steps: [] };
-      const enhanceGold = eb ? eb.gold : 0;
-      const enhanceSteps = eb ? eb.steps : null;
       // Crossing a system jump requires the CURRENT piece fully base-tuned first (Destruction aside)
       //, a REQUIRED in-game gate, true for Orna→Uaithne AND Uaithne→Eriu. That maxing is a real
       // prerequisite COST (current → cap), but the base-stat tuning it buys is then WIPED to 0 by the
@@ -658,12 +625,6 @@ export function slotMoves(state, ctx) {
       // chained (accumTuningPrereq), computed per-target in the walk from the jump sources so far.
       const stateTuningByCanon = {};
       for (const [k, v] of Object.entries(state.tuning || {})) stateTuningByCanon[tuneStatCanon(k)] = v;
-      // Expected enhancement material consumption (per-attempt qty × expected tries), as a
-      // netBreakdown-shaped list, for inventory netting below (enhancement is Orna-only; empty else).
-      const enhMats = {};
-      for (const s of enhanceSteps || []) for (const [n, q] of Object.entries(s.materials)) enhMats[n] = (enhMats[n] || 0) + q * s.tries;
-      const enhBreakdown = Object.keys(enhMats).length
-        ? [{ materials: Object.entries(enhMats).map(([material, qty]) => ({ material, qty })) }] : [];
       // On a wipe (system jump) the kept affixes are lost. Two ways to preserve them:
       //   (a) re-enchant each kept affix from scratch (Σ enchantCost), or
       //   (b) consume ONE extraction rune, saves BOTH affixes at a flat per-rune
@@ -717,25 +678,22 @@ export function slotMoves(state, ctx) {
           : { gold: 0, caps: {}, maxes: [], breakdown: [], ok: true };
         // A path crossing TWO system jumps (orna→uaithne→eriu) pays the preservation cost
         // once PER jump, each boundary wipes again, needing its own rune / re-enchant+re-tune.
-        // The enhancement EV + the base-tuning prerequisite apply only when this target CROSSES a
-        // jump (`crossedWipe`). Intra-system advances (e.g. Uaithne→Fine Uaithne) pay neither. Net
-        // owned stock across the applicable components through ONE shared clone (per target, since
-        // crossedWipe varies), so a material in more than one (e.g. Superior Enhancement Elixir, in
-        // both the enhancement and the craft) isn't double-credited; the craft BOM draws from what
-        // the enhancement + tuning left. The equipped current tier is seeded as owned (prevQty units)
-        // so it stays the free own-tier credit, not reported as stock.
+        // The base-tuning prerequisite applies only when this target CROSSES a jump
+        // (`crossedWipe`). Intra-system advances (e.g. Uaithne→Fine Uaithne, or an Orna +level)
+        // don't pay it. Net owned stock across both components through ONE shared clone (per
+        // target, since crossedWipe varies), so a material in both (e.g. Superior Enhancement
+        // Elixir, in the Orna steps and the Uaithne craft) isn't double-credited; the craft BOM
+        // draws from what the tuning prereq left. The equipped current tier is seeded as owned
+        // (prevQty units) so it stays the free own-tier credit, not reported as stock.
         const moveOwned = hasInventory(ctx) ? { ...ctx.inventory } : null;
-        let enhNb = { credit: 0, used: null }, tuneNb = { credit: 0, used: null };
-        if (moveOwned && crossedWipe) {
-          if (enhBreakdown.length) enhNb = netBreakdown(ctx, enhBreakdown, moveOwned);
-          if (tunePrereq.breakdown.length) tuneNb = netBreakdown(ctx, tunePrereq.breakdown, moveOwned);
+        let tuneNb = { credit: 0, used: null };
+        if (moveOwned && crossedWipe && tunePrereq.breakdown.length) {
+          tuneNb = netBreakdown(ctx, tunePrereq.breakdown, moveOwned);
         }
         const nb = netBuy(ctx, up.item.name, 1, craft - ownCredit,
           first.prevQty > 0 ? { [state.base.name]: first.prevQty } : null, moveOwned);
-        const enhGold = crossedWipe ? enhanceGold : 0;   // enhanceGold is already 0 unless Orna +N base
         const tuneGold = crossedWipe ? tunePrereq.gold : 0;
-        const goldCost = nb.gold + wipeCount * wipeKeepCost
-          + (enhGold - enhNb.credit) + (tuneGold - tuneNb.credit);
+        const goldCost = nb.gold + wipeCount * wipeKeepCost + (tuneGold - tuneNb.credit);
         // Set-bonus swing (SPEC §13.2): jumping this slot to the target's system shifts
         // a piece-count tier on BOTH the system it leaves and the one it joins. Fold the
         // scored delta into statDiff + pointGain so the climb is judged on net value
@@ -776,26 +734,21 @@ export function slotMoves(state, ctx) {
           // the base-stat tuning (unpreservable, its loss is folded into statDiff/pointGain).
           reEnchant: crossedWipe && !wipePreserved ? wipeCount * reEnchant : 0,
           extraction: crossedWipe && wipePreserved ? wipeCount * (runeGold || 0) : 0, ownCredit,
-          // +12..+14 Orna → +15 enhancement EV folded into goldCost (SPEC §12); shown in the tier
-          // detail. Only on a jump target (enhanceGold is already 0 for non-Orna bases anyway).
-          enhanceGold: enhGold, enhanceFrom: first.enhanceFrom ?? null, enhanceSteps: crossedWipe ? enhanceSteps : null,
           // Base-tuning-to-max prerequisite for crossing a system jump (Orna→Uaithne, Uaithne→Eriu;
           // folded into goldCost, carries free to the new system). Only on a jump target, intra-
           // system advances don't force tuning. `tunePrereqOk` false = a tuning material was
           // unpriceable (cost under-counted, flagged in the UI).
           tunePrereqGold: tuneGold, tunePrereqBreakdown: crossedWipe ? tunePrereq.breakdown : [],
           tunePrereqOk: tunePrereq.ok,
-          // Inventory credit spans the craft BOM (nb), tuning prereq (tuneNb), AND the enhancement
-          // EV (enhNb). All drawn from one shared clone (no double-credit). The cost LINES above are
-          // gross; the "From inventory" line nets all three. Enhancement `used` is expected (may be
-          // fractional) → rounded for the count + Craft button.
-          inventoryCredit: nb.credit + tuneNb.credit + enhNb.credit,
-          inventoryUsed: mergeUsed(mergeUsed(nb.used, tuneNb.used), roundUsed(enhNb.used)),
-          // Stock the enhancement EV + tuning prereq drew BEFORE the craft BOM (exact,
-          // unrounded). The UI nets its recipe/carousel totals from inventory minus this,
-          // so those totals reconcile with the Math grid instead of re-crediting shared
-          // materials from a fresh clone.
-          preCraftUsed: mergeUsed(tuneNb.used, enhNb.used),
+          // Inventory credit spans the craft BOM (nb) AND the tuning prereq (tuneNb), both drawn
+          // from one shared clone (no double-credit). The cost LINES above are gross; the
+          // "From inventory" line nets both.
+          inventoryCredit: nb.credit + tuneNb.credit,
+          inventoryUsed: mergeUsed(nb.used, tuneNb.used),
+          // Stock the tuning prereq drew BEFORE the craft BOM. The UI nets its recipe/carousel
+          // totals from inventory minus this, so those totals reconcile with the Math grid
+          // instead of re-crediting shared materials from a fresh clone.
+          preCraftUsed: tuneNb.used,
           // The enchant-keep DECISION for the detail: re-enchant the kept affixes vs one rune, per
           // jump (×`jumps` for the total). Only when there are affixes to preserve.
           wipeMath: crossedWipe && preserveAny ? {
@@ -806,41 +759,6 @@ export function slotMoves(state, ctx) {
           // `a.wipe` branch. No tuning is carried, so nothing to record here.
           apply: { kind: "tier", item: up.item, wipe: crossedWipe, wipePreserved },
         }));
-      }
-    }
-  }
-
-  // Orna gear enhance (+N → +N+1, SPEC §12)
-  // A weapon/armor Orna piece below +15 can be enhanced ONE level at a time, the discrete
-  // alternative to bundling the whole +N→+15 EV into the Orna→Uaithne jump. Cost = that single
-  // step's expected-value gold (failure keeps the level); the stat gain is the next +level
-  // variant's stats minus the current's. Tuning + enchants carry untouched (no wipe) → they
-  // cancel in the diff. The next variant is the same base name with the "+N" bumped.
-  if (TIER_SLOT_IDS.includes(slot) && state.base && ctx.enhancement && itemSystem(state.base.name) === "Orna") {
-    const lvl = plusLevel(state.base.name);
-    if (lvl != null && lvl < ENHANCE_TARGET_LEVEL) {
-      const nextName = state.base.name.replace(/^\+?\d+/, `+${lvl + 1}`);
-      const next = (bySlot[slot] || []).find((it) => it.name === nextName);
-      const eb = next ? gearEnhanceBreakdown(lvl, lvl + 1, ctx.enhancement, ctx.prices, opts?.basis, ctx.freeItems) : null;
-      if (next && eb && eb.steps.length) {
-        const statDiff = statDelta(next.stats, state.base.stats);
-        if (improvesAnyStat(statDiff)) {
-          // Expected step-material consumption (per-attempt qty × tries). Netted against owned
-          // stock like the jump's enhancement EV (credit exact, count rounded for the UI).
-          const enhMats = {};
-          for (const s of eb.steps) for (const [n, q] of Object.entries(s.materials)) enhMats[n] = (enhMats[n] || 0) + q * s.tries;
-          const bd = Object.keys(enhMats).length ? [{ materials: Object.entries(enhMats).map(([material, qty]) => ({ material, qty })) }] : [];
-          const owned = hasInventory(ctx) ? { ...ctx.inventory } : null;
-          const nb = owned && bd.length ? netBreakdown(ctx, bd, owned) : { credit: 0, used: null };
-          moves.push(mk(slot, "gearEnhance", {
-            from: state.base.name, to: next.name, fromLevel: lvl, toLevel: lvl + 1,
-            goldCost: eb.gold - nb.credit,
-            pointGain: score(next.stats) - score(state.base.stats), statDiff,
-            enhanceFrom: lvl, enhanceSteps: eb.steps,
-            inventoryCredit: nb.credit, inventoryUsed: roundUsed(nb.used),
-            apply: { kind: "gearEnhance", item: next },
-          }));
-        }
       }
     }
   }
@@ -1089,9 +1007,6 @@ export function applyMove(state, move) {
     ns.enhance = a.level != null ? { level: a.level, bracket: a.item.level } : null;
   } else if (a.kind === "enhance") {
     ns.enhance = { ...ns.enhance, level: a.level };
-  } else if (a.kind === "gearEnhance") {
-    // Orna +N → +N+1: swap to the next +level base variant; enchants + tuning carry untouched.
-    ns.base = { name: a.item.name, stats: a.item.stats, level: a.item.level };
   } else if (a.kind === "tune") {
     for (const { stat, amount } of a.maxes) ns.tuning[stat] = amount;
   } else if (a.kind === "tier") {
@@ -1544,19 +1459,16 @@ function canonicalSlotMoves(init, fin, ctx) {
   let state = init;
   const out = [];
   const pick = (pred) => slotMoves(state, ctx).find(pred);
-  // 1. reach fin.base. The final base can differ from init by an accessory/special base swap,
-  //    a cumulative tier climb, an Orna gearEnhance level climb (the +N prefix lives in the base
-  //    NAME), or a gearEnhance climb followed by a tier advance. Advance one move at a time until
-  //    the base matches: prefer a direct one-move jump straight to fin.base, else climb one Orna
-  //    +level, else advance one tier toward it. Bailing to raw picks (return null) if we can't
-  //    reach it keeps the intermediate-enchant waste this rebuild exists to eliminate, the old
-  //    code bailed on EVERY gearEnhance base, so a later scroll never got to supersede an earlier
-  //    one on the same affix (SPEC §17 raid-import ordering fix).
+  // 1. reach fin.base. The final base can differ from init by an accessory/special base swap or
+  //    a cumulative tier climb (which now spans the Orna +N levels too, since each is an ordinary
+  //    link in the chain). Advance one move at a time until the base matches: prefer a direct
+  //    one-move jump straight to fin.base, else advance one tier toward it. Bailing to raw picks
+  //    (return null) if we can't reach it keeps the intermediate-enchant waste this rebuild exists
+  //    to eliminate (SPEC §17 raid-import ordering fix).
   if (fin.base && fin.base.name !== init.base?.name) {
     let guard = 0;
     while (state.base?.name !== fin.base.name && guard++ < 30) {
       const m = pick((x) => (x.type === "baseSwap" || x.type === "tierStep") && x.to === fin.base.name)
-        || pick((x) => x.type === "gearEnhance")
         || pick((x) => x.type === "tierStep");
       if (!m) return null;
       out.push(m); state = applyMove(state, m);

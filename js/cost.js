@@ -257,61 +257,12 @@ export function enhanceStepCost(entry, pityBonuses, prices, basis = PRICE_BASIS,
   return { gold: attempts * perAttempt, attempts, perAttempt, fee: entry.gold || 0, materials };
 }
 
-// Gear enhancement EV (SPEC §12 gearEnhanceCost)
-// Expected attempts to pass ONE weapon/armor +level given the ABSOLUTE per-attempt
-// success rates (`rates`, %): rates[0] = first attempt, rates[k] = the rate after k
-// consecutive failures, last entry = 100 (guaranteed). Failure keeps the level, so
-// E[A] = Σ_k P(reach attempt k) = Σ_k Π_{j<k}(1 − p_j), terminating at the guarantee.
-// (Distinct from expectedEnhanceTries, which takes base + additive pity bonuses;
-// gear rates are stored absolute, so this consumes them directly.)
-export function expectedTriesFromRates(rates = []) {
-  let expected = 0, survive = 1;
-  for (const r of rates) {
-    const p = Math.min(1, (r || 0) / 100);
-    expected += survive;   // contributes if we reach this attempt
-    survive *= 1 - p;      // prob of still failing into the next
-    if (p >= 1) break;     // guaranteed → no further attempts
-  }
-  return expected;
-}
-
-// Per-step breakdown of enhancing a weapon/armor piece from +fromLevel up to +toLevel
-// using the Enhancement tab `steps` (keyed by from-level). Each step's EV = expected
-// attempts × (gold fee + Σ qty·price(material)). Returns { gold, steps: [{from, to,
-// tries, perAttempt, stepGold, fee, materials:{name:qtyPerAttempt}, rates}] }, an
-// empty result when nothing to do, or null if a step is missing / any material is
-// unpriceable (→ caller drops the enhancement cost rather than guessing). Backs both
-// gearEnhanceCost and the tier detail's enhancement breakdown.
-export function gearEnhanceBreakdown(fromLevel, toLevel, steps, prices, basis = PRICE_BASIS, freeItems = null) {
-  if (!steps || toLevel == null || fromLevel == null || toLevel <= fromLevel) return { gold: 0, steps: [] };
-  let total = 0;
-  const out = [];
-  for (let lvl = fromLevel; lvl < toLevel; lvl++) {
-    const step = steps[lvl];
-    if (!step) return null;
-    let matCost = 0;
-    const materials = {};
-    for (const [name, qty] of Object.entries(step.materials)) {
-      const unit = freeItems && freeItems.has(name) ? 0 : (prices[name]?.[basis] ?? null); // §17.9 free flag
-      if (unit == null) return null;
-      matCost += qty * unit;
-      materials[name] = qty;
-    }
-    const perAttempt = (step.gold || 0) + matCost;
-    const tries = expectedTriesFromRates(step.rates);
-    const stepGold = tries * perAttempt;
-    total += stepGold;
-    out.push({ from: step.from, to: step.to, tries, perAttempt, stepGold, fee: step.gold || 0, materials, rates: step.rates });
-  }
-  return { gold: total, steps: out };
-}
-
-// Expected gold to enhance from +fromLevel to +toLevel (the breakdown's total). Returns
-// gold, 0 when nothing to do, or null when unpriceable/missing (never guesses).
-export function gearEnhanceCost(fromLevel, toLevel, steps, prices, basis = PRICE_BASIS, freeItems = null) {
-  const b = gearEnhanceBreakdown(fromLevel, toLevel, steps, prices, basis, freeItems);
-  return b ? b.gold : null;
-}
+// Weapon/armor +level enhancement has NO cost model here: the Orna +12→+15 climb is
+// ordinary Crafting-tab data, with its expected number of attempts already baked into
+// each step's gold + material quantities, so craftCost prices it like any other tier.
+// See docs/orna-enhancement.md for the rates and the maths behind those numbers.
+// (`expectedEnhanceTries` below is the ACCESSORY table, a different mechanic: additive
+// pity bonuses rather than absolute per-attempt rates.)
 
 // Expected gold to enhance an accessory from `fromLevel` up to `toLevel` on a given
 // item-level bracket, the sum of each level's EV step. Used to (a) restore a

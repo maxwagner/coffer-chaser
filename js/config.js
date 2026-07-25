@@ -136,22 +136,20 @@ export const TAG_TO_SLOT_IDS = Object.freeze({
 // from the price feed). We keep only the material name + qty; the flat fee comes
 // from "Gold" (blank ⇒ 0). The recursive craftCost rolls up tier chains because a
 // tier's recipe lists the PREVIOUS tier as a material (e.g. "Fine Uaithne Helm"
-// requires "Beginner Uaithne Helm"). NOTE: only the COST side is live, tierStep
-// move-generation is still blocked on other data (system-jump enchant-wipe flag,
-// unpriced Premium Enhancement Runes, partial chain), even though some tier items
-// now carry stat lines on the Gear tab (SPEC §4 / §12).
+// requires "Beginner Uaithne Helm"). That now includes the Orna +12→+15 enhancement
+// climb, whose per-attempt cost is pre-multiplied by its expected attempt count
+// (docs/orna-enhancement.md), so the whole weapon/armor path from the free starting
+// piece up to Legendary Eriu prices through ONE recursion with no special cases.
+// A row with NO materials but an explicit Gold cell declares a FREE-ISSUE item (the
+// "+12 Orna <slot>" Lv.115 box gear at Gold 0): it has no market listing, so the
+// chain above it needs this row to be priceable at all.
 export const CRAFTING_CSV_URL = tabCsv(1517243497);
 export const CRAFTING_CSV_FALLBACK = "data/crafting.csv";
 export const CRAFTING_COLUMNS = Object.freeze({
   name: "Item",
-  fee: "Gold",           // flat crafting fee (blank → 0)
+  fee: "Gold",           // flat crafting fee (blank → 0, but see the free-issue note above)
 });
 export const CRAFTING_MAX_MATERIALS = 8; // "Item 1..8" each followed by "#"
-
-// A tier chain's "+15 Orna <slot>" baseline is assumed already owned / free (SPEC
-// §4), so when it appears as a recipe material it is NOT added as a priced leaf
-// (else it would be an unpriceable material that breaks the whole chain's cost).
-export const CRAFTING_BASELINE_RE = /^\+?\s*15\s+orna\b/i;
 
 // Gear tab (full candidate stat lines per slot)
 // Slot labels map through SLOT_NAME_TO_ID. A single Slot cell may list more than
@@ -262,25 +260,13 @@ export const TUNING_STAT_CANON = Object.freeze({
 });
 export const tuneStatCanon = (label) => TUNING_STAT_CANON[label] || label;
 
-// Enhancement (SPEC §12 gear +N→+15)
-// Weapon/armor enhancement steps (currently +12→+15 on the Orna baseline). Each
-// row = one +level step: absolute per-attempt success rates (Base = the 1st
-// attempt, Fail1..N = the rate AFTER N consecutive failures, last col = 100 =
-// guaranteed), a flat gold fee + materials consumed PER attempt. Failure KEEPS the
-// level (no downgrade) → each step is a finite EV series (gearEnhanceCost in
-// cost.js). Rates are community-sourced (Nexon hides them in-game) so they live in
-// the Sheet, editable without a code change. Materials must be in the price feed.
-export const ENHANCEMENT_CSV_URL = tabCsv(2053049296); // the Sheet's "Orna" tab
-export const ENHANCEMENT_CSV_FALLBACK = "data/orna.csv";
-export const ENHANCEMENT_COLUMNS = Object.freeze({
-  from: "From", to: "To", base: "Base", gold: "Gold",
-});
-export const ENHANCEMENT_MAX_FAILS = 5;     // "Fail1..5" absolute per-attempt rate columns
-export const ENHANCEMENT_MAX_MATERIALS = 2; // "Material N" + "Qty N" pairs
-// The +level every tier chain's Orna baseline material assumes owned (a +15 Orna
-// piece). A loadout piece below this must be enhanced up to it first, adding the
-// gearEnhanceCost EV to the Orna→Uaithne tierStep (SPEC §12).
-export const ENHANCE_TARGET_LEVEL = 15;
+// Weapon/armor +N enhancement (SPEC §12) has no config of its own. The Orna +12→+15
+// climb lives on the CRAFTING tab like every other gear upgrade: each "+N Orna <slot>"
+// row lists "+N−1 Orna <slot>" as a material, with the expected number of attempts
+// already multiplied into its gold fee and material quantities. The success rates and
+// the EV maths behind those numbers are recorded in docs/orna-enhancement.md.
+// (Accessory enhancement is a separate mechanic and DOES have a live table, see
+// ACCESSORIES_CSV_URL above.)
 
 // Enchant cost model (SPEC §5.3)
 // Success rate by rank: numeric rank ≥ 8 (and the future 9) is 100%; ranks 1–7

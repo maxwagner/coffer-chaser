@@ -1166,7 +1166,6 @@
     import { loadAccessories } from "./js/accessories.js";
     import { loadSetBonuses } from "./js/setbonuses.js";
     import { loadTuning } from "./js/tuning.js";
-    import { loadEnhancement } from "./js/enhancement.js";
     import { tuningKey, moveKey, moveVetoed, healTuning, statDelta } from "./js/utils.js";
     import { infusionKind, infusionOptions, infusionTargets, infusionStatus, INFUSION_STAT_LABEL } from "./js/infusion.js";
     import { snapshotState, makeProfileRecord, upsertProfile, removeProfile, renameProfile } from "./js/profiles.js";
@@ -1184,8 +1183,8 @@
       isCraftedMat, drawMaterial,
       reconcilePath, aggregateMaterials, aggregateStatDiffs, projectAffordability, stepLabel as stepLabelPure,
       newNoteStep, newGoalStep, newInfuseStep, insertSteps, removeStep, moveStep,
-      moveToSteps, stepKey, serializePath, parsePath, pathToTSV, slotUpgradeOptions, enhanceTargetOptions,
-      gearEnhanceTargetOptions, quickAddFilter, newStepId,
+      moveToSteps, stepKey, serializePath, parsePath, migratePath, pathToTSV, slotUpgradeOptions, enhanceTargetOptions,
+      quickAddFilter, newStepId,
       raidMilestones, raidShortfall, raidAimTargets, nextUnmetRaid, projectedStatsAt,
       clonePath, leadingDoneRun, shoppingListTSV, reorderPath, REORDER_MODES } from "./js/planner.js";
     import { makeStore, makeCanonicalizer, repairName, suggestNames, parseDrops, parseDropLine, makeActorMatcher, unwrapLines, resolveDropName as resolveDropNamePure, makeRunRecord, distinctCharacters, summarizeRuns, runsToTSV, raidModeOptions, isJunk, mergeGifFrameLines, dropUnitValue, bottleContentsLabel, normalizeBottleName, CORE_SOURCES, summarizeCoreSources, parseBoxLine, parseBoxOpenings, summarizeBoxes, boxExpectedValues } from "./js/scanner.js";
@@ -1215,8 +1214,8 @@
       return keys.map((k) => `<span class="${diff[k] > 0 ? "pos" : "neg"}">${STAT_LABEL[k]} ${diff[k] > 0 ? "+" : ""}${diff[k]}</span>`).join(", ");
     };
 
-    const [{ prices }, { enchants }, { recipes }, { items, bySlot }, { accessories }, { bonuses: setBonuses }, { tuning }, { enhancement }, { raids }, { raidDrops }, { sealShop, totals: sealTotals }, { weeklyBoxes }, { legacy }] =
-      await Promise.all([loadPrices(), loadEnchants(), loadRecipes(), loadItems(), loadAccessories(), loadSetBonuses(), loadTuning(), loadEnhancement(), loadRaids(), loadRaidDrops(), loadSealShop(), loadWeeklyBoxes(), loadLegacy()]);
+    const [{ prices }, { enchants }, { recipes }, { items, bySlot }, { accessories }, { bonuses: setBonuses }, { tuning }, { raids }, { raidDrops }, { sealShop, totals: sealTotals }, { weeklyBoxes }, { legacy }] =
+      await Promise.all([loadPrices(), loadEnchants(), loadRecipes(), loadItems(), loadAccessories(), loadSetBonuses(), loadTuning(), loadRaids(), loadRaidDrops(), loadSealShop(), loadWeeklyBoxes(), loadLegacy()]);
     // Legacy names still used as recipe ingredients are probably tagged by mistake
     // (harmless — legacy is display-only — but worth a nudge to un-tag).
     {
@@ -1358,7 +1357,7 @@
         persistInventory();
       }
       if (snap.gold != null) { goldTracker = snap.gold; persistGold(); }
-      if (snap.path && Array.isArray(snap.path.steps)) { plannerPath = { v: 1, steps: structuredClone(snap.path.steps) }; persistPlannerPath(); }
+      if (snap.path && Array.isArray(snap.path.steps)) { plannerPath = migratePath(structuredClone(snap.path)); persistPlannerPath(); }
       planUndoStack.length = planRedoStack.length = 0; // undo must never cross a character switch
       loadoutBaseline = structuredClone(loadout);
       statsBaseline = { ...currentStats };
@@ -1486,7 +1485,7 @@
     // here we just hold, persist, and profile-swap it. Reassigned (not held by reference)
     // on profile switch, renderPlanner will read the live binding each render.
     function loadPlannerPath() {
-      try { const p = JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY) || "null"); if (p && Array.isArray(p.steps)) return { v: 1, steps: p.steps }; }
+      try { const p = JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY) || "null"); if (p && Array.isArray(p.steps)) return migratePath(p); }
       catch { /* corrupt/blocked → empty */ }
       return { v: 1, steps: [] };
     }
@@ -1987,20 +1986,6 @@
       return `<h4 style="margin-top:10px">Cost breakdown</h4>${note}${blocks}`;
     };
 
-    // The +12→+15 enhancement EV, step by step: each row shows expected attempts (failure keeps
-    // the level so it's a finite EV) × the per-attempt materials + gold fee = that step's gold.
-    // So the reader sees WHERE the enhancement total comes from, not just a lump. "" when absent.
-    const enhanceStepsBlock = (m) => {
-      if (!m.enhanceSteps || !m.enhanceSteps.length) return "";
-      const row = (s) => {
-        const mats = Object.entries(s.materials).map(([n, q]) => matLi(n, q, null, new Set())).join("");
-        const fee = s.fee ? `<span class="muted"> · fee ${fmt(s.fee)}/try</span>` : "";
-        return `<div class="tunerow"><div class="statline"><b>+${s.from}→+${s.to}</b> <span class="muted">${s.tries.toFixed(2)}× expected tries · ${fmt(Math.round(s.perAttempt))}/try${""}</span> = <span class="v gold">${fmt(Math.round(s.stepGold))}</span>${fee}</div><div class="mats">${mats}</div><div class="statline muted">per-attempt materials (× the tries above):</div></div>`;
-      };
-      const to = m.enhanceSteps[m.enhanceSteps.length - 1].to; // last step's target (+15 for a jump, +N+1 for a single gear step)
-      return `<h4 style="margin-top:10px">Enhancement +${m.enhanceFrom}→+${to} (per step)</h4>${m.enhanceSteps.map(row).join("")}`;
-    };
-
     // The Orna base-tuning prerequisite breakdown (reuses the tuneStep block shape): one row per
     // non-Destruction base stat that must be maxed to advance, with its ticks/gain/gold + the total
     // materials, plus each craftable tuning material's own recipe once. "" when nothing to tune.
@@ -2390,9 +2375,9 @@
     // Tier-family grouping (shared by Crafting + Items)
     // A weapon/armor tier item's chain family = its name minus a leading tier adjective
     // (ITEM_TIER_WORDS) or a leading "+N" enhancement token, so "Uaithne Helm" gathers its
-    // five advances and "Orna Helm" gathers +12…+15 (an Orna piece is likewise a CHAIN: +15
-    // is reached only by enhancing through +13 and +14, orna.csv, so it reads like the
-    // craft chains rather than four independent items). Items without either prefix, e.g.
+    // five advances and "Orna Helm" gathers +12…+15 (an Orna piece IS a craft chain like any
+    // other: each +level lists the one below it as a recipe material, so it reads like the
+    // tier chains rather than four independent items). Items without either prefix, e.g.
     // "The Cursed Belt", key on their full name → no over-grouping. Multi-member families
     // render as a contiguous bracketed group.
     const ITEM_TIER_SET = new Set(ITEM_TIER_WORDS);
@@ -2647,7 +2632,7 @@
     // `inventory` is passed by REFERENCE so a +/- edit + recomputeLoadout re-nets every move
     // without rebuilding moveCtx (the solver reads the live object each generation, SPEC §5.2).
     // `recipes` + `priceOf` ride along for the planner.js helpers (expandBOM/moveBuys, SPEC §17).
-    const moveCtx = { enchants, prices, recipes, priceOf, bySlot, cost, craftCost, netCost, inventory, vetoes, accessories, tierChain, setBonuses, tuning, enhancement, freeItems };
+    const moveCtx = { enchants, prices, recipes, priceOf, bySlot, cost, craftCost, netCost, inventory, vetoes, accessories, tierChain, setBonuses, tuning, freeItems };
     // `moves` now includes net-negative-point moves that still improve SOME stat
     // (e.g. +Att Spd / −Bal). Kept for stat-target & threshold. The default ranked
     // (gold-per-point) view shows the genuine point gains PLUS every tier advance: a
@@ -2713,7 +2698,7 @@
     const moveNeedsRebase = (m) => (m.type === "enchantSwap" || m.type === "enhanceStep") && rebaseSlots.has(m.slot);
     const moveHasBetter = (m) => !!betterHint(m);
 
-    const TYPE_LABEL = { enchantSwap: "enchant", baseSwap: "base", enhanceStep: "enhance", tierStep: "advance", tuneStep: "tune", gearEnhance: "enhance" };
+    const TYPE_LABEL = { enchantSwap: "enchant", baseSwap: "base", enhanceStep: "enhance", tierStep: "advance", tuneStep: "tune" };
     const surplusRoman = (u) => (u === 1 ? "I" : "II");
     // The in-game "ATT Surplus I/II" tuning stat IS Destruction (SPEC §2/§12). Show it as
     // "Dest I/II" everywhere; base stats (DEF/BAL/…) keep their own label.
@@ -2737,7 +2722,6 @@
       : m.type === "baseSwap" ? `${m.from ? "swap base" : "acquire"} → <b>${m.to}</b>${m.toLevel ? hintChip("↻", "hint-reenh", `The new base must be re-enhanced up to +${m.toLevel}.`) : ""}`
       : m.type === "tierStep" ? `advance → <b>${m.to}</b> <span class="muted tiercount" data-tip="${esc(`${m.steps} tier advance${m.steps > 1 ? "s" : ""}.`)}">×${m.steps}</span>${m.wipe && !m.wipePreserved ? hintChip("⚠", "hint-wipe", "Advancing across a system boundary wipes this item's enchants. You'll need to re-enchant.") : ""}`
       : m.type === "tuneStep" ? `${m.capstone ? `tune → <b>Dest ${surplusRoman(m.capstone)}</b>` : `tune <b>${tuneStatDisplay(m.stat)}</b>`}${hintChip("⚙", "hint-tune", tuneTip(m))}`
-      : m.type === "gearEnhance" ? `enhance → <b>${m.to}</b> <span class="muted">(+${m.fromLevel}→+${m.toLevel})</span>`
       : `enhance <b>${m.from} → ${m.to}</b>`) + rebaseBadge(m, rebasedSlots) + betterHint(m);
 
     // Free-text the search bar matches against (the move's plain-text label + type word +
@@ -2875,7 +2859,7 @@
     // so its detail shows the totals + a per-level list, each level expandable to its own attempt math.
     const mergedStepDetail = (m) => {
       const steps = m.steps.map((s) => {
-        const lvl = s.type === "gearEnhance" ? `+${s.fromLevel} → +${s.toLevel}` : `${s.from} → ${s.to}`;
+        const lvl = `${s.from} → ${s.to}`;
         return `<details class="stepsub"><summary><span class="ss-lvl">${lvl}</span> <span class="pos">${sfmt(s.pointGain)} pts</span> · <span class="gold">${fmt(s.goldCost)}</span></summary><div class="stepsub-body">${moveDetail(s)}</div></details>`;
       }).join("");
       return `<div class="detail">
@@ -2891,17 +2875,6 @@
 
     const moveDetail = (m) => {
       if (m.merged) return mergedStepDetail(m);
-      if (m.type === "gearEnhance") {
-        return `<div class="detail">
-          <h4>Enhance ${m.from} → ${m.to}</h4><div class="statline muted">one enhancement level · failure keeps the level (expected-value cost)</div>
-          <h4 style="margin-top:10px">Stat change (vs equipped)</h4><div class="statline">${diffLine(m.statDiff)}</div>
-          <h4 style="margin-top:10px">Math</h4><div class="grid">
-            <div class="k">Point gain</div><div class="v">+${fmt(m.pointGain)}</div>
-            ${invLine(m)}
-            <div class="k">Expected gold</div><div class="v gold">${fmt(m.goldCost)}</div>
-            <div class="k">Gold / point</div><div class="v gold">${fmt(m.goldPerPoint)}</div>
-          </div>${enhanceStepsBlock(m)}${craftButton(m)}</div>`;
-      }
       if (m.type === "enhanceStep") {
         const mats = m.materials ? Object.entries(m.materials).map(([n, q]) => matLi(n, q, null, new Set())).join("") : "";
         const matsBlock = mats
@@ -2962,15 +2935,14 @@
           <h4 style="margin-top:10px">Math</h4><div class="grid">
             <div class="k">Point gain</div><div class="v">+${fmt(m.pointGain)}</div>
             <div class="k">Craft target tier</div><div class="v gold">${fmt(cr)}</div>
-            <div class="k">Own current tier</div><div class="v gold">− ${fmt(m.ownCredit)} <span class="muted">${m.ownCredit ? "(already owned)" : "(baseline, owned/free)"}</span></div>
-            ${m.enhanceGold ? `<div class="k">Enhance +${m.enhanceFrom}→+15</div><div class="v gold">+ ${fmt(m.enhanceGold)} <span class="muted">(the craft assumes a +15 Orna, expected cost to enhance yours up first)</span></div>` : ""}
+            <div class="k">Own current tier</div><div class="v gold">− ${fmt(m.ownCredit)} <span class="muted">${m.ownCredit ? "(already owned)" : "(free starting gear, nothing to credit)"}</span></div>
             ${m.tunePrereqGold ? `<div class="k">Max base tuning</div><div class="v gold">+ ${fmt(m.tunePrereqGold)} <span class="muted">(required gate: the piece must be fully base-tuned before the jump, then that tuning is wiped. Pure sunk gold, it buys no lasting stat. The stat change above is measured against your current tuning.)${m.tunePrereqOk === false ? " ⚠ some tuning materials unpriced. Cost understated" : ""}</span></div>` : ""}
             ${m.reEnchant ? `<div class="k">Re-enchant</div><div class="v gold">+ ${fmt(m.reEnchant)} <span class="muted">(enchants wiped on the jump, base-stat tuning is wiped too, only Destruction carries)</span></div>` : ""}
             ${m.extraction ? `<div class="k">Extraction rune</div><div class="v gold">+ ${fmt(m.extraction)} <span class="muted">(carries your enchants across, cheaper than re-enchanting)</span></div>` : ""}
             ${invLine(m)}
             <div class="k">Gold cost (total)</div><div class="v gold">${fmt(m.goldCost)}</div>
             <div class="k">Gold / point</div><div class="v gold">${fmt(m.goldPerPoint)}</div>
-          </div>${enhanceStepsBlock(m)}${tunePrereqBlock(m)}${wipeDecision(m)}${tierRecipeCarousel(m)}${craftButton(m)}</div>`;
+          </div>${tunePrereqBlock(m)}${wipeDecision(m)}${tierRecipeCarousel(m)}${craftButton(m)}</div>`;
       }
       const it = itemByName[m.to];
       const mk = priceOf(it.name), cr = craftCost(it.name);
@@ -3193,9 +3165,9 @@
     // Collapse a run of consecutive same-slot enhancement steps into ONE display row (issue 5): a
     // Target bundle often enhances an accessory +12→+13→+14→+15→+16 (or an Orna piece +12→+15) as
     // several rows; grouping them into "enhance +12→+16" with a per-level breakdown behind the row's
-    // expander keeps the list readable. Only enhanceStep/gearEnhance chains collapse, tune chains
+    // expander keeps the list readable. Only accessory enhanceStep chains collapse, tune chains
     // (Dest I vs Dest II) stay separate, distinct decisions. Runs of length 1 pass through unchanged.
-    const STEP_MERGE_TYPES = new Set(["enhanceStep", "gearEnhance"]);
+    const STEP_MERGE_TYPES = new Set(["enhanceStep"]);
     const mergeStepRuns = (list) => {
       const out = [];
       for (let i = 0; i < list.length; i++) {
@@ -3967,7 +3939,7 @@
     function planMoveOptionLabel(m) {
       let head;
       switch (m.type) {
-        case "tierStep": case "baseSwap": case "gearEnhance": head = m.to; break;
+        case "tierStep": case "baseSwap": head = m.to; break;
         case "enhanceStep": head = `+${m.apply.level}`; break;
         case "enchantSwap": head = shortScroll(m.to); break;
         case "tuneStep": head = `${m.stat} to cap`; break;
@@ -4042,15 +4014,15 @@
           });
         }
       }
-      // The "base" part's single "+N → +N+1" enhance move is joined by multi-level "enhance
-      // to +X" targets (SPEC §17.7) so one add jumps straight to +20 (accessories) or +15
-      // (Orna gear) instead of stepping level-by-level. Only the MULTI-level jumps (2+ levels)
-      // are added here, the single next level is already in groups.base.
+      // The "base" part's single "+N → +N+1" ACCESSORY enhance move is joined by multi-level
+      // "enhance to +X" targets (SPEC §17.7) so one add jumps straight to +20 instead of
+      // stepping level-by-level. Only the MULTI-level jumps (2+ levels) are added here, the
+      // single next level is already in groups.base. Weapon/armor needs no equivalent: the
+      // Orna +N levels are chain hops, so tierStep already emits one move per reachable
+      // target and moveToSteps explodes it into the per-level run.
       if (part === "base") {
         const multi = (o) => o.steps.length > 1;
         opts.push(...enhanceTargetOptions(loadout, slot, moveCtx, states).filter(multi)
-          .map((o) => ({ label: `enhance ${o.label}`, steps: o.steps })));
-        opts.push(...gearEnhanceTargetOptions(loadout, slot, moveCtx, states).filter(multi)
           .map((o) => ({ label: `enhance ${o.label}`, steps: o.steps })));
       }
       return opts;
@@ -4663,8 +4635,6 @@
       } else if (a.kind === "base") {
         slot.base = a.item.name;
         slot.enhance = a.level != null ? { level: a.level, bracket: a.item.level } : null;
-      } else if (a.kind === "gearEnhance") {
-        slot.base = a.item.name; // enchants + tuning carry untouched
       } else if (a.kind === "enhance") {
         slot.enhance = { level: a.level, bracket: slot.enhance?.bracket ?? itemByName[slot.base]?.level };
       } else if (a.kind === "tier") {
