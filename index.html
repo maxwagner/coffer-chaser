@@ -221,6 +221,7 @@
     .pill.kmaterial { color: var(--fg-dim); }
     .pill.ksealshop { color: var(--gold); border-color: var(--gold); }
     .pill.krng { color: #b48ce0; border-color: #b48ce0; } /* loot boxes valued at observed opening EV (SPEC §16.12) */
+    .pill.klegacy { color: var(--fg-dim); border-style: dashed; } /* retired items, price-tracked only (SPEC §7.3) */
     .deal { font-size: 11px; font-weight: 600; color: var(--good); margin-left: 6px; }
     .srcicon { display: inline-flex; vertical-align: -2px; margin-right: 3px; }
     .srcicon svg { width: 12px; height: 12px; }
@@ -1123,6 +1124,7 @@
         <button data-kind="material">Material</button>
         <button data-kind="sealshop">Seal Shop</button>
         <button data-kind="rng" title="Loot boxes from your Tracker → Boxes opening log, valued at their observed average payout per open">RNG</button>
+        <button data-kind="legacy" title="Retired gear, materials, and scrolls from the Legacy tab. Tracked for pricing only; never offered as upgrades">Legacy</button>
       </span>
       <span class="modeToggle" id="ownedFilter" style="margin:0 0 0 8px" title="Show only items you own (inventory > 0)">
         <button data-owned="all" class="on">All</button>
@@ -1172,6 +1174,7 @@
     import { loadRaidDrops, deriveRaidEssences } from "./js/raiddrops.js";
     import { loadSealShop, sealShopValues } from "./js/sealshop.js";
     import { loadWeeklyBoxes, weeklyBoxOptions, weeklyDemand, weeklyBoxPlan, nextReset, stepBoxWaits, stepBoxSavings } from "./js/weeklybox.js";
+    import { loadLegacy, legacyIngredientConflicts } from "./js/legacy.js";
     import { score } from "./js/score.js";
     import { CHANGELOG, VERSION } from "./js/changelog.js";
     import { damageBreakdown, damageRating, dpsGain, statMarginals, DAMAGE_STAT_KEYS } from "./js/damage.js";
@@ -1212,8 +1215,14 @@
       return keys.map((k) => `<span class="${diff[k] > 0 ? "pos" : "neg"}">${STAT_LABEL[k]} ${diff[k] > 0 ? "+" : ""}${diff[k]}</span>`).join(", ");
     };
 
-    const [{ prices }, { enchants }, { recipes }, { items, bySlot }, { accessories }, { bonuses: setBonuses }, { tuning }, { enhancement }, { raids }, { raidDrops }, { sealShop, totals: sealTotals }, { weeklyBoxes }] =
-      await Promise.all([loadPrices(), loadEnchants(), loadRecipes(), loadItems(), loadAccessories(), loadSetBonuses(), loadTuning(), loadEnhancement(), loadRaids(), loadRaidDrops(), loadSealShop(), loadWeeklyBoxes()]);
+    const [{ prices }, { enchants }, { recipes }, { items, bySlot }, { accessories }, { bonuses: setBonuses }, { tuning }, { enhancement }, { raids }, { raidDrops }, { sealShop, totals: sealTotals }, { weeklyBoxes }, { legacy }] =
+      await Promise.all([loadPrices(), loadEnchants(), loadRecipes(), loadItems(), loadAccessories(), loadSetBonuses(), loadTuning(), loadEnhancement(), loadRaids(), loadRaidDrops(), loadSealShop(), loadWeeklyBoxes(), loadLegacy()]);
+    // Legacy names still used as recipe ingredients are probably tagged by mistake
+    // (harmless — legacy is display-only — but worth a nudge to un-tag).
+    {
+      const conflicts = legacyIngredientConflicts(legacy, recipes);
+      if (conflicts.length) console.warn("Legacy-tagged items still used as recipe ingredients:", conflicts);
+    }
     // Crafting now includes the weapon/armor tier-chain recipes (SPEC §4), so the
     // recursive craftCost rolls up the whole chain straight from one recipe map.
     // `freeItems` backs the user's per-item "free" flags (SPEC §17.9): a live set the coster
@@ -2410,6 +2419,7 @@
       material: `<span class="pill kmaterial">Material</span>`,
       sealshop: `<span class="pill ksealshop">Seal Shop</span>`,
       rng: `<span class="pill krng">RNG</span>`,
+      legacy: `<span class="pill klegacy">Legacy</span>`,
     };
     // Cheapest-source glyphs (Lucide, currentColor). Bag = marketplace, hammer = craft.
     const ICON_BAG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`;
@@ -2418,6 +2428,8 @@
       const entries = [];
 
       // GEAR, has a stat line; its recipe (if any) folds into the detail.
+      // Legacy gear (Slot=Legacy in the sheet) renders like legacy enchants: name +
+      // Legacy pill + level, numeric columns blank; prices keep logging unseen.
       for (const it of items) {
         const pts = score(it.stats);
         const mk = priceOf(it.name), cr = craftCost(it.name), ch = cost(it.name);
@@ -2427,13 +2439,18 @@
           ? recipeBlock(it.name)
           : `<div class="muted" style="margin-top:10px">No crafting recipe. Marketplace only.</div>`;
         entries.push({
-          kind: "gear", name: it.name, famKey: itemFamilyKey(it.name),
-          slotHtml: slotPills, slotText: it.slotIds.join(", "),
+          kind: "gear", legacy: it.legacy,
+          name: it.name, famKey: it.legacy ? ` ${it.name}` : itemFamilyKey(it.name),
+          slotHtml: it.legacy ? `<span class="pill">Legacy</span>` : slotPills,
+          slotText: it.legacy ? "legacy" : it.slotIds.join(", "),
           lvlNum: it.level ?? null, lvlText: it.level ?? "—",
-          pts, mk, cr, ch, trend: prices[it.name]?.trend ?? null, gpp: ch != null && pts > 0 ? ch / pts : null,
+          pts: it.legacy ? null : pts,
+          mk: it.legacy ? null : mk, cr: it.legacy ? null : cr, ch: it.legacy ? null : ch,
+          trend: it.legacy ? null : prices[it.name]?.trend ?? null,
+          gpp: !it.legacy && ch != null && pts > 0 ? ch / pts : null,
           detail: `<div class="detail">
             <h4>Stats</h4><div class="statline">${statLine(it.stats)}${it.effect ? ` · <span class="muted">${it.effect}</span>` : ""}</div>
-            <h4 style="margin-top:10px">Slots</h4><div class="muted">${it.slotIds.join(", ")}</div>
+            ${it.legacy ? "" : `<h4 style="margin-top:10px">Slots</h4><div class="muted">${it.slotIds.join(", ")}</div>`}
             ${recipeHtml}
             ${priceDetail(it.name)}
           </div>`,
@@ -2448,7 +2465,7 @@
       const matNames = new Set([...Object.keys(recipes), ...Object.keys(prices)]);
       for (const v of boxValues) matNames.add(v.box); // a logged box lists even before its EV prices (all payouts unpriced)
       for (const n of matNames) {
-        if (gearNames.has(n) || enchantScrolls.has(n)) continue;
+        if (gearNames.has(n) || enchantScrolls.has(n) || legacy[n]) continue;
         const cr = craftCost(n), mk = priceOf(n), ch = cost(n);
         const recipeHtml = recipeBlock(n);
         // Seals carry a derived Seal-Shop value, not a real market listing → show the
@@ -2485,9 +2502,29 @@
           slotHtml: legacy ? tagPill.trim() : `<span class="pill">${e.affix}</span>${tagPill}`,
           slotText: `${e.affix} ${e.tag} ${e.appliesTo.join(", ")}`,
           lvlNum: typeof e.rank === "number" ? e.rank : null, lvlText: e.rank ?? "—",
+          legacy,
           pts: legacy ? null : pts, mk: null, cr: null, ch: legacy ? null : sch,
           trend: legacy ? null : prices[e.scroll]?.trend ?? null,
           gpp: !legacy && sch != null && pts > 0 ? sch / pts : null, detail,
+        });
+      }
+
+      // LEGACY (SPEC §7.3): retired gear/materials/scrolls from the Legacy tab. Name +
+      // rank/level only, every numeric column blank; the old stat line is display text in
+      // the detail. Price tracking continues unseen; rows hide behind the Legacy chip.
+      for (const l of Object.values(legacy)) {
+        const affixLabel = l.affix === "P" ? "prefix" : l.affix === "S" ? "suffix" : "";
+        entries.push({
+          kind: "legacy", legacy: true, name: l.name, famKey: ` ${l.name}`,
+          slotHtml: l.type ? `<span class="pill">${esc(l.type)}</span>` : "",
+          slotText: `legacy ${l.type.toLowerCase()} ${affixLabel}`,
+          lvlNum: /^\d+$/.test(l.rank) ? +l.rank : null, lvlText: l.rank || "—",
+          pts: null, mk: null, cr: null, ch: null, trend: null, gpp: null,
+          detail: `<div class="detail">
+            <h4>Old stats</h4><div class="statline">${l.stats ? esc(l.stats) : "—"}${affixLabel ? ` · <span class="muted">${affixLabel}</span>` : ""}</div>
+            <div class="muted" style="margin-top:10px">Legacy item: no longer in circulation. Tracked for pricing only, never offered as an upgrade.</div>
+            ${priceDetail(l.name)}
+          </div>`,
         });
       }
 
@@ -2529,6 +2566,7 @@
         rows: entries.map((en) => ({
           key: en.name,
           kind: en.kind,
+          legacy: en.legacy || false, // hidden unless the Legacy chip is on
           owned: ownedOf(en.name), // drives the Owned filter + most-owned-first sort (SPEC §5.2)
           group: en.grouped ? en.famKey : null,
           groupKey: en.groupKey, within: en.within, // drive the grouped Item-column sort
@@ -3409,6 +3447,7 @@
       enchant:  [0, 2, 3, 4, 5, 6, 7, 8],  // drop Kind (Trend = gold-weighted over the cheapest method's buys)
       material: [0, 5, 6, 8],              // drop Kind, Slot/Affix, Lvl/R, Pts, Gold/Pt
       sealshop: [0, 6, 8],                 // Item, Price (derived redemption worth), Owned, no trend/pts
+      legacy:   [0, 2, 3, 8],              // Item, Slot/Affix (= Type pill: Gear/Material/Enchant, sortable), Lvl/R, Owned
     };
     statTargetEl.innerHTML = `<option value="points">Ranking points</option>` +
       Object.entries(STAT_LABEL).map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
@@ -3494,6 +3533,8 @@
         : v.rows.slice();
       if (catalogTab && catalogKind !== "all") rows = rows.filter((r) => r.kind === catalogKind);
       if (catalogTab && ownedOnly) rows = rows.filter((r) => r.owned > 0);
+      // Legacy rows show ONLY under the Legacy kind scope; every other view hides them.
+      if (catalogTab && catalogKind !== "legacy") rows = rows.filter((r) => !r.legacy);
       if (active === UPGRADES_TAB) {
         if (hideRebase) rows = rows.filter((r) => !r.rebase);
         if (hideBetter) rows = rows.filter((r) => !r.better);
@@ -6307,7 +6348,7 @@
     // IMMEDIATELY; no Enter needed.
     function apprSearchResults() {
       if (!bQuery.trim()) { bShown = []; return ""; }
-      const cands = items.map((it) => ({
+      const cands = items.filter((it) => !it.legacy).map((it) => ({
         name: it.name, label: it.name,
         slots: it.slotIds.map(planSlotLabel).join(", "),
         search: `${it.name} ${it.slotIds.map(planSlotLabel).join(" ")}`,

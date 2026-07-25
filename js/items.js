@@ -34,11 +34,14 @@ export function rowsToItems(rows) {
     if (!name) continue;
 
     // A Slot cell may name more than one slot ("Ring 1, Ring 2").
-    const slotIds = (row[idx.slot] || "")
+    // Slot=Legacy keeps the row with NO slots: catalog-only old gear, priced and
+    // tracked but never a base-swap candidate (mirrors the enchant Legacy group).
+    const legacy = (row[idx.slot] || "").trim() === "Legacy";
+    const slotIds = legacy ? [] : (row[idx.slot] || "")
       .split(",")
       .map((s) => SLOT_NAME_TO_ID[s.trim()])
       .filter(Boolean);
-    if (!slotIds.length) continue; // unknown/empty slot label → skip
+    if (!slotIds.length && !legacy) continue; // unknown/empty slot label → skip
 
     const stats = {};
     for (const [col, key] of Object.entries(ITEM_STAT_COLUMNS)) {
@@ -50,6 +53,7 @@ export function rowsToItems(rows) {
       name,
       level: toInt(row[idx.level]),
       slotIds,
+      legacy,
       stats,
       effect: (row[idx.effect] || "").trim(),
     });

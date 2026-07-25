@@ -510,6 +510,22 @@ export const SEAL_SHOP_COLUMNS = Object.freeze({
   // looked up softly in rowsToSealShop so old sheets/snapshots without it still load.
 });
 
+// Legacy tab: old gear/materials/enchants no longer in circulation but still
+// price-tracked. One row per name: `Item` (price-feed key), optional `P/S`
+// (enchant affix), `Rank/Lvl`, `Stats` (old stat line, display text only, never
+// scored). Names here render in the Items catalog as Legacy-kind rows (numeric
+// columns blanked, hidden behind the Legacy chip) instead of Material rows.
+// Purely cosmetic: pricing and craft-cost math never consult this tab.
+export const LEGACY_CSV_URL = tabCsv(862737194);
+export const LEGACY_CSV_FALLBACK = "data/legacy.csv";
+export const LEGACY_COLUMNS = Object.freeze({
+  name: "Item",
+  type: "Type",   // Gear | Material | Enchant (display/sort grouping within the Legacy kind)
+  affix: "P/S",
+  rank: "Rank/Lvl",
+  stats: "Stats",
+});
+
 // Weekly Boxes tab (SPEC §18, weekly free choice boxes)
 // One free choice box per week per character that can run the qualifying raid;
 // contents BIND (unsellable), claimed boxes never expire. One row per box:
