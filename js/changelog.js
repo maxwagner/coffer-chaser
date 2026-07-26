@@ -3,6 +3,16 @@
 // (index.html `renderChangelog`). Write entries in plain player language, not commit-speak.
 export const CHANGELOG = [
   {
+    version: "0.5",
+    date: "2026-07-25",
+    notes: "Added equipment icons; reworked the Upgrades table",
+    changes: [
+      "Added icons for every equipment type. They are not the specific icons from in game, just generic ones drawn as SVG.",
+      "The Upgrades page changed a lot visually. The Slot and Type columns are gone, replaced by a slot icon on each row. You can still search by slot or type, but you can no longer sort by them.",
+      "Added icons to the Equipped section, and widened it a bit to fit them in.",
+    ],
+  },
+  {
     version: "0.4",
     date: "2026-07-25",
     notes: "Faster loading; filtered out legacy items; fixed Orna upgrade pricing",

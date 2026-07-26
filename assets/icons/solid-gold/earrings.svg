@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="slot-ico slot-ico-solid" viewBox="0 0 24 24" width="32" height="32" role="img" aria-label="earrings"><style>.g{fill:#c9a84c}.gs{stroke:#c9a84c}.d{fill:#111318}</style><g transform="translate(12 12) scale(1.45) translate(-7.79 -10.36)"><g transform="translate(0 -.6)">
+  <path class="gs" fill="none" stroke-width=".95" stroke-linecap="round"
+    d="M6.4 8.9V6a2 2 0 0 1 4 0v2.3c0 1 .2 1.5.8 2"/>
+  <circle class="g" cx="6.4" cy="9.4" r="1.05"/>
+  <rect class="g" x="5.2" y="10.2" width="2.4" height="1" rx=".45"/>
+  <path class="g" d="M6.4 11c1.65 1.9 2.5 3.45 2.5 4.9a2.5 2.5 0 0 1-5 0c0-1.45.85-3 2.5-4.9z"/></g></g></svg>

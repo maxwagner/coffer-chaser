@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="slot-ico slot-ico-solid" viewBox="0 0 24 24" width="32" height="32" role="img" aria-label="weapon"><style>.g{fill:#8a9ab8}.gs{stroke:#8a9ab8}.d{fill:#111318}</style><g class="g">
+    <path d="M12 1.4 13.7 4.6V15.4H10.3V4.6Z"/>
+    <rect x="6.6" y="15.4" width="10.8" height="2" rx=".9"/>
+    <rect x="11" y="17.4" width="2" height="3.4"/>
+    <circle cx="12" cy="21.6" r="1.5"/></g>
+    <path class="d" d="M11.6 3.8h.8v11.2h-.8z"/></svg>

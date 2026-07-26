@@ -6,6 +6,7 @@
   "description": "OCR build for Coffer Chaser, a Vindictus upgrade optimizer & knowledge base. The app ships as static HTML/CSS/JS (+ the pre-built, committed vendor/ppocr OCR bundle); esbuild is dev-only and never runs at page load.",
   "scripts": {
     "build:ocr": "node scripts/build-ppocr.mjs",
+    "build:icons": "node scripts/build-slot-icons.mjs",
     "refresh:data": "node scripts/refresh-data.mjs",
     "check:data": "node scripts/refresh-data.mjs --check",
     "sheets:pull": "cd scripts/sheets && clasp pull",

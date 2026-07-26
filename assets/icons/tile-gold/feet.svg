@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="slot-ico slot-ico-tile" viewBox="0 0 24 24" width="32" height="32" role="img" aria-label="feet"><style>.g{fill:#c9a84c}.gs{stroke:#c9a84c}.d{fill:#1a1e26}</style><defs><linearGradient id="slotTileBg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#232833"/><stop offset="1" stop-color="#14171d"/></linearGradient></defs><rect width="24" height="24" rx="6" fill="url(#slotTileBg)"/><g transform="translate(12 12) scale(.64) translate(-12 -12)"><path class="g" d="M5.4 2.6h6v9.8l6.2 2.9c1.4.7 2.2 2.1 2.2 3.7v1.6H5.4z"/>
+    <rect class="d" x="5.4" y="10.8" width="6" height="1.4"/>
+    <path class="d" d="M12.2 15.2 16.6 17.2v1.3l-4.4-2z"/>
+    <path class="d" d="M5.4 19h14.4v1.3H5.4z"/></g></svg>

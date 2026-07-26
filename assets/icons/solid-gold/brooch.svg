@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="slot-ico slot-ico-solid" viewBox="0 0 24 24" width="32" height="32" role="img" aria-label="brooch"><style>.g{fill:#c9a84c}.gs{stroke:#c9a84c}.d{fill:#111318}</style><path class="g" fill-rule="evenodd" d="M12 1.4a10.6 10.6 0 1 0 0 21.2 10.6 10.6 0 1 0 0-21.2zm0 1.3a9.3 9.3 0 1 1 0 18.6 9.3 9.3 0 0 1 0-18.6z"/>
+    <g transform="rotate(22 12 12)">
+      <path class="g" d="M12 4.6c1.9 1.7 2.8 3.9 2.8 6.4 0 2.2-.9 4.2-2.8 5.9-1.9-1.7-2.8-3.7-2.8-5.9 0-2.5.9-4.7 2.8-6.4z"/>
+      <rect class="g" x="11.6" y="16.2" width=".8" height="3.4" rx=".4"/>
+      <path class="d" d="M11.68 6.4h.64v12.9h-.64z"/>
+    </g></svg>

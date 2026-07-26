@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="slot-ico slot-ico-tile" viewBox="0 0 24 24" width="32" height="32" role="img" aria-label="artifact-paw"><style>.g{fill:#c9a84c}.gs{stroke:#c9a84c}.d{fill:#1a1e26}</style><defs><linearGradient id="slotTileBg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#232833"/><stop offset="1" stop-color="#14171d"/></linearGradient></defs><rect width="24" height="24" rx="6" fill="url(#slotTileBg)"/><g transform="translate(12 12) scale(.64) translate(-12 -12)"><path class="g" d="M12 21.6c-3.7 0-6.4-2.1-6.4-4.8 0-2.5 2.7-4.6 6.4-4.6s6.4 2.1 6.4 4.6c0 2.7-2.7 4.8-6.4 4.8z"/>
+    <ellipse class="g" cx="6.5" cy="11" rx="1.9" ry="2.4" transform="rotate(-22 6.5 11)"/>
+    <ellipse class="g" cx="9.9" cy="7.9" rx="2" ry="2.5"/>
+    <ellipse class="g" cx="14.1" cy="7.9" rx="2" ry="2.5"/>
+    <ellipse class="g" cx="17.5" cy="11" rx="1.9" ry="2.4" transform="rotate(22 17.5 11)"/>
+    <path class="g" d="M9.9 2.6 11.1 5.2H8.7zM14.1 2.6 15.3 5.2h-2.4zM5.1 5.4 7 7.4 4.9 8.4zM18.9 5.4 17 7.4l2.1 1z"/></g></svg>

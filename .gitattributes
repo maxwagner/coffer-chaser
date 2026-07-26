@@ -1,5 +1,12 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Auto detect text files and perform LF normalization, in the repo AND in the working
+# tree. `text=auto` alone only normalizes the committed blob and leaves the checked-out
+# ending to each machine's `core.autocrlf`, which drifts: git writes CRLF on checkout,
+# but every tool that later rewrites a file (sed, esbuild, node scripts, the refresh-data
+# Action on Linux, an editor) writes LF, and nothing converts it back. The tree ends up
+# half and half. Git's own diff normalizes before comparing so it looks clean, but tools
+# that read the working file directly (GitHub Desktop) see a whole-file rewrite and show
+# a file as changed with no visible diff. `eol=lf` pins both sides to LF and ends it.
+* text=auto eol=lf
 
 # Shell hooks must stay LF — a CR in the shebang breaks /bin/sh
 .githooks/** text eol=lf

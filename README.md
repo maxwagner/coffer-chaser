@@ -2,13 +2,15 @@
 
 A tool for figuring out the cheapest way to upgrade your gear in Vindictus.
 
+**[Open the app](https://maxwagner.github.io/coffer-chaser/)**
+
 ## What it does
 
 Every upgrade you can make (crafting a gear tier, applying an enchant, enhancing an accessory) costs some gold and gives you some ranking points. Coffer Chaser looks at all of them and sorts them by gold spent per point gained, so you can see which upgrades give you the most for your money. Prices come from a community Google Sheet, so the numbers stay close to the real marketplace.
 
 ## How to use it
 
-Open the app in your browser. It loads the price data and then shows you a ranked list of upgrades, cheapest first. Set up your character by editing your gear and stats in the sidebar on the right, and the whole list updates to match. From there you can plan out a path, check how much each stat is worth against a boss, or track your drops.
+[Open the app](https://maxwagner.github.io/coffer-chaser/) in your browser. It loads the price data and then shows you a ranked list of upgrades, cheapest first. Set up your character by editing your gear and stats in the sidebar on the right, and the whole list updates to match. From there you can plan out a path, check how much each stat is worth against a boss, or track your drops.
 
 Your character, gear, and settings are saved in your browser, so nothing gets lost when you close the tab.
 

@@ -29,14 +29,23 @@
     .main { flex: 1 1 auto; min-width: 0; overflow-x: auto; }
     .main.plan-scroll { overflow: visible; } /* let the Planner's sticky materials panel pin to the page */
     /* Inventory sidebar (read-only) */
-    .sidebar { flex: 0 0 280px; position: sticky; top: 24px; background: var(--surface2);
+    /* 320px, not 280: the Equipped rows carry a 28px slot icon now, and the extra 40px
+       keeps the item-name line as wide as it was before the icon took its bite. */
+    .sidebar { flex: 0 0 320px; position: sticky; top: 24px; background: var(--surface2);
       border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-size: 13px;
       max-height: calc(100vh - 48px); overflow-y: auto; }
     .sidebar h3 { margin: 0 0 2px; font-size: 13px; color: var(--head); text-transform: uppercase; letter-spacing: .03em; }
     .sidebar h3.mt { margin-top: 14px; }
     .sidebar .pts { color: var(--gold); font-family: var(--font-mono); }
     .sidebar .gear { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12px; }
-    .sidebar .gear li { padding: 3px 0; border-bottom: 1px solid var(--border); }
+    /* Icon left, the two text lines stacked right of it. `li.editing` below flips back to
+       display:block so the inline edit form keeps the full width. */
+    .sidebar .gear li { display: flex; align-items: center; gap: 8px;
+      padding: 3px 0; border-bottom: 1px solid var(--border); }
+    .sidebar .gear .gico { flex: 0 0 auto; color: var(--head); }
+    .sidebar .gear .gico .slot-ico { width: 28px; height: 28px; }
+    /* min-width:0 or the name's ellipsis never kicks in inside a flex row. */
+    .sidebar .gear .gtext { flex: 1 1 auto; min-width: 0; }
     /* Two lines: name on top (full width, ellipsis only for the longest), scrolls below.
        Both share one size, hierarchy is color + weight, not a size jump. */
     .sidebar .gear .item { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--fg); font-weight: 600; }
@@ -128,6 +137,11 @@
     h1 .hdr-ver + .hdr-status { margin-left: 8px; }
     /* Freshness badge sized to match the version button (11px, same box height). */
     h1 .hdr-status { display: inline-flex; align-items: center; }
+    /* Repo link, last in the right-hand group. Inherits the muted colour and lifts on hover
+       like the version button, so it reads as chrome rather than as a call to action. */
+    h1 .hdr-gh { align-self: center; margin-left: 8px; display: inline-flex; color: var(--fg-dim); }
+    h1 .hdr-gh:hover { color: var(--fg); }
+    h1 .hdr-gh svg { display: block; width: 18px; height: 18px; fill: currentColor; }
     h1 .hdr-status .badge { font-size: 11px; padding: 2px 8px; line-height: normal; }
     .modal-back { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 60;
       display: flex; align-items: flex-start; justify-content: center; padding: 60px 16px; }
@@ -175,7 +189,8 @@
     /* While booting: show only the header icon/title/subtitle + the spinner. Hide the tabs,
        controls, table, sidebar, and the freshness badge until the first render completes. */
     body.booting .tabs, body.booting #controls, body.booting #maintable,
-    body.booting .sidebar, body.booting .hdr-status, body.booting .hdr-ver { display: none; }
+    body.booting .sidebar, body.booting .hdr-status, body.booting .hdr-ver,
+    body.booting .hdr-gh { display: none; }
     /* Boot spinner, shown until the first render (after the Sheet loaders resolve). */
     .boot-loading { display: flex; align-items: center; gap: 10px; padding: 40px 4px;
       color: var(--fg-dim); font-size: 13px; }
@@ -229,6 +244,21 @@
     .srcicon.cr.on { color: var(--fallback); }
     .srcicon.off { color: var(--fg-dim); opacity: .4; }
     .profit { font-size: 11px; font-weight: 600; color: var(--good); margin-left: 6px; border: 1px solid var(--good); border-radius: 3px; padding: 0 4px; }
+    /* Equipment-slot icons (SPEC §22). The glyph paints with currentColor, so the tone is
+       just the `color` of the wrapper; only the .d cut-ins need to match the backdrop. */
+    .slot-ico { display: inline-flex; vertical-align: middle; width: 32px; height: 32px; flex: 0 0 auto; }
+    .slot-ico .g { fill: currentColor; }
+    .slot-ico .gs { stroke: currentColor; }
+    .slot-ico-solid .d { fill: var(--bg); }
+    .slot-ico-tile .d { fill: #1a1e26; }
+    /* Upgrades rows: 32px glyph ahead of the move label, in --head like the label itself,
+       with the row padding raised to 8px so the taller icon clears. Scoped to the Upgrades
+       tab (table.upgrows), every other tab keeps the 6px rows. */
+    table.upgrows td { padding: 8px 12px; }
+    /* One rule does both jobs: the label (and its bold item name) go muted, and the glyph
+       follows via currentColor. */
+    table.upgrows tr.mainrow td:first-child { color: var(--head); }
+    table.upgrows tr.mainrow td:first-child .slot-ico { margin-right: 8px; }
     .up { color: var(--bad); } .down { color: var(--good); }
     .pos { color: var(--good); } .neg { color: var(--bad); }
     .detailrow td { background: var(--surface2); white-space: normal; padding: 12px 16px 14px 30px; }
@@ -1108,7 +1138,7 @@
 </head>
 <body class="booting">
   <header class="apphdr">
-    <h1><img class="app-icon" src="assets/favicon.svg" alt="" width="26" height="26" />Coffer Chaser <span class="tagline">A Vindictus Upgrading Tool</span><button type="button" id="verBtn" class="hdr-ver" title="What's new"></button><span id="status" class="hdr-status"></span></h1>
+    <h1><img class="app-icon" src="assets/favicon.svg" alt="" width="26" height="26" />Coffer Chaser <span class="tagline">A Vindictus Upgrading Tool</span><button type="button" id="verBtn" class="hdr-ver" title="What's new"></button><span id="status" class="hdr-status"></span><a class="hdr-gh" href="https://github.com/maxwagner/coffer-chaser" target="_blank" rel="noopener noreferrer" title="Source on GitHub" aria-label="Source on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a></h1>
     <div class="tabs" id="tabs"></div>
   </header>
   <div class="pagerow">
@@ -1167,6 +1197,7 @@
     import { loadSetBonuses } from "./js/setbonuses.js";
     import { loadTuning } from "./js/tuning.js";
     import { tuningKey, moveKey, moveVetoed, healTuning, statDelta } from "./js/utils.js";
+    import { slotIcon } from "./js/slot-icons.js";
     import { infusionKind, infusionOptions, infusionTargets, infusionStatus, INFUSION_STAT_LABEL } from "./js/infusion.js";
     import { snapshotState, makeProfileRecord, upsertProfile, removeProfile, renameProfile } from "./js/profiles.js";
     import { loadRaids, nextRaid } from "./js/raids.js";
@@ -2724,6 +2755,12 @@
       : m.type === "tuneStep" ? `${m.capstone ? `tune → <b>Dest ${surplusRoman(m.capstone)}</b>` : `tune <b>${tuneStatDisplay(m.stat)}</b>`}${hintChip("⚙", "hint-tune", tuneTip(m))}`
       : `enhance <b>${m.from} → ${m.to}</b>`) + rebaseBadge(m, rebasedSlots) + betterHint(m);
 
+    // Upgrades rows lead with the slot's icon (SPEC §22). That table dropped its Type and
+    // Slot pills, so this glyph is the only place the slot is SHOWN, but `moveSearch` still
+    // carries the slot name, so filtering by "helm" or "ring1" keeps working. A slot with
+    // no glyph yields "" and the row simply reads without one.
+    const moveSlotIcon = (m) => slotIcon(m.slot, { label: m.slot });
+
     // Free-text the search bar matches against (the move's plain-text label + type word +
     // slot + affix), so a user can filter by what they SEE, "advance", "swap suffix",
     // "enchant weapon", not just the internal moveKey (tierStep:weapon:base:…).
@@ -3040,15 +3077,17 @@
         // Points view is already net-positive only (rankedMoves = pointGain>0), so
         // there are no lossy (net-loss) moves to gate here, the toggle is a no-op.
         return {
-          columns: [{ label: "Best buys (cheapest gold/point first)" }, { label: "Type" }, { label: "Slot" },
+          columns: [{ label: "Best buys (cheapest gold/point first)" },
                     { label: "Pts", num: true }, { label: "Gold", num: true }, { label: "Trend", num: true }, { label: "Gold / Pt", num: true },
                     { label: "DPS %", num: true }, { label: "Gold / DPS%", num: true }],
-          defaultSort: { col: 6, dir: "asc" },
+          defaultSort: { col: 4, dir: "asc" },
           rows: rankedMoves.map((m, i) => { const d = dpsCells(m); return {
             key: moveKey(m), search: moveSearch(m), pts: m.pointGain, gold: m.goldCost,
             rebase: moveNeedsRebase(m), better: moveHasBetter(m),
-            sort: [i, TYPE_LABEL[m.type], m.slot, m.pointGain, m.goldCost, moveTrend(m) ?? 0, m.goldPerPoint, ...d.sort],
-            cells: [moveLabel(m), ["", pill(TYPE_LABEL[m.type])], ["", pill(m.slot)],
+            // `sort` is indexed BY COLUMN (r.sort[sort.col]), so it drops the two removed
+            // entries alongside the columns or every header click sorts by the wrong value.
+            sort: [i, m.pointGain, m.goldCost, moveTrend(m) ?? 0, m.goldPerPoint, ...d.sort],
+            cells: [moveSlotIcon(m) + moveLabel(m),
               ["num", `<span class="${m.pointGain > 0 ? "pos" : "muted"}">${sfmt(m.pointGain)}</span>`], ["num", fmt(m.goldCost)], ["num", moveTrendChip(m)],
               // Wash tier advance (pointGain ≤ 0): no meaningful gold/point. Show "—" not ∞.
               ["num", `${m.pointGain > 0 ? fmt(m.goldPerPoint) : "—"}${freeTag(m)}`], ...d.cells],
@@ -3064,16 +3103,16 @@
         .map((m) => ({ m, gain: m.statDiff[target], gps: m.goldCost / m.statDiff[target] }))
         .sort((a, b) => a.gps - b.gps);
       return {
-        columns: [{ label: `Best ${tl} buys (${targeted.length})` }, { label: "Type" }, { label: "Slot" },
+        columns: [{ label: `Best ${tl} buys (${targeted.length})` },
                   { label: `+${tl}`, num: true }, { label: "Pts", num: true }, { label: "Gold", num: true },
                   { label: "Trend", num: true }, { label: `Gold / ${tl}`, num: true },
                   { label: "DPS %", num: true }, { label: "Gold / DPS%", num: true }],
-        defaultSort: { col: 7, dir: "asc" },
+        defaultSort: { col: 5, dir: "asc" },
         rows: targeted.map(({ m, gain, gps }, i) => { const d = dpsCells(m); return {
           key: moveKey(m), search: moveSearch(m), pts: m.pointGain, gold: m.goldCost,
           rebase: moveNeedsRebase(m), better: moveHasBetter(m),
-          sort: [i, TYPE_LABEL[m.type], m.slot, gain, m.pointGain, m.goldCost, moveTrend(m) ?? 0, gps, ...d.sort],
-          cells: [moveLabel(m), ["", pill(TYPE_LABEL[m.type])], ["", pill(m.slot)],
+          sort: [i, gain, m.pointGain, m.goldCost, moveTrend(m) ?? 0, gps, ...d.sort],
+          cells: [moveSlotIcon(m) + moveLabel(m),
             ["num", `+${fmt(gain)}`], ["num", `<span class="${m.pointGain < 0 ? "neg" : "pos"}">${sfmt(m.pointGain)}</span>`], ["num", fmt(m.goldCost)], ["num", moveTrendChip(m)],
             ["num", `${fmt(gps)}${freeTag(m)}`], ...d.cells],
           detail: moveDetail(m) + dpsFooter(m) + vetoFooter(m) + planFooter(m),
@@ -3546,6 +3585,8 @@
       // head, or members scatter, so we drop the bracketing then to avoid misleading nesting.
       const ds = v.defaultSort || {};
       const inDefaultOrder = (sort.col === ds.col && sort.dir === ds.dir) || catalogItemSort;
+      // Taller rows + muted labels are Upgrades-only (SPEC §22); every other tab keeps 6px rows.
+      document.getElementById("maintable").classList.toggle("upgrows", active === UPGRADES_TAB);
 
       rowsEl.innerHTML = rows.map((r, idx) => {
         const open = expanded.has(r.key);
@@ -5887,7 +5928,12 @@
         // The name line ellipsizes only for the longest names; title recovers the full text.
         const affixLine = affixes ? `<div class="affix">${affixes}</div>` : "";
         const titleText = [s, g.base || `— ${s} —`, affixes].filter(Boolean).join("  ·  ");
-        return `<li class="editable" data-slot="${s}" title="${titleText}"><div class="item">${base}</div>${affixLine}</li>`;
+        // The slot icon (SPEC §22) leads the row. This list carries no slot LABELS, so the
+        // glyph is what names the slot, which matters most for the empty ones.
+        const ico = slotIcon(s, { label: s });
+        return `<li class="editable" data-slot="${s}" title="${titleText}">` +
+          (ico ? `<span class="gico">${ico}</span>` : "") +
+          `<div class="gtext"><div class="item">${base}</div>${affixLine}</div></li>`;
       }).join("");
 
       // Stat totals are click-to-edit (like a gear slot): the value cell shows the
