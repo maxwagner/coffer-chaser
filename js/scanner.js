@@ -1079,9 +1079,10 @@ export function mergeGifFrameLines(frames, { fuzz = 0.14 } = {}) {
 // Build one run record from a drop tally. `items` = [[name, qty, source]…] (dropStore.items
 // entries; names already canonical; source = core-source key, defaults "base". SPEC §16.9).
 // Each drop's `unit` is the rolling-avg price at save (null if unpriced → contributes null
-// value, not counted in the total). `luck` = the character's Luck stat at save time (null =
-// unrecorded), frozen so luck-core yield can be tallied per luck level later.
-export function makeRunRecord({ items = [], gold = 0, prices = {}, character = "", raid = "", mode = "Normal", coreBoost = false, maxLevel = false, luck = null, name = "", durationSec = null, savedAt = null, id = null, party = [] } = {}) {
+// value, not counted in the total). Luck-core yield is tracked via the drops' `luck` source
+// tag; the character's Luck stat itself is no longer recorded (old records may carry `luck`,
+// it's ignored).
+export function makeRunRecord({ items = [], gold = 0, prices = {}, character = "", raid = "", mode = "Normal", coreBoost = false, maxLevel = false, name = "", durationSec = null, savedAt = null, id = null, party = [] } = {}) {
   const priceDrops = (list) => {
     const drops = []; let itemsValue = 0;
     for (const [nm, qty, source] of list) {
@@ -1109,7 +1110,6 @@ export function makeRunRecord({ items = [], gold = 0, prices = {}, character = "
     mode: mode === "Hero" ? "Hero" : "Normal", // Hero = doubled HP + doubled drops; still ONE run
     coreBoost: !!coreBoost, // whether the run was core-boosted (adds the raid's Core Gold, applied live)
     maxLevel: !!maxLevel,   // whether the character was max-level (adds the +20% level-cap gold bonus, applied live)
-    luck: Number.isFinite(Number(luck)) && luck !== null && luck !== "" ? Number(luck) : null, // Luck stat at save (null = unrecorded)
     savedAt: savedAt || new Date().toISOString(),
     durationSec: durationSec == null ? null : Math.max(0, Math.round(durationSec)),
     gold: g,
@@ -1240,33 +1240,41 @@ export function summarizeRuns(runs = []) {
 //
 // Costs are the CALLER's (config constants / live tracker prices). This stays pure:
 //   campfireCost, gold per run (the buff is per-battle; tag presence ⇒ it was bought)
-//   vvipCost / cadetCost, gold per 30 days
-//   plusUSD, real-money price of Core Boost Plus (reported as gold-per-dollar, not a verdict)
+// Core Boost Plus's price and term live in the UI's settings, not here: they're a property of
+// the player's account, not of the runs, so the caller does that arithmetic on `sources.plus`.
 //
 // TWO separate readings (the user's design): CONTRIBUTION = what each buff's tagged cores were
 // actually worth (sources/campfire/vvip/plus/luck). WORTH-IT = EV-based: the marginal value of
 // one extra core at a raid ≈ that raid+mode's AVERAGE core value (common cores are cheap; rare
 // spikes carry the EV, a buff is worth it if avgCore beats its per-core cost, regardless of
-// which items happened to carry the tag). Campfire's verdict is per raid+mode (`avgCore` on each
-// bucket vs campfireCost); VVIP (+1 core EVERY run) and Plus (+3 cores per BOOSTED run) aggregate
-// in `ev` across the window's runs.
+// which items happened to carry the tag). Only campfire is scored here (`ev.campfire`): it's a
+// per-battle purchase, so one more core at the mean value either beats its price or doesn't.
+// VVIP and Core Boost Plus are deliberately NOT judged in this module. VVIP carries benefits
+// well beyond core drops, so a core-only verdict would call it a loss for a sub worth holding
+// regardless; Plus is an account-wide fixed-term purchase whose accounting needs a start date
+// the runs don't carry. Both still have their cores TALLIED in `sources`.
 // `pooled` (SPEC §16.11): also fold every party member's tagged cores into the core-VALUE sample
 //, `perRaidMode` cores/value (→ a far larger, more reliable `avgCore`, which prices the worth-it
 // EV) and the `sources` contribution cores/value (→ how much each buff yields at party scale).
-// Deliberately NOT pooled: `runsWith`, campfire spend, VVIP/Plus boost counts, and luck-by-level
-//, those are the PLAYER's own spend/luck (party members' costs + Luck stat are unknown), so the
-// worth-it decision stays anchored to your runs while the EV estimate benefits from everyone's
-// cores. Returns { runCount, trackedCount, sources, perRaidMode, campfire, vvip, plus, luck, ev }.
-export function summarizeCoreSources(runs = [], { now = new Date(), windowDays = 30, campfireCost = 65000, vvipCost = null, cadetCost = null, plusUSD = 19, pooled = false } = {}) {
+// Pet cores are NEVER pooled (a party member's pet is their own buff, useless to your verdicts).
+// The campfire ledger pools BOTH sides: a member's campfire core cost them the same 65k yours
+// did, so pooling the earnings without the spend would read as free money.
+// Deliberately NOT pooled: the `ev` run counts. Core Boost Plus is bought per account, so what
+// a party member earns from their sub is not yours to collect; the worth-it decision stays
+// anchored to YOUR runs while the per-core value estimate benefits from everyone's cores.
+// Luck is tallied as a plain source (sources.luck), no per-level split, the player's Luck stat
+// is no longer recorded. Returns { runCount, trackedCount, sources, perRaidMode, campfire,
+// vvip, plus, ev }.
+export function summarizeCoreSources(runs = [], { now = new Date(), windowDays = 30, campfireCost = 65000, pooled = false } = {}) {
   const cutoff = new Date(now).getTime() - windowDays * 86400_000;
   const inWindow = runs.filter((r) => new Date(r.savedAt).getTime() >= cutoff);
   const tracked = inWindow.filter((r) => (r.drops || []).length === 0 || (r.drops || []).every((d) => CORE_SOURCES.includes(d.source)));
 
+  // `runsWith` counts run SAMPLES that yielded this source (pooled: each party member's run is
+  // its own sample, so cores/value and the run count they divide by scale together).
   const srcBucket = () => Object.fromEntries(CORE_SOURCES.map((s) => [s, { cores: 0, value: 0, runsWith: 0 }]));
   const sources = srcBucket();
   const perRaidMode = {}; // "raid|mode" → { raid, mode, runs, timedDurationSec, timedCount, sources }
-  const luckByLevel = {}; // luck stat → { runs, cores, value } (luck-source cores only)
-  let luckUnrecorded = 0;
   const plusByMode = { Normal: { runs: 0, boosts: 0, cores: 0, value: 0 }, Hero: { runs: 0, boosts: 0, cores: 0, value: 0 } };
 
   for (const r of tracked) {
@@ -1286,29 +1294,35 @@ export function summarizeCoreSources(runs = [], { now = new Date(), windowDays =
       if (!s.cores) continue;
       for (const b of [sources[src], rm.sources[src]]) { b.cores += s.cores; b.value += s.value; b.runsWith++; }
     }
-    // Luck yield per luck level (probabilistic 2nd+ cores, the data derives the odds).
-    if (r.luck == null) luckUnrecorded++;
-    else {
-      const lb = (luckByLevel[r.luck] ??= { runs: 0, cores: 0, value: 0 });
-      lb.runs++; lb.cores += runSrc.luck.cores; lb.value += runSrc.luck.value;
-    }
     // Plus boost efficiency: every character gets 10 core boosts/day (free, sub or not);
     // a boosted Hero run is believed to spend 2 of them, Normal 1, the split lets the data
-    // confirm. Only runs that actually yielded Plus cores count (a boosted run without the
-    // sub proves nothing).
-    if (r.coreBoost && runSrc.plus.cores > 0) {
+    // confirm. Only runs that actually yielded Plus-tagged cores count, the tag is the proof
+    // the sub was active (a boosted run without the sub proves nothing about Plus).
+    if (runSrc.plus.cores > 0) {
       const pb = plusByMode[mode];
       pb.runs++; pb.boosts += mode === "Hero" ? 2 : 1; pb.cores += runSrc.plus.cores; pb.value += runSrc.plus.value;
     }
-    // Pooled: add party members' tagged cores to the VALUE sample only (avgCore + contribution
-    // cores/value), never runsWith/luck/tokens (those stay the player's own, see header note).
+    // Pooled: each party member's run is another SAMPLE of the same raid, so their tagged cores
+    // join the value sample AND bump `runsWith` (the per-run figures stay per-player that way,
+    // instead of dividing four players' cores by your run count). A member's buffs are their
+    // own: a Plus core in their list counts even on a run where you had no sub, which is the
+    // point, it's more evidence about what Plus yields. Campfire spend rides `runsWith` too, so
+    // their 65k is counted alongside yours. Pet cores are skipped entirely, another player's
+    // pet says nothing about yours.
     if (pooled) {
       for (const m of r.party || []) {
+        const memberSrc = srcBucket();
         for (const d of m.drops || []) {
           const src = CORE_SOURCES.includes(d.source) ? d.source : "base";
+          if (src === "pet") continue;
+          const s = memberSrc[src];
+          s.cores += d.qty; s.value += d.value || 0;
           rm.cores += d.qty; rm.value += d.value || 0;
-          sources[src].cores += d.qty; sources[src].value += d.value || 0;
-          rm.sources[src].cores += d.qty; rm.sources[src].value += d.value || 0;
+        }
+        for (const src of CORE_SOURCES) {
+          const s = memberSrc[src];
+          if (!s.cores) continue;
+          for (const b of [sources[src], rm.sources[src]]) { b.cores += s.cores; b.value += s.value; b.runsWith++; }
         }
       }
     }
@@ -1316,44 +1330,62 @@ export function summarizeCoreSources(runs = [], { now = new Date(), windowDays =
 
   // Average core value per raid+mode bucket, the EV of one marginal core there.
   for (const rm of Object.values(perRaidMode)) rm.avgCore = rm.cores > 0 ? rm.value / rm.cores : null;
-  // EV worth-it aggregates: VVIP adds 1 core to EVERY run; Plus adds 3 to every BOOSTED run
-  // (whether or not the sub was active that run, this answers "would it be worth buying").
+  // EV worth-it aggregates. Run counts are ALWAYS the player's own runs (Core Boost Plus is
+  // bought per account: what a party member earns from their sub isn't yours to collect), so
+  // these never pool. The per-core value (avgCore) does pool when `pooled` is on, so pooling
+  // sharpens the estimate of what each extra core is worth without inflating how often you'd
+  // get one.
+  //   campfire: one more core at the raids you actually ran ≈ mean avgCore, vs its per-buy cost
+  //   plus: +3 cores per boosted battle, counted only on runs where a Plus tag appeared
+  // VVIP is absent by design, see the header note: its non-drop benefits dominate the decision.
+  //
+  // TIME NORMALIZATION: a subscription is priced per period, but the runs in the window may
+  // span far less than that period (2 days of logs vs a 30-day price reads as a huge loss
+  // purely because the data is young). So earnings are converted to a DAILY rate over
+  // `daySpan` (the actual span the tracked runs cover, at least one day), and the cost is
+  // converted to its own daily rate. Both sides are then per-day and directly comparable, and
+  // the verdict is meaningful from the first day of tracking.
+  const stamps = tracked.map((r) => new Date(r.savedAt).getTime()).filter((t) => Number.isFinite(t));
+  const daySpan = stamps.length ? Math.max(1, (Math.max(...stamps) - Math.min(...stamps)) / 86400_000) : 1;
   const ev = {
-    vvip: { runs: 0, value: 0, cost: vvipCost, net: null },
-    plus: { runs: 0, boosts: 0, value: 0, valuePerBoost: null, usd: plusUSD, goldPerUsd: null },
+    daySpan,
+    campfire: { runs: 0, value: 0, avg: null, cost: campfireCost, net: null },
   };
   for (const r of tracked) {
     const mode = r.mode === "Hero" ? "Hero" : "Normal";
     const avgCore = perRaidMode[`${r.raid || "—"}|${mode}`].avgCore;
     if (avgCore == null) continue;
-    ev.vvip.runs++; ev.vvip.value += avgCore;
-    if (r.coreBoost) { ev.plus.runs++; ev.plus.boosts += mode === "Hero" ? 2 : 1; ev.plus.value += 3 * avgCore; }
+    ev.campfire.runs++; ev.campfire.value += avgCore;
   }
-  if (vvipCost != null) ev.vvip.net = ev.vvip.value - vvipCost;
-  if (ev.plus.boosts) ev.plus.valuePerBoost = ev.plus.value / ev.plus.boosts;
-  if (plusUSD > 0) ev.plus.goldPerUsd = ev.plus.value / plusUSD;
+  // Campfire is a per-battle buy, not a subscription: no time normalization, just core vs cost.
+  if (ev.campfire.runs) { ev.campfire.avg = ev.campfire.value / ev.campfire.runs; ev.campfire.net = ev.campfire.avg - campfireCost; }
 
-  // Contribution (observed tagged cores). Campfire's `cost` is the actual spend (tag ⇒ bought).
+  // Contribution (observed tagged cores). Campfire's `cost` is the spend those cores implied
+  // (tag ⇒ a campfire was bought), priced off the CORE count: one campfire yields exactly one
+  // core, so cores are what you paid 65k apiece for. Counting runs instead would undercharge a
+  // run that logged two campfire cores. This also scales with pooling for free, since a party
+  // member's campfire core cost them the identical 65k, and pooling has to move both sides or
+  // the net reads as free money.
   const campfire = {
-    runsWith: sources.campfire.runsWith, cores: sources.campfire.cores, value: sources.campfire.value,
-    cost: sources.campfire.runsWith * campfireCost, costPerRun: campfireCost,
+    runsWith: sources.campfire.runsWith,
+    cores: sources.campfire.cores, value: sources.campfire.value,
+    cost: sources.campfire.cores * campfireCost, costPerRun: campfireCost,
   };
-  const vvip = { runsWith: sources.vvip.runsWith, cores: sources.vvip.cores, value: sources.vvip.value, cost: vvipCost };
+  const vvip = { runsWith: sources.vvip.runsWith, cores: sources.vvip.cores, value: sources.vvip.value };
   const plusValue = sources.plus.value;
   const plus = {
     runsWith: sources.plus.runsWith, cores: sources.plus.cores, value: plusValue,
     boosts: plusByMode.Normal.boosts + plusByMode.Hero.boosts,
     valuePerBoostedRun: sources.plus.runsWith ? plusValue / sources.plus.runsWith : null,
-    byMode: plusByMode, usd: plusUSD,
+    byMode: plusByMode, // price/term are the caller's (account settings), not the runs'
   };
-  const luck = { byLevel: luckByLevel, unrecordedRuns: luckUnrecorded, cadetCost };
-  return { windowDays, pooled, runCount: inWindow.length, trackedCount: tracked.length, sources, perRaidMode, campfire, vvip, plus, luck, ev };
+  return { windowDays, pooled, runCount: inWindow.length, trackedCount: tracked.length, sources, perRaidMode, campfire, vvip, plus, ev };
 }
 
 // Run-level TSV export (paste into a Sheet for long-term storage). One row per run.
 // Drops carry their core-source tag as a suffix ("Item×2 [luck]"; base cores bare).
 export function runsToTSV(runs = []) {
-  const header = ["Date", "Name", "Character", "Raid", "Mode", "Core boost", "Max level", "Luck", "Duration (min)", "Items value", "Gold", "Run reward", "Core gold", "Level cap bonus", "Total", "Party size", "Party items value", "Drops", "Party drops"];
+  const header = ["Date", "Name", "Character", "Raid", "Mode", "Core boost", "Max level", "Duration (min)", "Items value", "Gold", "Run reward", "Core gold", "Level cap bonus", "Total", "Party size", "Party items value", "Drops", "Party drops"];
   const rows = runs.map((r) => [
     new Date(r.savedAt).toISOString().slice(0, 10),
     r.name,
@@ -1362,7 +1394,6 @@ export function runsToTSV(runs = []) {
     r.mode || "Normal",
     r.coreBoost ? "Yes" : "",
     r.maxLevel ? "Yes" : "",
-    r.luck ?? "",
     r.durationSec == null ? "" : (r.durationSec / 60).toFixed(1),
     Math.round(r.itemsValue),
     r.gold,

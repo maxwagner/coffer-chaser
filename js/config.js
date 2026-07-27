@@ -647,39 +647,30 @@ export const SCAN_JUNK_STORAGE_KEY = "vgu.scanjunk.v1";
 // Durable data the app can't derive; feeds the per-box drop-rate/value aggregates.
 export const BOX_LOG_STORAGE_KEY = "vgu.boxlog.v1";
 
-// Party drop tracking (SPEC §16.11): when on, the drops scanner keeps OTHER party members' item
-// lines too (grouped per player) so one run samples the raid's drop table partySize× faster.
-// A global UI preference ("1"/"0"), like the planner consume toggle, not per-character.
-export const PARTY_TRACK_KEY = "vgu.partytrack.v1";
-
-// Sticky Drops-subtab run options (SPEC §16.8): { raid, mode, coreBoost, buffOpen }, the picked
-// raid, Normal/Hero mode, the manual core-boost checkbox, and the Drop Data "Core buffs" panel's
-// open state. Persisted so the setup you used yesterday is still selected today (options no
-// longer reset after each saved run). A global UI preference, like the party-track toggle.
+// Sticky Drops-subtab run options (SPEC §16.8): { raid, mode, coreBoost, circuit, buffOpen }, the
+// picked raid (or active circuit + position), Normal/Hero mode, the manual core-boost checkbox,
+// and the Drop Data "Core buffs" panel's open state. Persisted so the setup you used yesterday is
+// still selected today (options no longer reset after each saved run). A global UI preference.
+// Party drop tracking and the max-level bonus used to have their own keys and toggles; both are
+// now unconditional (always track party lines; always apply the +20% level-cap raid gold).
 export const RUN_PREFS_KEY = "vgu.runprefs.v1";
 
-// Per-character max-level flag: which characters are at the level cap and so earn the +20%
-// LEVEL_CAP_GOLD_BONUS on raid gold. A character-level setting (NOT per-run/per-raid), stored as
-// { charNameLower: true }. The TENTH allowed localStorage key. Toggling the drops-subtab "Max level"
-// checkbox writes it; each saved run freezes the character's flag as `maxLevel` for a stable value.
-export const MAXLEVEL_STORAGE_KEY = "vgu.maxlevel.v1";
+// App-wide settings (the header gear icon → Settings modal). Currently:
+//   { sealExclude: [currencyName…] } — Seal Shop currencies whose derived redemption value is
+//   EXCLUDED from the run tally (Drops run value + newly saved runs). They're untradeable, so
+//   their gold value only matters to a player who'd otherwise buy the redeemed item; the Items
+//   tab keeps showing the best-use value either way. GLOBAL, like the party-track toggle.
+export const APP_SETTINGS_KEY = "vgu.settings.v1";
 
-// Core-source tracking (SPEC §16.9)
-// Per-character Luck stat: { charNameLower: number }. Sticky (edited only when the player's
-// luck changes, blessing stones, Cadet Badge, luck gear); each saved run freezes the value as
-// `luck` so luck-core yield can be tallied per luck level. The ELEVENTH allowed localStorage key.
-export const LUCK_STORAGE_KEY = "vgu.luck.v1";
-
-// Buff costs for the core-source verdicts. Campfire is a fixed per-battle gold sink. VVIP and
-// Cadet Badge are 30-day purchases whose gold price drifts, a PriceInfo row whose name contains
-// the *_PRICE_MATCH substring (case-insensitive) overrides the fallback when present. Core Boost
-// Plus is real money (USD), reported as gold-per-dollar, never converted.
+// Buff costs for the core-source verdicts. Campfire is a fixed per-battle gold sink. Core Boost
+// Plus is real money (USD), reported as gold-per-dollar, never converted. VVIP has no cost
+// constant on purpose: it isn't scored (its worth is dominated by benefits outside the drop
+// table), so a price for it would only invite a misleading cores-only verdict.
 export const CAMPFIRE_CORE_COST = 65_000;
-export const VVIP_COST_30D = 19_000_000;        // fallback when no tracker row matches
-export const VVIP_PRICE_MATCH = "vvip";
-export const CADET_COST_30D = 11_000_000;       // fallback when no tracker row matches
-export const CADET_PRICE_MATCH = "cadet badge";
-export const CORE_BOOST_PLUS_USD = 19;
+// Core Boost Plus defaults, overridable per player in Settings (a free 14-day variant shows up
+// in events, and the price has moved before).
+export const CORE_BOOST_PLUS_USD = 18.90;
+export const CORE_BOOST_PLUS_DAYS = 30;
 
 // Character save slots + gear presets (SPEC §9.1)
 // The player runs many characters with different gear. A profile is a named snapshot

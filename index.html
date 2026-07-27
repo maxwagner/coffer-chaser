@@ -126,23 +126,30 @@
        the icon/badges are not text, so they stay optically centered. */
     h1 { font-size: 18px; margin: 0 0 4px; display: flex; align-items: baseline; gap: 8px; }
     h1 .app-icon { display: block; align-self: center; }
-    h1 .hdr-ver, h1 .hdr-status { align-self: center; }
     h1 .tagline { color: var(--fg-dim); font-size: 13px; font-weight: 400; }
-    h1 .hdr-status { margin-left: auto; }
-    /* Version link (header) → changelog modal. */
-    h1 .hdr-ver { margin-left: auto; background: none; border: 1px solid var(--border);
+    /* Right-hand header chrome, in order: settings cog, version, data freshness, repo link.
+       All four read as one muted group (the badges are not text, so they stay optically
+       centered rather than sitting on the wordmark's baseline). */
+    h1 .hdr-set { margin-left: auto; }
+    h1 .hdr-set, h1 .hdr-ver, h1 .hdr-status, h1 .hdr-gh { align-self: center; }
+    /* Version link → changelog modal. */
+    .hdr-ver { background: none; border: 1px solid var(--border);
       color: var(--fg-dim); font: 600 11px var(--font-mono); padding: 2px 7px;
       border-radius: 4px; cursor: pointer; }
-    h1 .hdr-ver:hover { color: var(--fg); border-color: var(--head); }
-    h1 .hdr-ver + .hdr-status { margin-left: 8px; }
-    /* Freshness badge sized to match the version button (11px, same box height). */
-    h1 .hdr-status { display: inline-flex; align-items: center; }
-    /* Repo link, last in the right-hand group. Inherits the muted colour and lifts on hover
-       like the version button, so it reads as chrome rather than as a call to action. */
-    h1 .hdr-gh { align-self: center; margin-left: 8px; display: inline-flex; color: var(--fg-dim); }
-    h1 .hdr-gh:hover { color: var(--fg); }
-    h1 .hdr-gh svg { display: block; width: 18px; height: 18px; fill: currentColor; }
-    h1 .hdr-status .badge { font-size: 11px; padding: 2px 8px; line-height: normal; }
+    .hdr-ver:hover { color: var(--fg); border-color: var(--head); }
+    /* Freshness badge: same muted treatment as the version button beside it, so the header
+       chrome reads as chrome (a green pill here pulled the eye away from the actual content). */
+    .hdr-status { display: inline-flex; align-items: center; }
+    .hdr-status .badge, .hdr-status .badge.live { background: none; border: 1px solid var(--border);
+      color: var(--fg-dim); font: 600 11px var(--font-mono); padding: 2px 7px; line-height: normal; }
+    .hdr-status .badge.fallback { background: none; color: var(--fallback); border-color: var(--fallback); }
+    /* Settings cog + repo link: muted icons that lift on hover, like the version button. */
+    .hdr-set { background: none; border: none; padding: 0; display: inline-flex; color: var(--fg-dim); cursor: pointer; }
+    .hdr-set:hover { color: var(--fg); }
+    .hdr-set svg { display: block; width: 18px; height: 18px; fill: currentColor; }
+    .hdr-gh { display: inline-flex; color: var(--fg-dim); }
+    .hdr-gh:hover { color: var(--fg); }
+    .hdr-gh svg { display: block; width: 18px; height: 18px; fill: currentColor; }
     .modal-back { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 60;
       display: flex; align-items: flex-start; justify-content: center; padding: 60px 16px; }
     .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
@@ -186,11 +193,27 @@
       color: var(--fg); font-size: 12px; padding: 6px 12px; cursor: pointer; }
     .preset-acts button:hover { border-color: var(--head); color: var(--head); }
     .preset-acts .preset-apply { border-color: var(--head); color: var(--head); font-weight: 600; }
+    /* Settings modal (gear icon): per-currency count/exclude checkboxes + all-on/off buttons. */
+    .set-hint { margin: 5px 0 0; font-size: 12px; line-height: 1.5; color: var(--fg-dim); }
+    .set-acts { display: flex; gap: 8px; margin: 10px 0 6px; }
+    .set-acts button { background: var(--surface); border: 1px solid var(--border); border-radius: 5px;
+      color: var(--fg); font-size: 12px; padding: 4px 10px; cursor: pointer; }
+    .set-acts button:hover { border-color: var(--head); color: var(--head); }
+    .set-seal-row { display: flex; align-items: center; gap: 8px; padding: 5px 2px; font-size: 13px;
+      border-bottom: 1px solid var(--border); cursor: pointer; }
+    .set-seal-row:last-child { border-bottom: none; }
+    .set-seal-row .set-seal-val { margin-left: auto; font-size: 12px; }
+    .set-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 9px 0 4px; font-size: 13px; }
+    .set-row label { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-dim); }
+    .set-row input { width: 78px; padding: 3px 8px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--fg); font-size: 12px; font-family: var(--font-mono); }
+    .set-row input[type="date"] { width: auto; }
+    .set-row .set-row-note { color: var(--gold); font-family: var(--font-mono); font-size: 12px; }
     /* While booting: show only the header icon/title/subtitle + the spinner. Hide the tabs,
        controls, table, sidebar, and the freshness badge until the first render completes. */
     body.booting .tabs, body.booting #controls, body.booting #maintable,
     body.booting .sidebar, body.booting .hdr-status, body.booting .hdr-ver,
-    body.booting .hdr-gh { display: none; }
+    body.booting .hdr-set, body.booting .hdr-gh { display: none; }
     /* Boot spinner, shown until the first render (after the Sheet loaders resolve). */
     .boot-loading { display: flex; align-items: center; gap: 10px; padding: 40px 4px;
       color: var(--fg-dim); font-size: 13px; }
@@ -795,20 +818,37 @@
     .src-chip.src-pet { color: var(--good); border-color: color-mix(in srgb, var(--good) 50%, transparent); }
     .src-chip.src-guild { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
     .src-chip.src-luck { color: #8ac98a; border-color: color-mix(in srgb, #8ac98a 50%, transparent); }
-    .scan-buff-sub { font-size: 12px; color: var(--fg-dim); margin: 10px 0 4px; }
     .scan-buff-panel summary.scan-run-h4 { cursor: pointer; user-select: none; }
     .scan-buff-panel summary.scan-run-h4:hover { color: var(--fg); }
     .scan-raid-detail td { background: var(--surface); }
     .scan-raid-mode { padding: 6px 4px; font-size: 12px; color: var(--fg-dim); }
     .scan-raid-mode > b { color: var(--head); }
     .scan-src-line { padding: 1px 0 1px 12px; }
-    .scan-src-line .src-chip { margin-left: 0; margin-right: 4px; }
+    /* Fixed-width chips so every label starts at the same x: the codes differ in length
+       ("CF" vs "BASE"), which otherwise ragged the whole column. */
+    .scan-src-line .src-chip { margin-left: 0; margin-right: 6px; display: inline-flex;
+      justify-content: center; width: 38px; box-sizing: border-box; }
+    /* Average-core line: same shape as the per-source lines, but it's the headline number every
+       verdict derives from, so it leads the list and sits at full brightness. */
+    .scan-src-avg { color: var(--fg); padding-bottom: 3px; }
+    .src-chip.src-avg { color: var(--head); border-color: var(--border); }
+    /* Campfire mark: "worth buying a campfire here". Inherits the row colour. */
+    .camp-icon { width: 12px; height: 12px; fill: currentColor; vertical-align: -1px; margin-right: 3px; }
+    .camp-mark { color: #c98a4c; }
     .scan-src-verdict { padding: 3px 0 1px 12px; }
     .scan-good { color: var(--good); }
     .scan-bad { color: var(--bad); }
     .scan-buff-row { display: flex; gap: 12px; align-items: baseline; font-size: 13px; color: var(--fg-dim); padding: 3px 0; }
     .scan-buff-lbl { flex: 0 0 130px; color: var(--fg); }
-    .scan-charname .scan-luck-input { flex: 0 0 80px; }
+    /* Field separator inside a buff row: a dot with real air around it, so the parts read as
+       columns instead of one comma-spliced sentence. */
+    .scan-buff-sep { display: inline-block; padding: 0 10px; color: var(--border); }
+    /* Cog beside a buff label: jumps to the Settings modal where that buff is configured. */
+    .scan-buff-gear { background: none; border: none; padding: 0; margin-left: 4px; color: var(--fg-dim);
+      cursor: pointer; vertical-align: -2px; }
+    .scan-buff-gear:hover { color: var(--fg); }
+    .scan-buff-gear .cog-svg { display: block; width: 13px; height: 13px; fill: currentColor; }
+    .scan-buff-lbl { display: flex; align-items: center; }
     .scan-mode-fixed { font-size: 13px; color: var(--fg); }
     .scan-time-set { display: inline-flex; align-items: center; gap: 5px; color: var(--fg-dim); font-size: 12px; margin-left: 6px; }
     .scan-time-set input { width: 68px; padding: 4px 7px; background: var(--bg); border: 1px solid var(--border);
@@ -920,7 +960,7 @@
     .scan-party-carousel .rc-slides { cursor: default; }
     /* Drops-subtab setup header (SPEC §16.8). Planner-style side-by-side Character / Run cards,
        planner-scale controls (11-12px, tight padding). */
-    .scan-setup { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0 4px; }
+    .scan-setup { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; align-items: flex-start; }
     .scan-card { flex: 1 1 280px; max-width: 420px; border: 1px solid var(--border); border-radius: 8px;
       background: var(--surface); padding: 7px 11px 8px; }
     .scan-card-h { margin: 0 0 4px; font-size: 11px; font-weight: 600; color: var(--fg-dim);
@@ -929,8 +969,35 @@
     .scan-card .scan-field-lbl { width: 84px; }
     .scan-card .scan-charname input, .scan-card .scan-charname select { padding: 3px 8px; font-size: 12px;
       border-radius: 5px; flex: 0 0 200px; }
-    .scan-card .scan-charname .scan-luck-input { flex: 0 0 72px; }
     .scan-card .scan-mode-fixed { font-size: 12px; }
+    .scan-card-raids .scan-charname { margin: 6px 0; }  /* the circuit row */
+    .scan-card-raids .scan-field-lbl { width: 42px; }   /* short labels, no need for the wide gutter */
+    .scan-circuit-pos { font-size: 12px; }
+    .scan-circuit-done { font-size: 12px; color: var(--good); }
+    /* The run setup lives in this panel's header: the title, then the mode and core toggles for
+       the fight you picked. One row, everything left-aligned against the table below it. */
+    /* Left padding matches the table's column headers below (.scan-raidpick-h), so "RAID" starts
+       on the same x as "CIRCUITS" rather than 7px to its left. */
+    .scan-raid-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding-left: 7px; }
+    .scan-raid-head .scan-card-h { margin: 0; }
+    .scan-raid-head .modeToggle { margin: 0; }
+    /* Who the drops are being counted for. Reads as a status, not a control, and sits hard right
+       so the controls on the left keep their own group. */
+    .scan-raid-head .scan-ign { margin-left: auto; font-size: 12px; color: var(--head); font-weight: 600; }
+    /* Raid picker as a table: one column per tier, every raid visible and one click away.
+       The panel spans the full width (room for more controls later) and everything inside is
+       left-aligned; the table scrolls sideways rather than squashing on a narrow screen. */
+    .scan-card-raids { flex: 1 1 100%; min-width: 0; max-width: none; }
+    .scan-raidpick { display: flex; justify-content: flex-start; gap: 4px; align-items: flex-start;
+      overflow-x: auto; padding-bottom: 2px; }
+    .scan-raidpick-col { display: flex; flex-direction: column; min-width: 74px; flex: 0 0 auto; }
+    .scan-raidpick-h { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--fg-dim);
+      padding: 0 7px 4px; margin-bottom: 3px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .scan-raidpick-cell { display: block; width: 100%; text-align: left; background: none; border: none;
+      padding: 4px 7px; margin: 1px 0; border-radius: 4px; color: var(--fg); font-size: 12px;
+      cursor: pointer; white-space: nowrap; }
+    .scan-raidpick-cell:hover { background: var(--surface2); color: var(--head); }
+    .scan-raidpick-cell.on { background: var(--accent); color: #fff; }
     .scan-timer-readout.editable { cursor: pointer; border-bottom: 1px dashed var(--border); }
     .scan-timer-readout.editable:hover { color: var(--accent); border-bottom-color: var(--accent); }
     .scan-timer-edit { width: 72px; background: var(--surface); color: var(--fg); border: 1px solid var(--accent);
@@ -1138,7 +1205,7 @@
 </head>
 <body class="booting">
   <header class="apphdr">
-    <h1><img class="app-icon" src="assets/favicon.svg" alt="" width="26" height="26" />Coffer Chaser <span class="tagline">A Vindictus Upgrading Tool</span><button type="button" id="verBtn" class="hdr-ver" title="What's new"></button><span id="status" class="hdr-status"></span><a class="hdr-gh" href="https://github.com/maxwagner/coffer-chaser" target="_blank" rel="noopener noreferrer" title="Source on GitHub" aria-label="Source on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a></h1>
+    <h1><img class="app-icon" src="assets/favicon.svg" alt="" width="26" height="26" />Coffer Chaser <span class="tagline">A Vindictus Upgrading Tool</span><button type="button" id="setBtn" class="hdr-set" title="Settings" aria-label="Settings"><svg class="cog-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5 12a7 7 0 1 0 14 0 7 7 0 1 0-14 0Zm3.4 0a3.6 3.6 0 1 1 7.2 0 3.6 3.6 0 0 1-7.2 0Z"/><g><rect x="10.7" y="1.9" width="2.6" height="3.8" rx="0.7"/><rect x="10.7" y="1.9" width="2.6" height="3.8" rx="0.7" transform="rotate(45 12 12)"/><rect x="10.7" y="1.9" width="2.6" height="3.8" rx="0.7" transform="rotate(90 12 12)"/><rect x="10.7" y="1.9" width="2.6" height="3.8" rx="0.7" transform="rotate(135 12 12)"/><rect x="10.7" y="1.9" width="2.6" height="3.8" rx="0.7" transform="rotate(180 12 12)"/><rect x="10.7" y="1.9" width="2.6" height="3.8" rx="0.7" transform="rotate(225 12 12)"/><rect x="10.7" y="1.9" width="2.6" height="3.8" rx="0.7" transform="rotate(270 12 12)"/><rect x="10.7" y="1.9" width="2.6" height="3.8" rx="0.7" transform="rotate(315 12 12)"/></g></svg></button><button type="button" id="verBtn" class="hdr-ver" title="What's new"></button><span id="status" class="hdr-status"></span><a class="hdr-gh" href="https://github.com/maxwagner/coffer-chaser" target="_blank" rel="noopener noreferrer" title="Source on GitHub" aria-label="Source on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a></h1>
     <div class="tabs" id="tabs"></div>
   </header>
   <div class="pagerow">
@@ -1226,7 +1293,7 @@
     async function getScanDropImage() { return (await getPpocr()).scanDropImage; }
     let _gif; // GIF frame decoder, lazy-imported on first GIF scan (browser-only, no heavy deps)
     async function getGif() { if (!_gif) _gif = await import("./js/gif.js"); return _gif; }
-    import { PRICE_BASIS, DEAL_DISCOUNT_THRESHOLD, EXQUISITE_RUNE_NAME, EXTRACTION_RUNE_NAME, SCRAP_SALE_FEE, LOADOUT, LOADOUT_STORAGE_KEY, CURRENT_STATS, CURRENT_STATS_STORAGE_KEY, INVENTORY_STORAGE_KEY, VETO_STORAGE_KEY, SCAN_ALIASES_STORAGE_KEY, CHARACTER_NAME, CHARACTER_NAME_STORAGE_KEY, RUNS, RUNS_STORAGE_KEY, SCAN_JUNK, SCAN_JUNK_STORAGE_KEY, BOX_LOG_STORAGE_KEY, PARTY_TRACK_KEY, RUN_PREFS_KEY, MAXLEVEL_STORAGE_KEY, LEVEL_CAP_GOLD_BONUS, LUCK_STORAGE_KEY, CAMPFIRE_CORE_COST, VVIP_COST_30D, VVIP_PRICE_MATCH, CADET_COST_30D, CADET_PRICE_MATCH, CORE_BOOST_PLUS_USD, PROFILES_STORAGE_KEY, CHECKLIST_STORAGE_KEY, GOLD_STORAGE_KEY, PLANNER_STORAGE_KEY, PLANNER_CONSUME_KEY, PLANNER_RAID_KEY, DAMAGE_STORAGE_KEY, PREP_GOALS, GEAR_PRESETS, ENHANCEABLE_SLOT_IDS, ENHANCEMENT_RUNE_NAME, FREE_ENHANCEMENT_RUNE_DEFAULT, FREE_RAID_ESSENCES, FREE_RAID_ESSENCES_DEFAULT, FREE_ITEMS_STORAGE_KEY, WEEKLY_BOX_STORAGE_KEY, WEEKLY_BOX_MAX_WEEKS, ITEM_TIER_WORDS, TIER_SLOT_IDS, TUNING_STAT_TO_KEY, tuneStatCanon } from "./js/config.js";
+    import { PRICE_BASIS, DEAL_DISCOUNT_THRESHOLD, EXQUISITE_RUNE_NAME, EXTRACTION_RUNE_NAME, SCRAP_SALE_FEE, LOADOUT, LOADOUT_STORAGE_KEY, CURRENT_STATS, CURRENT_STATS_STORAGE_KEY, INVENTORY_STORAGE_KEY, VETO_STORAGE_KEY, SCAN_ALIASES_STORAGE_KEY, CHARACTER_NAME, CHARACTER_NAME_STORAGE_KEY, RUNS, RUNS_STORAGE_KEY, SCAN_JUNK, SCAN_JUNK_STORAGE_KEY, BOX_LOG_STORAGE_KEY, RUN_PREFS_KEY, LEVEL_CAP_GOLD_BONUS, APP_SETTINGS_KEY, CAMPFIRE_CORE_COST, CORE_BOOST_PLUS_USD, CORE_BOOST_PLUS_DAYS, PROFILES_STORAGE_KEY, CHECKLIST_STORAGE_KEY, GOLD_STORAGE_KEY, PLANNER_STORAGE_KEY, PLANNER_CONSUME_KEY, PLANNER_RAID_KEY, DAMAGE_STORAGE_KEY, PREP_GOALS, GEAR_PRESETS, ENHANCEABLE_SLOT_IDS, ENHANCEMENT_RUNE_NAME, FREE_ENHANCEMENT_RUNE_DEFAULT, FREE_RAID_ESSENCES, FREE_RAID_ESSENCES_DEFAULT, FREE_ITEMS_STORAGE_KEY, WEEKLY_BOX_STORAGE_KEY, WEEKLY_BOX_MAX_WEEKS, ITEM_TIER_WORDS, TIER_SLOT_IDS, TUNING_STAT_TO_KEY, tuneStatCanon } from "./js/config.js";
 
     const fmt = (n) => (n == null || Number.isNaN(n) ? "—" : Math.round(n).toLocaleString());
     const sfmt = (n) => (n == null || Number.isNaN(n) ? "—" : (n < 0 ? "−" : "+") + fmt(Math.abs(n))); // signed
@@ -1292,6 +1359,50 @@
       if (v.unit != null && prices[name] == null) {
         prices[name] = { avg: v.unit, min: null, date: null, trend: null, ath: null, atl: null, snapshots: null, derived: "sealshop" };
       }
+    }
+
+    // App settings (APP_SETTINGS_KEY): the header gear icon → Settings modal.
+    // `sealExclude` = Seal Shop currencies whose derived redemption value is excluded from the
+    // RUN TALLY only (Drops run value + newly saved runs; the "at today's prices" line too).
+    // The Items tab and catalog keep the best-use value either way. Already-saved runs keep
+    // their frozen values.
+    const appSettings = (() => { try { const s = JSON.parse(localStorage.getItem(APP_SETTINGS_KEY) || "null"); return s && typeof s === "object" ? s : {}; } catch { return {}; } })();
+    appSettings.sealExclude = Array.isArray(appSettings.sealExclude) ? appSettings.sealExclude.filter((n) => typeof n === "string") : [];
+    // `plus` = your Core Boost Plus subscription: { start:"YYYY-MM-DD"|null, days, usd }.
+    // It's bought per ACCOUNT and runs for a fixed term, so the panel needs the term's start to
+    // report a daily rate and a countdown. Free 14-day variants exist, hence the editable length.
+    if (!appSettings.plus || typeof appSettings.plus !== "object") appSettings.plus = {};
+    if (typeof appSettings.plus.start !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(appSettings.plus.start)) appSettings.plus.start = null;
+    if (!Number.isFinite(appSettings.plus.days) || appSettings.plus.days <= 0) appSettings.plus.days = CORE_BOOST_PLUS_DAYS;
+    if (!Number.isFinite(appSettings.plus.usd) || appSettings.plus.usd < 0) appSettings.plus.usd = CORE_BOOST_PLUS_USD;
+    const hadVvipSetting = "vvip" in appSettings;
+    delete appSettings.vvip; // retired: VVIP is no longer scored, so its cost had no consumer
+    const persistAppSettings = () => { try { localStorage.setItem(APP_SETTINGS_KEY, JSON.stringify(appSettings)); } catch { /* storage blocked */ } };
+    if (hadVvipSetting) persistAppSettings(); // write the retired key out once, don't wait for an edit
+    // Subscription term maths, all from local dates (a term is calendar days, not hours).
+    const dayMs = 86400_000;
+    const midnight = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+    const plusTerm = () => {
+      const s = appSettings.plus.start;
+      if (!s) return null;
+      const [y, m, d] = s.split("-").map(Number);
+      const start = midnight(new Date(y, m - 1, d));
+      const elapsed = Math.floor((midnight(new Date()) - start) / dayMs) + 1; // inclusive of day 1
+      return { start, days: appSettings.plus.days, usd: appSettings.plus.usd,
+        elapsed: Math.max(1, elapsed), remaining: appSettings.plus.days - Math.max(0, elapsed) };
+    };
+    // Currencies the toggle can exclude: priced ONLY by their injected redemption value (a
+    // currency with a real market listing is tradeable, its value is real gold, never excluded).
+    const sealCurrencies = () => Object.keys(sealValues).filter((n) => prices[n]?.derived === "sealshop").sort((a, b) => a.localeCompare(b));
+    const isSealExcluded = (n) => prices[n]?.derived === "sealshop" && appSettings.sealExclude.includes(n);
+    // Prices view for the RUN TALLY: excluded seal currencies are simply absent, so their drops
+    // value null (rendered with an off SHOP badge, not counted). Everything else is untouched.
+    function tallyPrices() {
+      const ex = appSettings.sealExclude.filter((n) => prices[n]?.derived === "sealshop");
+      if (!ex.length) return prices;
+      const o = { ...prices };
+      for (const n of ex) delete o[n];
+      return o;
     }
 
     // Loot-box EV injection (SPEC §16.12): value each box in the opening log at its OBSERVED
@@ -1397,6 +1508,11 @@
       goldBaseline = goldTracker;
       pathBaseline = structuredClone(plannerPath);
       editingSlot = null; editingStat = null;
+      // The Tracker's IGN follows the active character profile (SPEC §16.8), so a switch has to
+      // carry it across, and repaint the Tracker if that's the tab you're looking at. Strict: a
+      // preset load leaves no active profile, and the IGN must clear rather than go stale.
+      syncCharName({ strict: true });
+      if (active === SCANNER_TAB) renderScanner();
       recomputeLoadout();
       renderChecklist();
     }
@@ -1466,6 +1582,8 @@
       if (!profiles.active) return;
       profiles.list = renameProfile(profiles.list, profiles.active, name);
       persistProfiles();
+      syncCharName();  // the Tracker's IGN mirrors the profile name
+      if (active === SCANNER_TAB) renderScanner();
       renderSidebar();
     }
 
@@ -6081,7 +6199,18 @@
     sidebarEl.addEventListener("change", (e) => {
       // Character save-slot picker: switch to a saved character, or detach to "Unsaved".
       const psel = e.target.closest(".profsel");
-      if (psel) { psel.value ? switchProfile(psel.value) : (profiles.active = null, persistProfiles(), renderSidebar()); return; }
+      // Switching to "Unsaved" leaves no active character, so the Tracker's IGN has to clear
+      // with it (a stale name there would silently attribute the next scan to the wrong player).
+      if (psel) {
+        if (psel.value) switchProfile(psel.value);
+        else {
+          profiles.active = null; persistProfiles();
+          syncCharName({ strict: true });
+          if (active === SCANNER_TAB) renderScanner();
+          renderSidebar();
+        }
+        return;
+      }
       // Preset picker: apply a base-gear template (working state overwritten, unsaved).
       const preset = e.target.closest(".presetsel");
       // Reset the picker back to the "Preset…" placeholder immediately: the confirm modal
@@ -6531,8 +6660,10 @@
     // `party` (SPEC §16.11): actor → Map(dropKey → qty), filled only when party tracking is on.
     const dropStore = { items: new Map(), gold: 0, foreign: new Set(), party: new Map() };
     // Party-tracking toggle, a global UI pref like the planner consume toggle ("1"/"0").
-    let partyTrack = (() => { try { return localStorage.getItem(PARTY_TRACK_KEY) === "1"; } catch { return false; } })();
-    const persistPartyTrack = () => { try { localStorage.setItem(PARTY_TRACK_KEY, partyTrack ? "1" : "0"); } catch { /* storage blocked */ } };
+    // Party drops are ALWAYS tracked now (SPEC §16.11): keeping other players' lines costs
+    // nothing when there are none, and the Pooled view is only as good as the data behind it,
+    // so there was no reason to make the user opt in run by run.
+    const partyTrack = true;
     const dropKey = (name, source) => `${name}\x1f${CORE_SOURCES.includes(source) ? source : "base"}`;
     const parseDropKey = (k) => { const i = k.indexOf("\x1f"); return i < 0 ? { name: k, source: "base" } : { name: k.slice(0, i), source: k.slice(i + 1) }; };
     // Core-boost detection (SPEC §16.9): a Core Boost Plus (`plus`) drop only appears on a core-boosted
@@ -6562,49 +6693,35 @@
     // skip). Shown in a collapsed panel so a missed drop can be traced to OCR vs parse vs filter.
     const scanDropDebug = [];
     // The player's character name, only chat lines whose actor matches it (fuzzily) are counted.
+    // It now comes from the ACTIVE CHARACTER PROFILE (sidebar) rather than its own picker: the
+    // profile already names the character you're playing, and two places to say who you are is
+    // one too many. `syncCharName` pulls it across; the stored key remains as the fallback for
+    // an unsaved character (no active profile) and as the value editing an old run restores.
+    // NOTE: the profile name must match the in-game name for OCR to attribute your drops. If it
+    // doesn't, nothing is counted, so the Drops card shows the name it's matching against.
     function loadCharName() { try { return localStorage.getItem(CHARACTER_NAME_STORAGE_KEY) ?? CHARACTER_NAME; } catch { return CHARACTER_NAME; } }
     let charName = loadCharName();
     const persistCharName = () => { try { localStorage.setItem(CHARACTER_NAME_STORAGE_KEY, charName); } catch { /* storage blocked */ } };
+    // `strict` also CLEARS the name when no profile is active (switching to "Unsaved", applying
+    // a preset). Boot is deliberately non-strict: a returning player who never used profiles
+    // still has a stored name, and wiping it on load would be data loss.
+    function syncCharName({ strict = false } = {}) {
+      const n = activeProfile()?.name?.trim() ?? "";
+      if (n) { if (n !== charName) { charName = n; persistCharName(); } }
+      else if (strict && charName) { charName = ""; persistCharName(); }
+    }
+    syncCharName();
 
-    // Per-character max-level flag (SPEC §16.8). The 10th allowed localStorage key. A character at the
-    // level cap earns +20% (LEVEL_CAP_GOLD_BONUS) on raid gold; this is a CHARACTER property (not per-run/
-    // per-raid), so it's stored as { charNameLower: true } and applies to all of that character's runs.
-    function loadMaxLevelChars() { try { const s = JSON.parse(localStorage.getItem(MAXLEVEL_STORAGE_KEY) || "null"); return s && typeof s === "object" ? s : {}; } catch { return {}; } }
-    const maxLevelChars = loadMaxLevelChars();
-    const persistMaxLevelChars = () => { try { localStorage.setItem(MAXLEVEL_STORAGE_KEY, JSON.stringify(maxLevelChars)); } catch { /* storage blocked */ } };
-    const isMaxLevel = (name) => !!maxLevelChars[String(name || "").trim().toLowerCase()];
-    const setMaxLevel = (name, on) => {
-      const k = String(name || "").trim().toLowerCase(); if (!k) return;
-      if (on) maxLevelChars[k] = true; else delete maxLevelChars[k];
-      persistMaxLevelChars();
-    };
-
-    // Per-character Luck stat (SPEC §16.9). The 11th allowed localStorage key. STICKY: edited only
-    // when the player's luck actually changes (blessing stones, Cadet Badge, luck gear); each saved
-    // run freezes the value so luck-core yield can be tallied per luck level. { charNameLower: n }.
-    function loadLuckChars() { try { const s = JSON.parse(localStorage.getItem(LUCK_STORAGE_KEY) || "null"); return s && typeof s === "object" ? s : {}; } catch { return {}; } }
-    const luckChars = loadLuckChars();
-    const persistLuckChars = () => { try { localStorage.setItem(LUCK_STORAGE_KEY, JSON.stringify(luckChars)); } catch { /* storage blocked */ } };
-    const charLuck = (name) => { const v = luckChars[String(name || "").trim().toLowerCase()]; return Number.isFinite(v) ? v : null; };
-    const setCharLuck = (name, v) => {
-      const k = String(name || "").trim().toLowerCase(); if (!k) return;
-      const n = parseNum(v);
-      if (n == null) delete luckChars[k]; else luckChars[k] = n;
-      persistLuckChars();
-    };
+    // Max level is now ASSUMED (SPEC §16.8): anyone tracking raid profit is running end-game
+    // content on a capped character, so every run gets the +20% LEVEL_CAP_GOLD_BONUS on raid
+    // gold rather than asking. Saved runs still carry their own `maxLevel` flag, so runs logged
+    // before this keep whatever they were saved with.
+    const isMaxLevel = () => true;
 
     // Core-source display: letter chip + label per source key (SPEC §16.9). Base cores get no chip.
     const SRC_CHIP = { campfire: "CF", plus: "CB+", vvip: "VIP", pet: "PET", guild: "GLD", luck: "LCK" };
     const SRC_LABEL = { base: "Base cores", campfire: "Campfire", plus: "Core Boost Plus", vvip: "VVIP", pet: "Pet", guild: "Guild skill", luck: "Luck" };
     const srcChip = (source) => (source && source !== "base" ? ` <span class="src-chip src-${source}" title="${escTxt(SRC_LABEL[source])} core">${SRC_CHIP[source]}</span>` : "");
-    // 30-day buff costs: a PriceInfo row whose name contains the match substring overrides the
-    // config fallback, so tracker price updates flow through automatically.
-    function priceByMatch(match, fallback) {
-      const m = String(match).toLowerCase();
-      for (const [name, p] of Object.entries(prices || {})) if (name.toLowerCase().includes(m) && p?.avg) return p.avg;
-      return fallback;
-    }
-
     // saved run history (SPEC §16.8). The 7th allowed localStorage key
     // Each completed run is snapshotted from `dropStore` (value frozen at save time) with its
     // name, character, raid, and timer duration; persisted so profit can be tracked long-term.
@@ -6694,7 +6811,7 @@
     // The setup you used yesterday is still selected today; restored below once the raid list exists.
     const runPrefs = (() => { try { const s = JSON.parse(localStorage.getItem(RUN_PREFS_KEY) || "null"); return s && typeof s === "object" ? s : {}; } catch { return {}; } })();
     const persistRunPrefs = () => { try { localStorage.setItem(RUN_PREFS_KEY, JSON.stringify(runPrefs)); } catch { /* storage blocked */ } };
-    const rememberRunPrefs = () => { runPrefs.raid = selectedRaid; runPrefs.mode = runModeSel; runPrefs.coreBoost = runCoreBoost; persistRunPrefs(); };
+    const rememberRunPrefs = () => { runPrefs.raid = selectedRaid; runPrefs.mode = runModeSel; runPrefs.coreBoost = runCoreBoost; runPrefs.circuit = circuitSel; persistRunPrefs(); };
     let editingRunId = null;     // when set, the drops subtab is EDITING that saved run (Save → Update)
 
     // in-app run timer (drops subtab). Measures a run's duration for gold/hour
@@ -6774,9 +6891,44 @@
     // Mode options for the currently-selected raid (Hero availability from its `hero` flag; a
     // name-locked "… Hero"/"… Normal" raid is a single fixed mode). See `raidModeOptions`.
     function currentRaidModes() { return raidModeOptions(selectedRaid, dRaidMeta[selectedRaid]?.hero); }
-    // Restore the sticky run options now that the raid list exists: the raid must still be known
-    // (a renamed/removed sheet row falls back to none) and the mode must be one the raid offers.
-    if (runPrefs.raid && dRaidMeta[runPrefs.raid]) {
+    // Circuits (SPEC §16.8): the fixed back-to-back daily raid rotations, listed at the top of
+    // the raid picker. Picking one walks `selectedRaid` through `seq`; saving a run auto-advances
+    // to the next step (wrapping at the end). Each run still saves as an ordinary individual
+    // record, so Drop Data aggregates are untouched. The 110 rotation runs each raid twice
+    // back-to-back on Normal; the rest are one Hero clear each. Raids missing from the sheet
+    // are silently dropped from the sequence. Boost/party options stay per-run as usual.
+    const CIRCUIT_DEFS = [
+      { id: "c110", label: "110s 2x", mode: "Normal", perRaid: 2, raids: ["Romel", "Naberius", "Milo", "Cessair", "Enok"] },
+      { id: "c115", label: "115s H", mode: "Hero", perRaid: 1, raids: ["Irusan", "Emmett", "Jarnir", "Bres"] },
+      { id: "c120", label: "120s H", mode: "Hero", perRaid: 1, raids: ["Sreng", "Spinos", "Gorbas", "Morgant"] },
+      { id: "c125", label: "125s H", mode: "Hero", perRaid: 1, raids: ["Lucian", "Semias", "Uscias", "Esras"] },
+    ];
+    const CIRCUITS = CIRCUIT_DEFS
+      .map((c) => ({ ...c, seq: c.raids.filter((r) => dRaidMeta[r]).flatMap((r) => Array(c.perRaid).fill(r)) }))
+      .filter((c) => c.seq.length);
+    let circuitSel = null; // { id, i } while a circuit is active (persisted in runPrefs.circuit)
+    const activeCircuit = () => (circuitSel ? CIRCUITS.find((c) => c.id === circuitSel.id) || null : null);
+    // A circuit runs ONCE and is then done: `i` clamps to [0, seq.length], and i === seq.length
+    // is the finished state (no raid selected, so the next run needs a deliberate pick, whether
+    // that's restarting the circuit or moving to another one).
+    const circuitDone = () => { const c = activeCircuit(); return !!c && circuitSel.i >= c.seq.length; };
+    function setCircuit(id, i) {
+      const c = CIRCUITS.find((x) => x.id === id);
+      if (!c) { circuitSel = null; return; }
+      circuitSel = { id, i: Math.min(Math.max(0, i), c.seq.length) };
+      if (circuitSel.i >= c.seq.length) setSelectedRaid("");
+      else {
+        setSelectedRaid(c.seq[circuitSel.i]);
+        if (currentRaidModes().options.includes(c.mode)) runModeSel = c.mode;
+      }
+      rememberRunPrefs();
+    }
+    // Restore the sticky run options now that the raid list exists: an active circuit wins;
+    // otherwise the raid must still be known (a renamed/removed sheet row falls back to none)
+    // and the mode must be one the raid offers.
+    if (runPrefs.circuit && CIRCUITS.some((c) => c.id === runPrefs.circuit.id)) {
+      setCircuit(runPrefs.circuit.id, runPrefs.circuit.i || 0);
+    } else if (runPrefs.raid && dRaidMeta[runPrefs.raid]) {
       setSelectedRaid(runPrefs.raid);
       if (currentRaidModes().options.includes(runPrefs.mode)) runModeSel = runPrefs.mode;
     }
@@ -6972,30 +7124,62 @@
             ${Object.entries(scanAliases).map(([read, canon]) => `<div class="scan-alias-row"><code>${escTxt(read)}</code> → ${escTxt(canon)} <button class="scan-alias-x" data-alias-remove="${escTxt(read)}" title="Forget this alias">×</button></div>`).join("")}</details>` : ""}`;
     }
 
-    // Raid picker options for the drops subtab, every battle from the Raid Info sheet, grouped by
-    // Type (Raid/Special/RAR/RME). Members are REVERSED to hardest→easiest, the SAME order the Target tab
-    // shows (`[...raids].reverse()`). A raid with no drop table still lists (it won't scope OCR).
-    function raidPickerOptions() {
-      const groups = {};
-      for (const r of dRaids || []) (groups[r.type || "Other"] ||= []).push(r);
-      let html = `<option value=""${selectedRaid ? "" : " selected"}>Not Specified</option>`;
-      for (const g of Object.keys(groups).sort()) {
-        const rs = groups[g].slice().reverse(); // planner order = hardest first
-        html += `<optgroup label="${escTxt(g)}">${rs.map((r) => `<option value="${escTxt(r.raid)}"${r.raid === selectedRaid ? " selected" : ""}>${escTxt(r.raid)} (Lv ${r.level})</option>`).join("")}</optgroup>`;
+    // Raid picker for the drops subtab, laid out as a TABLE rather than a dropdown: every raid is
+    // visible at once, so picking one is a single click instead of open-scroll-click. Columns are
+    // Circuits, then the level tiers of ordinary raids (hardest tier first, hardest raid first
+    // within it), then the odd battle types pooled into Special, then the Redeemers. A raid with
+    // no drop table still lists (it just won't scope OCR). Derived entirely from the sheet's Type
+    // and Level, so a new raid or a new tier appears with no code edit.
+    function raidPickerColumns() {
+      const byLevel = {}, special = [], redeemer = [];
+      for (const r of dRaids || []) {
+        const type = (r.type || "").trim().toLowerCase();
+        if (type === "redeemer") redeemer.push(r);
+        else if (type === "raid") (byLevel[r.level || 0] ||= []).push(r);
+        else special.push(r);           // Special, RAR, RME: one-off formats, not a level tier
       }
-      return html;
+      const cell = (value, label, on) => ({ value, label, on });
+      const cols = [];
+      if (CIRCUITS.length) {
+        const cur = circuitSel ? `circuit:${circuitSel.id}` : "";
+        cols.push({ label: "Circuits", items: CIRCUITS.map((c) => cell(`circuit:${c.id}`, c.label, cur === `circuit:${c.id}`)) });
+      }
+      // Columns run hardest tier first, but WITHIN a tier the easiest raid leads (`dRaids` is
+      // already sorted that way), so the grid reads down-and-right in rising difficulty.
+      const pick = (r) => cell(r.raid, r.raid, !circuitSel && r.raid === selectedRaid);
+      for (const lv of Object.keys(byLevel).map(Number).sort((a, b) => b - a)) {
+        cols.push({ label: `${lv} Raids`, items: byLevel[lv].map(pick) });
+      }
+      // Special has no natural order (it isn't a difficulty ladder and the sheet's order is
+      // incidental), so it's listed explicitly. Anything new falls in after these, in sheet order.
+      if (special.length) {
+        const order = ["Special", "RME", "RAR"];
+        const rank = (r) => { const i = order.indexOf(r.raid); return i === -1 ? order.length : i; };
+        cols.push({ label: "Special", items: special.slice().sort((a, b) => rank(a) - rank(b)).map(pick) });
+      }
+      if (redeemer.length) cols.push({ label: "Redeemer", items: redeemer.map(pick) });
+      return cols;
+    }
+    function raidPickerHtml() {
+      return `<div class="scan-raidpick">${raidPickerColumns().map((c) => `<div class="scan-raidpick-col">
+        <div class="scan-raidpick-h">${escTxt(c.label)}</div>
+        ${c.items.map((i) => `<button type="button" class="scan-raidpick-cell${i.on ? " on" : ""}" data-raid-pick="${escTxt(i.value)}">${escTxt(i.label)}</button>`).join("")}
+      </div>`).join("")}</div>`;
     }
 
     // Raid-drops subtab: OCR the SYSTEM chat log, keep only YOUR character's drops, and sum the
     // run's farm value (qty × rolling-avg market price + literal gold). Standalone session log.
     function renderScanDrops() {
+      const tPrices = tallyPrices(); // run-tally view: settings-excluded seal currencies value null
       const allItems = [...dropStore.items.entries()].map(([key, qty]) => {
         const { name, source } = parseDropKey(key);
-        const avg = dropUnitValue(name, prices);  // rolling avg, sealed-bottle EV, seal-shop redemption, or box-opening EV
+        const avg = dropUnitValue(name, tPrices);  // rolling avg, sealed-bottle EV, seal-shop redemption, or box-opening EV
         const bottle = bottleContentsLabel(name), seal = bottle ? "" : sealShopLabel(name), rng = bottle || seal ? "" : boxEVLabel(name);
         // badge: "EV" for a sealed bottle (stochastic contents), "SHOP" for a seal (fixed
-        // redemption), "RNG" for a loot box valued at its observed opening EV (SPEC §16.12).
-        return { name, source, display: normalizeBottleName(name), qty, avg, value: avg != null ? avg * qty : null, contents: bottle || seal || rng, badge: bottle ? "ev" : seal ? "shop" : rng ? "rng" : null };
+        // redemption; "off" variant when Settings exclude it from the run value), "RNG" for a
+        // loot box valued at its observed opening EV (SPEC §16.12).
+        const excluded = isSealExcluded(name);
+        return { name, source, display: normalizeBottleName(name), qty, avg, value: avg != null ? avg * qty : null, contents: bottle || seal || rng, badge: bottle ? "ev" : seal ? "shop" : rng ? "rng" : null, excluded };
       });
       // Split off user-marked JUNK, excluded from the tally + value, listed in a collapsed section.
       const items = allItems.filter((i) => !isJunk(i.name, scanJunk));
@@ -7008,7 +7192,7 @@
       const baseGold = raidBaseGold(selectedRaid, liveMode); // flat run reward for the picked raid+mode
       const coreAvail = raidCoreGold(selectedRaid);          // Core Gold the picked raid offers (0 = none)
       const coreGold = coreBoosted() ? coreAvail : 0;        // boosted: inferred from a Plus drop, or the manual override
-      const maxLevel = isMaxLevel(charName);                  // this character is at the level cap → +20% raid gold
+      const maxLevel = isMaxLevel();                          // assumed: every run gets the +20% level-cap raid gold
       const levelBonus = maxLevel ? Math.round((baseGold + coreGold) * LEVEL_CAP_GOLD_BONUS) : 0;
       const total = itemsValue + dropStore.gold + baseGold + coreGold + levelBonus;
       const pricedN = items.filter((i) => i.value != null).length;
@@ -7021,11 +7205,12 @@
         : (dropStore.foreign.size ? ` · ${dropStore.foreign.size} other player${dropStore.foreign.size !== 1 ? "s" : ""} filtered` : "");
       const status = ocrError ? ocrError
         : scanBusy ? "Scanning…"
-        : !hasName ? "Enter your character name to start"
+        : !hasName ? "Name your character in the sidebar to start"
+        : !selectedRaid ? "Pick a raid to save this run"
         : `${items.length} item${items.length !== 1 ? "s" : ""}${dropStore.gold ? ` · ${fmt(dropStore.gold)} gold` : ""}${items.length - pricedN > 0 ? ` · ${items.length - pricedN} unpriced` : ""}${junkItems.length ? ` · ${junkItems.length} junk hidden` : ""}${partyNote}${scanSkips.length ? ` · ${scanSkips.length} skipped` : ""}`;
       const table = items.length
         ? `<table class="scan-table"><thead><tr><th class="scan-sort${dropSort === "name" ? " on" : ""}" data-dropsort="name" title="Sort A–Z">Drop${dropSort === "name" ? " ▲" : ""}</th><th class="num">Qty</th><th class="num">Avg ea</th><th class="num scan-sort${dropSort === "value" ? " on" : ""}" data-dropsort="value" title="Sort by value, high→low">Value${dropSort === "value" ? " ▼" : ""}</th><th></th></tr></thead><tbody>${
-            items.map((i) => `<tr${i.value == null ? ' class="scan-unknown"' : ""}><td>${i.contents ? `<span title="${escTxt(i.contents)}">${escTxt(i.display)}</span>` : escTxt(i.display)}${srcChip(i.source)}${i.badge === "ev" ? ` <span class="scan-newbadge" title="${escTxt(i.contents)}. Valued at the expected value of its contents">EV</span>` : i.badge === "shop" ? ` <span class="scan-newbadge" title="${escTxt(i.contents)}. Valued at its best Seal Shop redemption">SHOP</span>` : i.badge === "rng" ? ` <span class="scan-newbadge" title="${escTxt(i.contents)}. Valued at its observed average payout per open">RNG</span>` : ""}${i.value == null ? ` <span class="scan-newbadge" title="No market price in the app. Not counted in the run value">unpriced</span> <button class="scan-junk-btn scan-rename-btn" data-drop-rename="${escTxt(i.name)}" title="Rename. Fix an OCR misread; remembered for every future scan">✎</button>` : ""}</td><td class="num">${i.qty}</td><td class="num gold">${i.avg == null ? "—" : fmt(i.avg)}</td><td class="num gold">${i.value == null ? "—" : fmt(i.value)}</td><td class="num"><button class="scan-junk-btn" data-junk-add="${escTxt(i.name)}" title="Mark as junk. Hide this from the tally on every scan">✕</button></td></tr>`).join("")}${
+            items.map((i) => `<tr${i.value == null ? ' class="scan-unknown"' : ""}><td>${i.contents ? `<span title="${escTxt(i.contents)}">${escTxt(i.display)}</span>` : escTxt(i.display)}${srcChip(i.source)}${i.badge === "ev" ? ` <span class="scan-newbadge" title="${escTxt(i.contents)}. Valued at the expected value of its contents">EV</span>` : i.badge === "shop" ? (i.excluded ? ` <span class="scan-newbadge" title="Excluded from the run value (header gear → Settings). ${escTxt(i.contents)}">SHOP off</span>` : ` <span class="scan-newbadge" title="${escTxt(i.contents)}. Valued at its best Seal Shop redemption. The header gear → Settings can exclude it from the run value">SHOP</span>`) : i.badge === "rng" ? ` <span class="scan-newbadge" title="${escTxt(i.contents)}. Valued at its observed average payout per open">RNG</span>` : ""}${i.value == null && !i.excluded ? ` <span class="scan-newbadge" title="No market price in the app. Not counted in the run value">unpriced</span> <button class="scan-junk-btn scan-rename-btn" data-drop-rename="${escTxt(i.name)}" title="Rename. Fix an OCR misread; remembered for every future scan">✎</button>` : ""}</td><td class="num">${i.qty}</td><td class="num gold">${i.avg == null ? "—" : fmt(i.avg)}</td><td class="num gold">${i.value == null ? "—" : fmt(i.value)}</td><td class="num"><button class="scan-junk-btn" data-junk-add="${escTxt(i.name)}" title="Mark as junk. Hide this from the tally on every scan">✕</button></td></tr>`).join("")}${
             dropStore.gold ? `<tr><td>Gold</td><td class="num"></td><td class="num"></td><td class="num gold">${fmt(dropStore.gold)}</td><td></td></tr>` : ""
           }${
             baseGold ? `<tr><td>Run reward${liveMode === "Hero" ? " (Hero)" : ""}</td><td class="num"></td><td class="num"></td><td class="num gold">${fmt(baseGold)}</td><td></td></tr>` : ""
@@ -7058,9 +7243,9 @@
           const rows = [...bucket.entries()].map(([key, qty]) => {
             const { name, source } = parseDropKey(key);
             if (isJunk(name, scanJunk)) return null;
-            const avg = dropUnitValue(name, prices);
+            const avg = dropUnitValue(name, tPrices);
             const value = avg != null ? avg * qty : null;
-            return { name, source, qty, avg, value };
+            return { name, source, qty, avg, value, excluded: isSealExcluded(name) };
           }).filter(Boolean).sort(sortFn);
           const sub = rows.reduce((s, i) => s + (i.value || 0), 0);
           partyValue += sub;
@@ -7074,7 +7259,7 @@
         return `<details class="scan-skips scan-party" open><summary>Party drops, ${dropStore.party.size} other player${dropStore.party.size !== 1 ? "s" : ""} · ${fmt(partyValue)} in items · ~${fmt(perPlayer)}/player</summary>
           <p class="hint">Other party members' drops, valued like yours. Estimated haul per player = the party's pooled items split ${size} ways${goldNote}, plus the same run gold you earned. Nexon doesn't broadcast others' gold, so we assume everyone got what you did. Saving the run stores these for the pooled per-raid stats.</p>
           ${groups.map((g) => `<div class="scan-party-actor"><b>${escTxt(g.actor)}</b> — ${fmt(g.sub)} <button class="scan-junk-btn scan-rename-btn" data-party-rename="${escTxt(g.actor)}" title="Rename this player. Fix an OCR misread; renaming onto another listed player merges their drops">✎</button><button class="scan-junk-btn" data-party-del="${escTxt(g.actor)}" title="Remove this player and their drops from the run. E.g. a stray OCR-invented name">✕</button></div>
-            ${g.rows.map((i) => `<div class="scan-party-row"><span>${escTxt(normalizeBottleName(i.name))}${srcChip(i.source)}${i.value == null ? ` <span class="scan-newbadge" title="No market price in the app. Not counted">unpriced</span> <button class="scan-junk-btn scan-rename-btn" data-drop-rename="${escTxt(i.name)}" title="Rename. Fix an OCR misread; remembered for every future scan">✎</button>` : ""} <button class="scan-junk-btn" data-junk-add="${escTxt(i.name)}" title="Mark as junk. Hide this from the tally on every scan">✕</button></span><span class="num">×${i.qty}</span><span class="num gold">${i.value == null ? "—" : fmt(i.value)}</span></div>`).join("")}`).join("")}</details>`;
+            ${g.rows.map((i) => `<div class="scan-party-row"><span>${escTxt(normalizeBottleName(i.name))}${srcChip(i.source)}${i.excluded ? ` <span class="scan-newbadge" title="Excluded from the run value (header gear → Settings)">SHOP off</span>` : i.value == null ? ` <span class="scan-newbadge" title="No market price in the app. Not counted">unpriced</span> <button class="scan-junk-btn scan-rename-btn" data-drop-rename="${escTxt(i.name)}" title="Rename. Fix an OCR misread; remembered for every future scan">✎</button>` : ""} <button class="scan-junk-btn" data-junk-add="${escTxt(i.name)}" title="Mark as junk. Hide this from the tally on every scan">✕</button></span><span class="num">×${i.qty}</span><span class="num gold">${i.value == null ? "—" : fmt(i.value)}</span></div>`).join("")}`).join("")}</details>`;
       })();
       const KIND_LABEL = { mine: "✓ yours", foreign: "other player", party: "✓ party", gold: "✓ gold", skip: "not a drop" };
       const debug = scanDropDebug.length
@@ -7082,47 +7267,47 @@
             <p class="hint">Every raw line the OCR read, and how it was classified. If a drop is missing, find its line here: not listed = OCR never read it; <b>other player</b> = the character-name filter dropped it (check your name / OCR of the actor); <b>not a drop</b> = the line didn't parse.</p>
             ${scanDropDebug.map((d) => `<div class="scan-dbg-${d.kind}"><span class="scan-dbg-tag">${KIND_LABEL[d.kind]}</span> ${escTxt(d.line)}</div>`).join("")}</details>`
         : "";
-      // Setup header (SPEC §16.8): two side-by-side planner-style cards, everything about the
-      // CHARACTER on the left, everything about this RUN on the right. All run options are sticky.
-      const charCard = `<div class="scan-card">
-        <h5 class="scan-card-h">Character</h5>
-        <div class="scan-charname"><span class="scan-field-lbl">IGN</span>
-          ${(() => {
-            const cur = charName.trim(), curL = cur.toLowerCase();
-            const list = distinctCharacters(runs);
-            const inList = list.some((c) => c.toLowerCase() === curL);
-            return `<select id="scanCharName">
-              ${!cur ? `<option value="" selected>. Select character —</option>` : ""}
-              ${cur && !inList ? `<option value="${escTxt(cur)}" selected>${escTxt(cur)}</option>` : ""}
-              ${list.map((c) => `<option value="${escTxt(c)}"${c.toLowerCase() === curL ? " selected" : ""}>${escTxt(c)}</option>`).join("")}
-              <option value="__new__">＋ New character…</option>
-            </select>`;
-          })()}
-          <span class="help-icon" tabindex="0" title="${partyTrack ? "Your drops are tallied in the run value; party members' drops are tracked separately below." : "Only your drops are kept, party members are filtered out."} Pick a saved character, or choose “New character…” to add one.">?</span></div>
-        ${hasName ? `<div class="scan-charname"><span class="scan-field-lbl">Luck</span>
-          <input type="text" id="scanLuck" class="scan-luck-input" inputmode="numeric" value="${charLuck(charName) ?? ""}" placeholder="e.g. 104" autocomplete="off">
-          <span class="help-icon" tabindex="0" title="${escTxt(charName.trim())}'s current Luck stat (base 100). Sticky per character, update it when your luck changes (blessing stones, Cadet Badge, luck gear). Each saved run freezes the value, so the Drop Data tab can tally Luck-core yield per luck level.">?</span></div>` : ""}
-        ${hasName ? `<div class="scan-charname"><span class="scan-field-lbl">Max level</span>
-          <div class="modeToggle mini"><label class="chip"><input type="checkbox" id="scanMaxLevel"${maxLevel ? " checked" : ""}>+20% raid gold</label></div>
-          <span class="help-icon" tabindex="0" title="A character at the level cap earns +20% on raid gold (run reward + core gold). Saved per character, so it applies to all of ${escTxt(charName.trim())}'s runs.">?</span></div>` : ""}
-      </div>`;
+      // Setup header (SPEC §16.8): ONE planner-style card, who (IGN), where (raid + mode, incl.
+      // circuits), and the boolean options as self-labeled pills. All run options are sticky.
       const partyChip = dropStore.party.size ? ` <span class="scan-mode-pill scan-party-pill" title="Party members detected in this scan's chat log (including you)">party of ${dropStore.party.size + 1}</span>` : "";
-      const runCard = `<div class="scan-card">
-        <h5 class="scan-card-h">Run${partyChip}</h5>
-        <div class="scan-charname"><span class="scan-field-lbl">Raid</span>
-          <select id="scanRaid">${raidPickerOptions()}</select>
-          <span class="help-icon" tabindex="0" title="Optional, improves drop-name accuracy by matching against the raid's known drop list. Sticky: stays picked for your next run.">?</span></div>
-        <div class="scan-charname"><span class="scan-field-lbl">Mode</span>
-          ${(() => { const m = currentRaidModes(); return m.options.length > 1
-            ? `<div class="modeToggle mini scan-runmode">${m.options.map((o) => `<button type="button" data-runmode="${o}" class="${runModeSel === o ? "on" : ""}">${o}</button>`).join("")}</div>`
-            : `<span class="scan-mode-fixed">${escTxt(m.options[0])}${m.locked ? "" : `<span class="hint">, no hero version</span>`}</span>`; })()}
-          <span class="help-icon" tabindex="0" title="Hero doubles the boss HP and the drops. It's logged as ONE run, the By-raid value/hour tells you whether hero beats normal. Raids where hero changes the requirements are listed separately (name says Hero or Normal).">?</span></div>
-        ${coreAvail ? `<div class="scan-charname"><span class="scan-field-lbl">Core boost</span>
-          <div class="modeToggle mini"><label class="chip"><input type="checkbox" id="scanCoreBoost"${coreBoosted() ? " checked" : ""}${isCoreBoosted() ? " disabled" : ""}>Boosted</label></div>${isCoreBoosted() ? ' <span class="hint">(auto. Plus drop in log)</span>' : ""}
-          <span class="help-icon" tabindex="0" title="Adds the raid's Core Gold to the run value. Auto-ticks when a Core Boost Plus drop is in the log (that only happens on a boosted run); tick it manually if you boosted WITHOUT the Plus sub. Sticky: stays checked for your next run.">?</span></div>` : ""}
-        <div class="scan-charname"><span class="scan-field-lbl">Party</span>
-          <div class="modeToggle mini"><label class="chip"><input type="checkbox" id="scanPartyTrack"${partyTrack ? " checked" : ""}>Track drops</label></div>
-          <span class="help-icon" tabindex="0" title="Also tally the OTHER party members' drops (grouped per player) instead of filtering them out. One run then samples the raid's drop table once per player, so the By-raid pooled value converges much faster. Their gold isn't tracked, the pooled math assumes everyone earned what you did.">?</span></div>
+      const circuit = activeCircuit();
+      const circuitRow = circuit ? (() => {
+        const i = circuitSel.i, n = circuit.seq.length;
+        const body = i >= n
+          ? `<span class="scan-circuit-done">Circuit complete, all ${n} runs logged.</span>
+             <button class="scan-junk-btn" data-circuit-step="restart" title="Start this circuit over">↻ restart</button>`
+          : `<span class="scan-circuit-pos">${i + 1}/${n}: <b>${escTxt(circuit.seq[i])}</b>${i + 1 < n ? `<span class="hint"> · next ${escTxt(circuit.seq[i + 1])}</span>` : `<span class="hint"> · last one</span>`}</span>
+             <button class="scan-junk-btn" data-circuit-step="-1" title="Back one step">‹</button>
+             <button class="scan-junk-btn" data-circuit-step="1" title="Skip to the next step">›</button>`;
+        return `<div class="scan-charname"><span class="scan-field-lbl">Circuit</span>${body}
+          <span class="help-icon" tabindex="0" title="Saving a run advances the circuit to its next raid. It runs through once and then reports complete, use ↻ to go again. ‹ › step manually, e.g. to skip a raid you're not doing.">?</span></div>`;
+      })() : "";
+      // Mode toggle rides WITH the raid name (they're one choice: which fight you just did),
+      // rather than sitting on its own labelled row.
+      const modeToggle = (() => {
+        const m = currentRaidModes();
+        return m.options.length > 1
+          ? `<div class="modeToggle mini scan-runmode" title="Hero doubles the boss HP and the drops. It's logged as ONE run; the By-raid value/hour tells you whether hero beats normal.">${m.options.map((o) => `<button type="button" data-runmode="${o}" class="${runModeSel === o ? "on" : ""}">${o}</button>`).join("")}</div>`
+          : `<span class="scan-mode-fixed" title="${m.locked ? "This raid is listed as a fixed mode." : "This raid has no hero version."}">${escTxt(m.options[0])}</span>`;
+      })();
+      // The run setup lives IN the raid panel now: mode and core boost are properties of the
+      // fight you just picked, so they sit on the panel's header row instead of in a card of
+      // their own. The IGN isn't shown at all, it's just the active character (sidebar), and the
+      // status line calls it out when it's missing.
+      const corePill = coreAvail
+        ? `<div class="modeToggle mini"><label class="chip" title="Adds the raid's Core Gold to the run value. Auto-ticks when a Core Boost Plus drop is in the log (that only happens on a boosted run); tick it manually if you boosted WITHOUT the Plus sub. Sticky."><input type="checkbox" id="scanCoreBoost"${coreBoosted() ? " checked" : ""}${isCoreBoosted() ? " disabled" : ""}>Core Boost${isCoreBoosted() ? " (auto)" : ""}</label></div>`
+        : "";
+      const setupCard = `<div class="scan-card scan-card-raids">
+        <div class="scan-raid-head">
+          <h5 class="scan-card-h">Raid</h5>
+          ${modeToggle}
+          ${corePill}
+          <span class="help-icon" tabindex="0" title="Pick the raid you just ran, it scopes drop-name matching to that raid's known drop list and is required to save. Circuits walk you through a rotation, advancing after each save. Sticky: your pick survives a reload.">?</span>
+          ${partyChip}
+          <span class="scan-ign" title="${hasName ? `Drops are counted for ${escTxt(charName.trim())}. This is the active character in the sidebar, and must match your in-game name.` : "No active character. Pick or save one in the sidebar, drops are matched against its name."}">${hasName ? escTxt(charName.trim()) : `<span class="scan-bad">no character</span>`}</span>
+        </div>
+        ${circuitRow}
+        ${raidPickerHtml()}
       </div>`;
       // Timer: ONE Start/Pause/Resume button; click the readout while paused to type a time.
       const timerLabel = runTimer.startedAt ? "Pause" : (runTimer.elapsedSec ? "Resume" : "Start");
@@ -7130,7 +7315,7 @@
         ? `<input type="text" id="runTimeEdit" class="scan-timer-edit" value="${runTimer.elapsedSec ? fmtDuration(runTimer.elapsedSec) : ""}" placeholder="mm:ss" autocomplete="off" title="mm:ss, h:mm:ss, or minutes. Enter to apply, Esc to cancel">`
         : `<span id="runTimerReadout" class="scan-timer-readout${runTimer.startedAt ? "" : " editable"}"${runTimer.startedAt ? "" : ' title="Click to set the time (mm:ss, h:mm:ss, or minutes)"'}>${fmtDuration(runElapsed())}</span>`;
       return `<p class="hint">Scan a run's chat log to automatically log the drops. Can use screenshots or a GIF of the chat window. Use a program like ShareX to capture GIFs quickly. </p>
-        <div class="scan-setup">${charCard}${runCard}</div>
+        <div class="scan-setup">${setupCard}</div>
         <div class="scan-drop scan-drop-spaced" id="scanDrop">Drop chat-log screenshots or a GIF here · click to browse · or Ctrl+V
           <input type="file" id="scanFiles" accept="image/*,image/gif" multiple hidden></div>
         <div class="scan-run">
@@ -7140,7 +7325,7 @@
             <button data-timer="reset" class="danger"${runTimer.elapsedSec || runTimer.startedAt ? "" : " disabled"}>Reset</button>
             <button data-scan="runsave"${canSaveRun() ? "" : " disabled"} title="${editing ? "Update this run" : "Save this drop tally as a run, freezing its value"}">${editing ? "Update run" : "Save run"}</button></div>
           <span class="scan-status">${escTxt(status)}</span>
-          <button data-scan="dropclear" class="danger"${has ? "" : " disabled"}>Clear</button>
+          <button data-scan="dropclear" class="danger"${has || scanSkips.length || ocrError ? "" : " disabled"} title="Clear the drop tally, the skipped-file list, and the timer">Clear</button>
         </div>
         ${table}
         ${partySection}
@@ -7247,6 +7432,7 @@
     function renderScanHistory() {
       if (!runs.length) return `<p class="hint">No saved runs yet. On the <b>Drops</b> subtab, scan a run's chat log, optionally time it, then <b>Save run</b>, it lands here with its value frozen for long-term profit tracking.</p>`;
       // Fold each run's LIVE base gold into its total so summaries/sorts/rows reflect current values.
+      const tPrices = tallyPrices(); // "at today's prices" honours the Settings seal exclusions
       const filtered = (runFilterChar ? runs.filter((r) => (r.character || "") === runFilterChar) : runs.slice()).map(withBaseGold);
       const cmp = {
         date: (a, b) => new Date(b.savedAt) - new Date(a.savedAt),
@@ -7269,7 +7455,7 @@
       const perHourVal = pooled ? s.pooledPerHour : s.valuePerHour;
       const perHour = perHourVal == null ? "—" : fmt(perHourVal);
       const dataViewToggle = anyPartyRuns
-        ? `<div class="modeToggle mini scan-dataview" title="Off = only your drops. On = every party member's run counts as a sample (runs and total scale with party size; per-run and per-hour are what one player gets). A bigger sample of what a run is worth. The Core buffs panel is always your own data.">
+        ? `<div class="modeToggle mini scan-dataview" title="Off = only your drops. On = every party member's run counts as a sample (runs and total scale with party size; per-run and per-hour are what one player gets). A bigger sample of what a run is worth. The Core buffs panel pools too: party cores sharpen the per-core values, run counts and spend stay your own (pet cores never pool).">
             <button type="button" data-dataview="${pooled ? "mine" : "pooled"}" class="onoff${pooled ? " on" : ""}">Pooled</button></div>`
         : "";
       const summary = `<div class="scan-run-summary">
@@ -7300,12 +7486,16 @@
         .sort(byRaidCmp[byRaidSort] || byRaidCmp.perrun);
       // Core-source analysis (SPEC §16.9). All-time stats feed the per-raid breakdowns; the
       // 30-day window (with live buff costs) feeds the "Core buffs" panel below the summary.
-      // The Pooled toggle folds party members' cores into the BY-RAID sample only (§16.11);
-      // the Core buffs panel is ALWAYS self-only, your spend, your cores, stable layout.
-      const vvipCost = priceByMatch(VVIP_PRICE_MATCH, VVIP_COST_30D);
-      const cadetCost = priceByMatch(CADET_PRICE_MATCH, CADET_COST_30D);
+      // The Pooled toggle folds party members' cores into BOTH samples (§16.11): the by-raid
+      // avgCore and the buff panel's contribution/worth-it values sharpen from everyone's
+      // cores, while run counts and spend stay the player's own (pet cores never pool).
       const coreAll = summarizeCoreSources(filtered, { windowDays: Infinity, campfireCost: CAMPFIRE_CORE_COST, pooled });
-      const core30 = summarizeCoreSources(filtered, { campfireCost: CAMPFIRE_CORE_COST, vvipCost, cadetCost, plusUSD: CORE_BOOST_PLUS_USD });
+      const core30 = summarizeCoreSources(filtered, { campfireCost: CAMPFIRE_CORE_COST, pooled });
+      // Core Boost Plus is an ACCOUNT subscription: it pays out on every character you play, so
+      // its row is computed over ALL runs, ignoring the character filter (which would otherwise
+      // understate a multi-character player's return). Never pooled either, a party member's sub
+      // is theirs to profit from, not yours. Same 30-day window as the rest of the panel.
+      const plusAll = summarizeCoreSources(runs.map(withBaseGold), { campfireCost: CAMPFIRE_CORE_COST });
       // Base-boost drop-QUALITY comparison: the daily core boost adds no lines, it upgrades what
       // base cores contain, so compare avg base-core value, boosted vs unboosted, per raid+mode.
       const boostCmp = {}; // "raid|mode" → { boosted:{runs,val}, plain:{runs,val} }
@@ -7316,7 +7506,18 @@
         const t = r.coreBoost ? e.boosted : e.plain;
         t.runs++; t.val += r.drops.filter((d) => d.source === "base").reduce((a, d) => a + (d.value || 0), 0);
       }
-      const goodBad = (n) => `<b class="${n >= 0 ? "scan-good" : "scan-bad"}">${n >= 0 ? "worth it" : "not covering it"} (${sfmt(n)})</b>`;
+      const goodBad = (n, unit = "") => `<b class="${n >= 0 ? "scan-good" : "scan-bad"}">${n >= 0 ? "worth it" : "not covering it"} (${sfmt(n)}${unit})</b>`;
+      // Small cog, same glyph as the header's, as the "configure this" affordance on a row.
+      const gearIcon = `<svg class="cog-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5 12a7 7 0 1 0 14 0 7 7 0 1 0-14 0Zm3.4 0a3.6 3.6 0 1 1 7.2 0 3.6 3.6 0 0 1-7.2 0Z"/><g>${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<rect x="10.7" y="1.9" width="2.6" height="3.8" rx="0.7"${a ? ` transform="rotate(${a} 12 12)"` : ""}/>`).join("")}</g></svg>`;
+      // Campfire glyph: crossed logs under a flame. Marks a raid whose average core beats the
+      // campfire's price, i.e. one worth buying a campfire on. Drawn (not an emoji) so it takes
+      // the row's colour and sits on the text baseline.
+      const campIcon = `<svg class="camp-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2c.9 1.5.6 2.4.1 3.1-.5.8-1.2 1.4-1.2 2.5 0 .5.2 1 .5 1.3-.7-.2-1.3-.9-1.3-1.9 0-.3 0-.5.1-.8-.9.7-1.5 1.8-1.5 3 0 1.9 1.5 3.4 3.3 3.4s3.3-1.5 3.3-3.4c0-2.6-2-3.4-3.3-7.2Z"/><path d="M2.6 13.2a.7.7 0 0 1 .3-1l9.4-3.1a.7.7 0 1 1 .4 1.3l-9.4 3.1a.7.7 0 0 1-.7-.3Z" opacity=".85"/><path d="M13.4 13.2a.7.7 0 0 0-.3-1L3.7 9.1a.7.7 0 1 0-.4 1.3l9.4 3.1a.7.7 0 0 0 .7-.3Z" opacity=".85"/></svg>`;
+      // Which raid+mode rows are worth camping (their average core beats the campfire price).
+      const worthCamping = (raid, mode) => {
+        const rm = coreAll.perRaidMode[`${raid}|${mode}`];
+        return rm && rm.avgCore != null && rm.avgCore >= CAMPFIRE_CORE_COST;
+      };
       // Expanded raid+mode row: that mode's core-source averages + the per-run verdicts.
       // Source lines are per CORE (value ÷ cores). Per-run would average in players/runs the
       // source never fired on (a missing campfire core means "didn't buy one", not bad luck).
@@ -7325,20 +7526,29 @@
         const rm = coreAll.perRaidMode[`${raid}|${mode}`];
         if (!rm) return `<div class="hint">No core-source data for this raid yet, runs saved from now on record where each core came from.</div>`;
         const n = sampleN || rm.runs;
+        // Average core leads (it's the number every verdict is built on), formatted exactly like
+        // the per-source lines below it so the chips and their labels form one column.
+        const avgLine = rm.avgCore != null
+          ? `<div class="scan-src-line scan-src-avg"><span class="src-chip src-avg">AVG</span> Average core: ${rm.cores} core${rm.cores !== 1 ? "s" : ""} · avg ${fmt(rm.avgCore)}/core</div>` : "";
         const lines = CORE_SOURCES.map((src) => {
           const b = rm.sources[src];
           if (!b.cores) return "";
-          return `<div class="scan-src-line">${srcChip(src) || '<span class="src-chip src-base">CORE</span>'} ${escTxt(SRC_LABEL[src])}: ${b.cores} core${b.cores !== 1 ? "s" : ""} · avg ${fmt(b.value / b.cores)}/core</div>`;
+          return `<div class="scan-src-line">${srcChip(src) || '<span class="src-chip src-base">BASE</span>'} ${escTxt(SRC_LABEL[src])}: ${b.cores} core${b.cores !== 1 ? "s" : ""} · avg ${fmt(b.value / b.cores)}/core</div>`;
         }).join("");
-        // Campfire verdict = the raid's AVERAGE core value vs the 65k buy: the campfire core is
-        // one more draw from the same pool, so the pool's EV (spikes included) prices it, not
-        // whatever the campfire-tagged lines happened to be.
+        // Camping call on its own line: the campfire core is one more draw from the same pool,
+        // so that pool's EV (spikes included) is exactly what a campfire buys you.
         const verdict = rm.avgCore != null
-          ? `<div class="scan-src-verdict">Avg core here: ${fmt(rm.avgCore)} (over ${rm.cores} cores) vs ${fmt(CAMPFIRE_CORE_COST)} campfire → ${goodBad(rm.avgCore - CAMPFIRE_CORE_COST)} per campfire</div>` : "";
+          ? `<div class="scan-src-verdict">${rm.avgCore >= CAMPFIRE_CORE_COST
+              ? `${campIcon}<b class="scan-good">Camp here</b>: ${sfmt(rm.avgCore - CAMPFIRE_CORE_COST)} vs the ${fmt(CAMPFIRE_CORE_COST)} campfire`
+              : `<b class="scan-bad">Don't camp here</b>: ${sfmt(rm.avgCore - CAMPFIRE_CORE_COST)} vs the ${fmt(CAMPFIRE_CORE_COST)} campfire`}</div>` : "";
+        // Base-boost drop-QUALITY check: avg base-core value per run, boosted vs unboosted,
+        // each on its own line (a side with no runs just doesn't render).
         const bc = boostCmp[`${raid}|${mode}`];
-        const boostLine = bc && bc.boosted.runs && bc.plain.runs
-          ? `<div class="scan-src-verdict">Core boost (drop quality): base cores avg ${fmt(bc.boosted.val / bc.boosted.runs)}/run boosted vs ${fmt(bc.plain.val / bc.plain.runs)}/run unboosted (${bc.boosted.runs}B/${bc.plain.runs}U)</div>` : "";
-        return `<div class="scan-raid-mode">${rm.runs} tracked run${rm.runs !== 1 ? "s" : ""}${pooled ? ` (${n} pooled samples)` : ""}${lines}${verdict}${boostLine}</div>`;
+        const boostLines = bc
+          ? [bc.boosted.runs ? `<div class="scan-src-verdict">Boosted runs: base cores ${fmt(bc.boosted.val / bc.boosted.runs)}/run (${bc.boosted.runs} run${bc.boosted.runs !== 1 ? "s" : ""})</div>` : "",
+             bc.plain.runs ? `<div class="scan-src-verdict">Unboosted runs: base cores ${fmt(bc.plain.val / bc.plain.runs)}/run (${bc.plain.runs} run${bc.plain.runs !== 1 ? "s" : ""})</div>` : ""].join("")
+          : "";
+        return `<div class="scan-raid-mode">${rm.runs} tracked run${rm.runs !== 1 ? "s" : ""}${pooled ? ` (${n} pooled samples)` : ""}${avgLine}${lines}${verdict}${boostLines}</div>`;
       };
       // Show the By-raid table when there's more than one row or core-source data to expand into.
       const hr = (b) => { const v = bHr(b); return v ? fmt(v) : "—"; };
@@ -7349,7 +7559,8 @@
               const key = `${raid}|${mode}`;
               const open = raidExpanded.has(key);
               const modeTag = mode === "Hero" ? ' <span class="scan-mode-pill scan-hero-pill" title="Hero mode">H</span>' : "";
-              const head = `<tr class="scan-run-row${open ? " on" : ""}" data-raid-toggle="${escTxt(key)}" title="Click for this raid's core-source breakdown"><td>${escTxt(raid)}${modeTag}</td><td class="num">${bRuns(b)}</td><td class="num">${b.avgDurationSec != null ? fmtDuration(b.avgDurationSec) : "—"}</td><td class="num gold">${fmt(bTotal(b))}</td><td class="num gold">${fmt(bPerRun(b))}</td><td class="num gold">${hr(b)}</td></tr>`;
+              const camp = worthCamping(raid, mode) ? ` <span class="camp-mark" title="Worth camping here: the average core beats the ${fmt(CAMPFIRE_CORE_COST)} campfire cost">${campIcon}</span>` : "";
+              const head = `<tr class="scan-run-row${open ? " on" : ""}" data-raid-toggle="${escTxt(key)}" title="Click for this raid's core-source breakdown"><td>${escTxt(raid)}${modeTag}${camp}</td><td class="num">${bRuns(b)}</td><td class="num">${b.avgDurationSec != null ? fmtDuration(b.avgDurationSec) : "—"}</td><td class="num gold">${fmt(bTotal(b))}</td><td class="num gold">${fmt(bPerRun(b))}</td><td class="num gold">${hr(b)}</td></tr>`;
               return open ? head + `<tr class="scan-run-drop scan-raid-detail"><td colspan="6">${raidBreakdown(raid, mode, bRuns(b))}</td></tr>` : head;
             }).join("")}</tbody></table>`
         : "";
@@ -7361,38 +7572,77 @@
         const cs = core30;
         if (!cs.trackedCount) return "";
         const rows = [];
-        const row = (label, html) => rows.push(`<div class="scan-buff-row"><span class="scan-buff-lbl">${escTxt(label)}</span><span>${html}</span></div>`);
+        // `rawLabel` lets a row carry markup in its label (the Plus row's settings cog).
+        const row = (label, html, rawLabel = false) => rows.push(`<div class="scan-buff-row"><span class="scan-buff-lbl">${rawLabel ? label : escTxt(label)}</span><span>${html}</span></div>`);
+        // Join a row's parts with a dot separator that breathes: the wide gap around it reads
+        // as a column break rather than as punctuation inside one sentence.
+        const sep = (parts) => parts.filter(Boolean).join(`<span class="scan-buff-sep">·</span>`);
         const src = cs.sources;
-        const cores = (b) => `${b.cores} core${b.cores !== 1 ? "s" : ""} · ${fmt(b.value)}`;
-        if (cs.campfire.runsWith) row("Campfire", `${cores(src.campfire)} · spent ${fmt(cs.campfire.cost)}`);
-        // Plus fires on every core-boosted battle (no separate currency). Headline is what a
-        // boosted run yielded; the Hero/Normal split (verifying +3 even on Hero) lives in the tooltip.
-        if (src.plus.cores) {
-          const bm = cs.plus.byMode;
-          const modeSplit = ["Hero", "Normal"].filter((m) => bm[m].runs)
-            .map((m) => `${m}: ${bm[m].cores} core${bm[m].cores !== 1 ? "s" : ""} over ${bm[m].runs} boosted run${bm[m].runs !== 1 ? "s" : ""}`).join(" · ");
-          row("Core Boost Plus", `<span title="${escTxt(modeSplit)}">${cores(src.plus)} over ${cs.plus.runsWith} boosted run${cs.plus.runsWith !== 1 ? "s" : ""}${cs.plus.valuePerBoostedRun != null ? ` → ${fmt(cs.plus.valuePerBoostedRun)}/boosted run` : ""}</span>`);
+        // Every row shares one shape, "N cores (N runs)" then its own figures, so the columns
+        // line up down the panel. Cell 1 is identical everywhere.
+        const coresRuns = (b) => `${b.cores} core${b.cores !== 1 ? "s" : ""} (${b.runsWith} run${b.runsWith !== 1 ? "s" : ""})`;
+        // Campfire IS the verdict, there's no separate worth-it section any more: what you drew,
+        // what it cost, what a core is actually worth here, and the gap. The difference is
+        // coloured but NOT bolded, bold read as a bigger font next to the rest of the row.
+        if (cs.ev.campfire.runs && src.campfire.cores) {
+          const net = cs.ev.campfire.net;
+          // The average is backed by every core in the window, not just the campfire-tagged ones,
+          // so the parenthetical says how big that sample is.
+          const totalCores = CORE_SOURCES.reduce((a, s) => a + src[s].cores, 0);
+          // One campfire yields one core, so cores and runs-with-a-campfire should match. When
+          // they don't (two campfire cores read on one run, a duplicate OCR line), the CORE count
+          // is the truth: it's what you actually drew, and what you actually paid 65k each for.
+          // So both the run count beside it and the total spend follow the cores.
+          const camp = { cores: src.campfire.cores, runsWith: src.campfire.cores };
+          row("Campfire", sep([
+            coresRuns(camp),
+            `Cost: ${fmt(CAMPFIRE_CORE_COST)} (${fmt(cs.campfire.cost)})`,
+            `Avg core: ${fmt(cs.ev.campfire.avg)} (${totalCores} core${totalCores !== 1 ? "s" : ""})`,
+            `<span class="${net >= 0 ? "scan-good" : "scan-bad"}">${sfmt(net)}</span>`,
+          ]));
         }
-        if (src.vvip.cores) row("VVIP", cores(src.vvip));
-        if (src.pet.cores) row("Pet", `${cores(src.pet)} · ${src.pet.runsWith} run${src.pet.runsWith !== 1 ? "s" : ""}`);
-        const luckLevels = Object.keys(cs.luck.byLevel).sort((a, b) => a - b);
-        for (const lv of luckLevels) {
-          const b = cs.luck.byLevel[lv];
-          row(`Luck ${lv}`, `${(b.cores / b.runs).toFixed(2)} cores/run · ${fmt(b.value / b.runs)}/run (${b.runs} run${b.runs !== 1 ? "s" : ""})`);
+        if (src.vvip.cores) row("VVIP", sep([coresRuns(src.vvip), fmt(src.vvip.value), `${fmt(src.vvip.value / src.vvip.runsWith)}/run`]));
+        if (src.pet.cores) row("Pet", sep([coresRuns(src.pet), fmt(src.pet.value), `${fmt(src.pet.value / src.pet.runsWith)}/run`]));
+        // Luck: plain source tally, no per-level split (the Luck stat is no longer recorded).
+        if (src.luck.cores) row("Luck", sep([coresRuns(src.luck), fmt(src.luck.value), `${fmt(src.luck.value / src.luck.runsWith)}/run`]));
+        // Core Boost Plus LAST: it's the only row that isn't a per-run tally. Bought per ACCOUNT
+        // for a fixed term, so it reports subscription accounting and reads `plusAll` (EVERY
+        // character's runs, since one sub covers them all). With no term set, or an expired one,
+        // there's nothing meaningful to divide by, so the figures are withheld rather than shown
+        // against a denominator that doesn't exist. The gear opens Settings, where the term lives.
+        {
+          const term = plusTerm();
+          const active = !!term && term.remaining > 0;
+          const p = plusAll.sources.plus;
+          const label = `Core Boost Plus <button type="button" class="scan-buff-gear" data-open-settings title="Set your subscription's start date, length, and price">${gearIcon}</button>`;
+          if (!active) {
+            row(label, `<span class="scan-bad">${term ? "Expired" : "Setup by using the gear icon"}</span>`, true);
+          } else if (p.cores) {
+            const bm = plusAll.plus.byMode;
+            const modeSplit = ["Hero", "Normal"].filter((m) => bm[m].runs)
+              .map((m) => `${m}: ${bm[m].cores} core${bm[m].cores !== 1 ? "s" : ""} over ${bm[m].runs} boosted run${bm[m].runs !== 1 ? "s" : ""}`).join(" · ");
+            const usd = appSettings.plus.usd;
+            row(label, `<span title="${escTxt(modeSplit)}. Rates are over the ${term.elapsed} day${term.elapsed !== 1 ? "s" : ""} since your term started">${sep([
+              coresRuns(p),
+              fmt(p.value),
+              `${fmt(p.value / term.elapsed)}/day`,
+              usd > 0 ? `${fmt(p.value / usd)}/$` : `<span class="scan-good">free</span>`,
+              `<span class="scan-good">${term.remaining} day${term.remaining !== 1 ? "s" : ""} left</span>`,
+            ])}</span>`, true);
+          } else {
+            row(label, `<span class="scan-good">${term.remaining} day${term.remaining !== 1 ? "s" : ""} left</span>${sep(["", "no Plus cores logged yet"])}`, true);
+          }
         }
-        // EV worth-it: VVIP = +1 avg core every run; Plus = +3 avg cores per boosted run.
-        const evRows = [];
-        const evRow = (label, html) => evRows.push(`<div class="scan-buff-row"><span class="scan-buff-lbl">${escTxt(label)}</span><span>${html}</span></div>`);
-        if (cs.ev.vvip.runs) evRow("VVIP", `+1 core × ${cs.ev.vvip.runs} run${cs.ev.vvip.runs !== 1 ? "s" : ""} ≈ ${fmt(cs.ev.vvip.value)} vs ${fmt(vvipCost)}/30d → ${goodBad(cs.ev.vvip.net)}`);
-        if (cs.ev.plus.runs) evRow("Core Boost Plus", `+3 cores × ${cs.ev.plus.runs} boosted run${cs.ev.plus.runs !== 1 ? "s" : ""} ≈ ${fmt(cs.ev.plus.value)} → ${fmt(cs.ev.plus.goldPerUsd)} gold/$ at $${CORE_BOOST_PLUS_USD}/30d`);
-        if (!rows.length && !evRows.length) return "";
+        if (!rows.length) return "";
         const untracked = cs.runCount - cs.trackedCount;
-        const note = untracked > 0 ? `<p class="hint">${untracked} older run${untracked !== 1 ? "s" : ""} excluded (no source data).</p>` : "";
-        const evBlock = evRows.length ? `<div class="scan-buff-sub" title="An extra core is valued at the raid's average core value, rare spikes carry the average, whichever line they drop on. Campfire is judged per raid, in the By-raid rows.">Worth it? (extra core ≈ raid's avg core · campfire: see By raid)</div>${evRows.join("")}` : "";
+        const notes = [];
+        if (untracked > 0) notes.push(`${untracked} older run${untracked !== 1 ? "s" : ""} excluded (no source data).`);
+        if (plusAll.sources.plus.cores && runFilterChar) notes.push(`Core Boost Plus covers the whole account, so its row counts every character's runs, not just ${escTxt(runFilterChar)}'s.`);
+        const note = notes.length ? `<p class="hint">${notes.join(" ")}</p>` : "";
         // Open state is sticky (runPrefs.buffOpen, SPEC §16.8). Survives re-renders AND reloads.
-        // ALWAYS self-only (never pooled). Same numbers and same height whatever the toggle says.
-        return `<details class="scan-run-section scan-buff-panel"${runPrefs.buffOpen ? " open" : ""}><summary class="scan-run-h4">Core buffs, last 30 days</summary>
-          ${rows.join("")}${evBlock}${note}</details>`;
+        // Honours the Pooled toggle: party cores sharpen the values, run counts stay self-only.
+        return `<details class="scan-run-section scan-buff-panel"${runPrefs.buffOpen ? " open" : ""}><summary class="scan-run-h4">Core buffs, last 30 days${cs.pooled ? " (pooled)" : ""}</summary>
+          ${rows.join("")}${note}</details>`;
       })();
       const chars = distinctCharacters(runs);
       const filterSel = chars.length > 1
@@ -7409,7 +7659,7 @@
           <td class="num scan-run-actions"><button class="scan-run-edit" data-run-edit="${r.id}" title="Edit this run, change the time or redo the drops">Edit</button><button class="scan-run-del" data-run-del="${r.id}" title="Delete this run">×</button></td></tr>`;
         if (!open) return head;
         // Drop breakdown; also recompute against TODAY's prices so drift is visible.
-        const nowVal = (r.drops || []).reduce((a, d) => { const u = dropUnitValue(d.name, prices); return a + (u != null ? u * d.qty : 0); }, 0) + (r.gold || 0) + (r.baseGold || 0) + (r.coreGold || 0) + (r.levelBonus || 0);
+        const nowVal = (r.drops || []).reduce((a, d) => { const u = dropUnitValue(d.name, tPrices); return a + (u != null ? u * d.qty : 0); }, 0) + (r.gold || 0) + (r.baseGold || 0) + (r.coreGold || 0) + (r.levelBonus || 0);
         // Drops sorted by core source (SPEC §16.9) so same-source cores cluster, each keeping its
         // source tag chip. No subtotal/total rows, the per-source breakdown lives in the By-raid
         // rows + the 30-day panel; a single run just lists its drops. Unknown sources sink last,
@@ -7538,7 +7788,7 @@
     async function scanDropFiles(blobs) {
       blobs = [...blobs].filter(Boolean);
       if (!blobs.length || scanBusy) return;
-      if (!charName.trim()) { ocrError = "Enter your character name first."; renderScanner(); return; }
+      if (!charName.trim()) { ocrError = "Name your character in the sidebar first, drops are matched against it."; renderScanner(); return; }
       scanBusy = true; ocrError = null; renderScanner();
       let scanDropImage;
       try { scanDropImage = await getScanDropImage(); }
@@ -7724,7 +7974,8 @@
 
     // True when the drops scratchpad holds something worth saving (drops, gold, or a recorded time).
     // A timed-but-empty run is allowed so you can time a run live now and add screenshots later.
-    function canSaveRun() { return charName.trim() && (dropStore.items.size || dropStore.party.size || dropStore.gold || runElapsed() > 0 || editingRunId); }
+    // A raid is REQUIRED: without one the run can't be attributed in any By-raid view.
+    function canSaveRun() { return charName.trim() && selectedRaid && (dropStore.items.size || dropStore.party.size || dropStore.gold || runElapsed() > 0 || editingRunId); }
 
     // Snapshot the current scratchpad as a run. If editing an existing run, UPDATE it in place
     // (keeping its id + original date); otherwise push a new one. Then clear the log + timer.
@@ -7738,13 +7989,16 @@
           actor,
           items: [...bucket.entries()].map(([k, qty]) => { const { name, source } = parseDropKey(k); return [name, qty, source]; }).filter(([n]) => !isJunk(n, scanJunk)),
         })),
-        gold: dropStore.gold, prices,
-        character: charName, raid: selectedRaid, mode: currentRaidModes().locked || runModeSel, coreBoost: coreBoosted() && raidCoreGold(selectedRaid) > 0, maxLevel: isMaxLevel(charName), luck: charLuck(charName),
+        gold: dropStore.gold, prices: tallyPrices(),
+        character: charName, raid: selectedRaid, mode: currentRaidModes().locked || runModeSel, coreBoost: coreBoosted() && raidCoreGold(selectedRaid) > 0, maxLevel: isMaxLevel(),
         durationSec: runTimer.elapsedSec || null,
         id: editing?.id, savedAt: editing?.savedAt,
       });
       if (editing) runs[runs.indexOf(editing)] = rec; else runs.push(rec);
       if (editing) restoreRunPrefs(); // an edit loaded the OLD run's raid/mode/boost, put your sticky setup back
+      // A new run inside a circuit advances to its next raid (that's the whole point of one:
+      // less between-run fiddling). Editing an old run never moves the circuit.
+      else if (circuitSel) setCircuit(circuitSel.id, circuitSel.i + 1);
       editingRunId = null;            // raid/mode/core-boost otherwise stay as set (sticky, SPEC §16.8)
       dropClear(); timerReset();
       if (editing) scanMode = "history"; // updating a run returns to the Runs list, not the edit screen
@@ -7752,8 +8006,12 @@
     }
     // Put the sticky run options back after an edit temporarily loaded another run's setup.
     function restoreRunPrefs() {
-      setSelectedRaid(runPrefs.raid && dRaidMeta[runPrefs.raid] ? runPrefs.raid : "");
-      if (currentRaidModes().options.includes(runPrefs.mode)) runModeSel = runPrefs.mode;
+      if (runPrefs.circuit && CIRCUITS.some((c) => c.id === runPrefs.circuit.id)) setCircuit(runPrefs.circuit.id, runPrefs.circuit.i || 0);
+      else {
+        circuitSel = null;
+        setSelectedRaid(runPrefs.raid && dRaidMeta[runPrefs.raid] ? runPrefs.raid : "");
+        if (currentRaidModes().options.includes(runPrefs.mode)) runModeSel = runPrefs.mode;
+      }
       runCoreBoost = !!runPrefs.coreBoost;
     }
 
@@ -7767,6 +8025,7 @@
       dropStore.party = new Map((r.party || []).map((m) => [m.actor, new Map((m.drops || []).map((d) => [dropKey(d.name, d.source), d.qty]))]));
       dropStore.gold = r.gold || 0; dropStore.foreign.clear(); scanDropDebug.length = 0;
       charName = r.character || charName; persistCharName();
+      circuitSel = null;                             // editing a past run steps out of the circuit
       setSelectedRaid(r.raid || "");                 // re-defaults runModeSel…
       runModeSel = currentRaidModes().locked || r.mode || "Normal"; // …then restore the run's mode
       runCoreBoost = !!r.coreBoost;                     // restore the saved flag explicitly (an edit overrides the inference)
@@ -7808,6 +8067,21 @@
         const inp = document.getElementById("runTimeEdit"); if (inp) { inp.focus(); inp.select(); }
         return;
       }
+      // Raid table: a "circuit:<id>" cell starts that rotation at step 0; anything else is a
+      // plain raid and clears any active circuit. Core boost stays as set (sticky, SPEC §16.8).
+      const raidPick = e.target.closest("[data-raid-pick]");
+      if (raidPick) {
+        const v = raidPick.dataset.raidPick;
+        if (v.startsWith("circuit:")) setCircuit(v.slice(8), 0);
+        else { circuitSel = null; setSelectedRaid(v); rememberRunPrefs(); }
+        renderScanner(); return;
+      }
+      const circuitStep = e.target.closest("[data-circuit-step]");
+      if (circuitStep && circuitSel) {
+        const d = circuitStep.dataset.circuitStep;
+        setCircuit(circuitSel.id, d === "restart" ? 0 : circuitSel.i + Number(d));
+        renderScanner(); return;
+      }
       const modeBtn = e.target.closest("[data-runmode]");
       if (modeBtn) { runModeSel = modeBtn.dataset.runmode; rememberRunPrefs(); renderScanner(); return; }
       const junkAdd = e.target.closest("[data-junk-add]");
@@ -7828,6 +8102,8 @@
       if (byRaidTh) { byRaidSort = byRaidTh.dataset.byraidsort; renderScanner(); return; }
       const dataView = e.target.closest("[data-dataview]");
       if (dataView) { dropDataView = dataView.dataset.dataview; renderScanner(); return; }
+      // Per-row cog → the Settings modal (where the Core Boost Plus term is configured).
+      if (e.target.closest("[data-open-settings]")) { openSettings(); return; }
       // Sticky Core-buffs expander: record the state this click is about to produce (SPEC §16.8).
       const buffSummary = e.target.closest(".scan-buff-panel > summary");
       if (buffSummary) { runPrefs.buffOpen = !buffSummary.parentElement.open; persistRunPrefs(); return; } // no re-render, the <details> toggles natively
@@ -7854,7 +8130,8 @@
         if (act === "copy") { navigator.clipboard.writeText(scanStore.toTSV()); btn.textContent = "Copied!"; setTimeout(() => { if (active === SCANNER_TAB) renderScanner(); }, 1200); }
         else if (act === "csv") downloadScanCSV();
         else if (act === "clear") { scanStore.clear(); scanSkips.length = 0; scanReview.length = 0; renderScanner(); }
-        else if (act === "dropclear") { dropClear(); scanSkips.length = 0; renderScanner(); }
+        // Clear wipes the whole scratchpad: the tally, the skipped-file list, and any error.
+        else if (act === "dropclear") { dropClear(); scanSkips.length = 0; ocrError = null; renderScanner(); }
         else if (act === "junk-add-btn") { const inp = document.getElementById("junkAdd"); if (inp) addJunk(inp.value); }
         else if (act === "junk-clear") { if (scanJunk.length && confirm(`Clear all ${scanJunk.length} junk pattern${scanJunk.length !== 1 ? "s" : ""}?`)) { scanJunk.length = 0; persistScanJunk(); renderScanner(); } }
         else if (act === "runrename") renameCharacter();
@@ -7893,23 +8170,9 @@
       const inp = e.target.closest("[data-review-input]");
       if (inp && e.key === "Enter") { e.preventDefault(); const v = inp.value.trim(); if (v) resolveReview(+inp.dataset.reviewInput, v); }
     });
-    // Run-name field: track keystrokes live without re-rendering (keeps focus); it's committed on save.
-    scannerPanel.addEventListener("input", (e) => {
-    });
     scannerPanel.addEventListener("change", (e) => {
       if (e.target.id === "scanFiles") { scanFiles(e.target.files); e.target.value = ""; }
-      else if (e.target.id === "scanCharName") {
-        let v = e.target.value;
-        if (v === "__new__") { v = (prompt("New character name:", "") || "").trim(); if (!v) { renderScanner(); return; } }
-        charName = v; persistCharName(); ocrError = null;
-        if (!editingRunId) runCoreBoost = false; // new context → reset the manual toggle
-        renderScanner();
-      }
-      else if (e.target.id === "scanRaid") { setSelectedRaid(e.target.value); rememberRunPrefs(); renderScanner(); } // core boost stays as set, sticky, SPEC §16.8
       else if (e.target.id === "scanCoreBoost") { runCoreBoost = e.target.checked; rememberRunPrefs(); renderScanner(); } // manual override of the auto-infer; sticky
-      else if (e.target.id === "scanPartyTrack") { partyTrack = e.target.checked; persistPartyTrack(); renderScanner(); } // global pref; applies to the NEXT scan
-      else if (e.target.id === "scanMaxLevel") { setMaxLevel(charName, e.target.checked); renderScanner(); } // per-character setting
-      else if (e.target.id === "scanLuck") { setCharLuck(charName, e.target.value); renderScanner(); } // per-character sticky luck stat
       else if (e.target.id === "runFilterChar") { runFilterChar = e.target.value; renderScanner(); }
       else if (e.target.id === "runTimeEdit") { const secs = parseTimeInput(e.target.value); if (secs != null) { timerPause(); runTimer.elapsedSec = secs; } timerEditing = false; renderScanner(); }
     });
@@ -8059,6 +8322,89 @@
       document.body.appendChild(back);
     }
     document.getElementById("verBtn").addEventListener("click", openChangelog);
+
+    // Header gear icon → Settings modal (same chrome as the changelog). Currently one section:
+    // which Seal Shop currencies count in the run tally. They're untradeable, so their derived
+    // gold value only matters to a player who'd otherwise buy the redeemed item; excluding one
+    // zeroes it in the Drops run value + newly saved runs, while the Items tab keeps showing
+    // its best-use value. Global on/off buttons flip every per-currency checkbox at once.
+    function openSettings() {
+      const back = document.createElement("div");
+      back.className = "modal-back";
+      const currencyRows = () => sealCurrencies().map((n) => {
+        const v = sealValues[n];
+        const on = !appSettings.sealExclude.includes(n);
+        return `<label class="set-seal-row"><input type="checkbox" data-seal-count="${escTxt(n)}"${on ? " checked" : ""}>
+          <span>${escTxt(n)}</span><span class="set-seal-val gold">${v?.unit != null ? fmt(v.unit) + " ea" : "—"}</span></label>`;
+      }).join("") || `<p class="hint">No Seal Shop currencies loaded.</p>`;
+      back.innerHTML = `<div class="modal preset-modal" role="dialog" aria-modal="true" aria-label="Settings">
+        <div class="mhead"><h2>Settings</h2><button type="button" class="mclose" title="Close">&times;</button></div>
+        <div class="mbody">
+          <h3 class="preset-sec">Core Boost Plus subscription</h3>
+          <p class="set-hint">One subscription covers your whole account, so the Drop Data panel counts every character's runs against it. Give it a start date to get a daily rate and a countdown. Free 14-day variants show up in events, hence the length field.</p>
+          <div class="set-row">
+            <label>Started <input type="date" id="setPlusStart" value="${appSettings.plus.start || ""}"></label>
+            <label>lasting <input type="text" id="setPlusDays" inputmode="numeric" value="${appSettings.plus.days}" autocomplete="off"> days</label>
+            <label>for $<input type="text" id="setPlusUsd" inputmode="decimal" value="${appSettings.plus.usd}" autocomplete="off"></label>
+            <span class="set-row-note" id="setPlusNote"></span></div>
+          <h3 class="preset-sec">Seal Shop drops in the run value</h3>
+          <p class="set-hint">Seals and other redemption currencies are untradeable; the app values them at their best shop redemption. If you wouldn't buy that item anyway, the value isn't real income. Unchecked currencies count 0 in the Drops tally and in runs you save from now on. Already-saved runs and the Items tab are unaffected.</p>
+          <div class="set-acts"><button type="button" data-set-all="on">Count all</button><button type="button" data-set-all="off">Exclude all</button></div>
+          <div class="set-seal-list">${currencyRows()}</div>
+        </div></div>`;
+      const showPlusNote = () => {
+        const t = plusTerm();
+        back.querySelector("#setPlusNote").innerHTML = !t
+          ? `<span class="hint">no start date, no countdown</span>`
+          : t.remaining > 0
+            ? `day ${t.elapsed} of ${t.days}, ${t.remaining} left`
+            : `<span class="scan-bad">expired ${-t.remaining} day${-t.remaining !== 1 ? "s" : ""} ago</span>`;
+      };
+      const applyChange = () => {
+        persistAppSettings();
+        if (active === SCANNER_TAB) renderScanner();
+      };
+      const close = () => { back.remove(); document.removeEventListener("keydown", onKey); };
+      const onKey = (e) => { if (e.key === "Escape") close(); };
+      back.addEventListener("click", (e) => {
+        const all = e.target.closest("[data-set-all]");
+        if (all) {
+          appSettings.sealExclude = all.dataset.setAll === "off" ? sealCurrencies() : [];
+          back.querySelector(".set-seal-list").innerHTML = currencyRows();
+          applyChange(); return;
+        }
+        if (e.target === back || e.target.closest(".mclose")) close();
+      });
+      back.addEventListener("change", (e) => {
+        const cb = e.target.closest("[data-seal-count]");
+        if (cb) {
+          const name = cb.dataset.sealCount;
+          appSettings.sealExclude = appSettings.sealExclude.filter((n) => n !== name);
+          if (!cb.checked) appSettings.sealExclude.push(name);
+          applyChange(); return;
+        }
+        if (e.target.id === "setPlusStart") {
+          appSettings.plus.start = /^\d{4}-\d{2}-\d{2}$/.test(e.target.value) ? e.target.value : null;
+          showPlusNote(); applyChange(); return;
+        }
+        if (e.target.id === "setPlusDays") {
+          const v = parseNum(e.target.value);
+          appSettings.plus.days = v != null && v > 0 ? Math.round(v) : CORE_BOOST_PLUS_DAYS;
+          e.target.value = appSettings.plus.days;
+          showPlusNote(); applyChange(); return;
+        }
+        if (e.target.id === "setPlusUsd") {
+          const v = parseNum(e.target.value);
+          appSettings.plus.usd = v != null && v >= 0 ? v : CORE_BOOST_PLUS_USD;
+          e.target.value = appSettings.plus.usd;
+          applyChange();
+        }
+      });
+      document.addEventListener("keydown", onKey);
+      document.body.appendChild(back);
+      showPlusNote();
+    }
+    document.getElementById("setBtn").addEventListener("click", openSettings);
 
     // Pre-apply explainer for a gear preset (GEAR_PRESETS `blurb`, SPEC §9.1): what it
     // does + what's left to enter by hand, with Apply / Cancel. Same chrome as the
