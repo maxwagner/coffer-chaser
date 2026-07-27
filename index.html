@@ -7454,13 +7454,14 @@
       const perRunVal = pooled ? s.pooledPerRun : s.valuePerRun;
       const perHourVal = pooled ? s.pooledPerHour : s.valuePerHour;
       const perHour = perHourVal == null ? "—" : fmt(perHourVal);
+      const durVal = pooled ? s.totalPooledDurationSec : s.totalDurationSec;
       const dataViewToggle = anyPartyRuns
         ? `<div class="modeToggle mini scan-dataview" title="Off = only your drops. On = every party member's run counts as a sample (runs and total scale with party size; per-run and per-hour are what one player gets). A bigger sample of what a run is worth. The Core buffs panel pools too: party cores sharpen the per-core values, run counts and spend stay your own (pet cores never pool).">
             <button type="button" data-dataview="${pooled ? "mine" : "pooled"}" class="onoff${pooled ? " on" : ""}">Pooled</button></div>`
         : "";
       const summary = `<div class="scan-run-summary">
         <div><span class="srs-n">${runsN}</span><span class="srs-l">run${runsN !== 1 ? "s" : ""}</span></div>
-        <div><span class="srs-n">${s.totalDurationSec ? fmtDuration(s.totalDurationSec) : "—"}</span><span class="srs-l">total time</span></div>
+        <div><span class="srs-n">${durVal ? fmtDuration(durVal) : "—"}</span><span class="srs-l">total time</span></div>
         <div><span class="srs-n gold">${fmt(totalVal)}</span><span class="srs-l">total value</span></div>
         <div><span class="srs-n gold">${fmt(perRunVal)}</span><span class="srs-l">per run</span></div>
         <div><span class="srs-n gold">${perHour}</span><span class="srs-l">per hour</span></div>

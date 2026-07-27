@@ -1174,7 +1174,7 @@ export function runsToday(runs = [], { character = "", raid = "", now = new Date
 export function summarizeRuns(runs = []) {
   // `timedValue`/`timedDurationSec` accumulate ONLY runs that recorded a time, so value/hour
   // is computed strictly from timed runs (an untimed run's value never inflates the rate).
-  const base = () => ({ count: 0, value: 0, gold: 0, durationSec: 0, timedValue: 0, timedDurationSec: 0, timedCount: 0, pooledValue: 0, timedPooledValue: 0, partyRuns: 0, pooledCount: 0, pooledTotalValue: 0 });
+  const base = () => ({ count: 0, value: 0, gold: 0, durationSec: 0, pooledDurationSec: 0, timedValue: 0, timedDurationSec: 0, timedCount: 0, pooledValue: 0, timedPooledValue: 0, partyRuns: 0, pooledCount: 0, pooledTotalValue: 0 });
   const total = base();
   const perRaid = {}, perCharacter = {};
   // Pooled per-player value (SPEC §16.11): items pooled across the whole party ÷ party size,
@@ -1184,7 +1184,9 @@ export function summarizeRuns(runs = []) {
   // A ×N party run counts as N SAMPLES in the pooled view: `pooledCount` sums party sizes and
   // `pooledTotalValue` sums every player's assumed haul (pv × size), so pooled Runs/Total scale
   // with the party while pooledPerRun (= pooledTotalValue/pooledCount, a size-weighted mean)
-  // and pooledPerHour stay per-player.
+  // and pooledPerHour stay per-player. TIME pools the same way (`pooledDurationSec` = Σ d × size,
+  // every player spends the run's wall clock), so the pooled summary stays internally consistent:
+  // total value ÷ total time still reads as the per-player rate.
   const pooled = (r) => {
     const size = r.partySize > 1 ? r.partySize : 1;
     const partyItems = (r.party || []).reduce((s, m) => s + (m.itemsValue || 0), 0);
@@ -1200,7 +1202,7 @@ export function summarizeRuns(runs = []) {
     const mode = r.mode === "Hero" ? "Hero" : "Normal";
     const mb = ((raidB.byMode ??= {})[mode] ??= base());
     for (const bucket of [total, raidB, (perCharacter[r.character || "—"] ??= base()), mb]) {
-      bucket.count++; bucket.value += v; bucket.gold += g; bucket.durationSec += d;
+      bucket.count++; bucket.value += v; bucket.gold += g; bucket.durationSec += d; bucket.pooledDurationSec += d * size;
       bucket.pooledValue += pv; bucket.pooledCount += size; bucket.pooledTotalValue += pv * size;
       if (r.partySize > 1) bucket.partyRuns++;
       if (d > 0) { bucket.timedValue += v; bucket.timedDurationSec += d; bucket.timedCount++; bucket.timedPooledValue += pv; }
@@ -1222,6 +1224,7 @@ export function summarizeRuns(runs = []) {
     totalPooledValue: total.pooledTotalValue, // Σ every player's assumed haul (pv × size)
     totalGold: total.gold,
     totalDurationSec: total.durationSec,
+    totalPooledDurationSec: total.pooledDurationSec, // Σ d × party size, the pooled sample's clock
     valuePerRun: total.count ? total.value / total.count : 0,
     valuePerHour: perHour(total),
     pooledPerRun: total.pooledCount ? total.pooledTotalValue / total.pooledCount : 0,
