@@ -806,7 +806,7 @@
     .scan-runmode { display: inline-flex; }
     .scan-mode-pill { display: inline-block; min-width: 15px; padding: 0 5px; border-radius: 4px; font-size: 10px; font-weight: 600;
       text-align: center; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gold); border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent); vertical-align: middle; }
-    .scan-mode-pill.scan-core-pill { color: var(--good); border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+    .scan-mode-pill.scan-core-pill { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
     .scan-mode-pill.scan-hero-pill { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, transparent); }
     /* Core-source chips + breakdowns (SPEC §16.9) */
     .src-chip { display: inline-block; margin-left: 6px; min-width: 15px; padding: 0 5px; border-radius: 4px;
@@ -1019,6 +1019,18 @@
     .modeToggle.mini .chip:has(input:disabled) { opacity: 0.55; cursor: default; }
     .modeToggle.mini .chip::before, .modeToggle.mini button.onoff::before { content: "○"; display: inline-block; width: 13px; opacity: 0.6; }
     .modeToggle.mini .chip:has(input:checked)::before, .modeToggle.mini button.onoff.on::before { content: "✓"; color: var(--good); opacity: 1; }
+    /* Difficulty reads by COLOUR on the Drops run setup: Normal green, Hero red, matching the
+       red H pill in the run history. A tinted wash plus coloured text, not a filled button, so
+       the picked mode is obvious without shouting over the raid name next to it. Any other mode
+       string falls through to the plain .on style above. */
+    .scan-runmode button.on[data-runmode="Normal"] { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
+    .scan-runmode button.on[data-runmode="Hero"] { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+    .scan-mode-fixed.mode-Normal { color: var(--good); }
+    .scan-mode-fixed.mode-Hero { color: var(--bad); }
+    /* Core Boost, when on: the same wash in accent blue. Its own colour, so it doesn't read as
+       another difficulty, and the ✓ follows suit. */
+    .modeToggle.mini .chip.scan-coreboost:has(input:checked) { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+    .modeToggle.mini .chip.scan-coreboost:has(input:checked)::before { color: var(--accent); }
     /* Review UI, unmatched rows the user resolves into (persisted) aliases */
     .scan-review { margin: 8px 0 14px; border: 1px solid rgba(201, 168, 76, 0.4); border-radius: 8px;
       background: rgba(201, 168, 76, 0.05); padding: 8px 12px; max-width: 720px; }
@@ -7288,14 +7300,14 @@
         const m = currentRaidModes();
         return m.options.length > 1
           ? `<div class="modeToggle mini scan-runmode" title="Hero doubles the boss HP and the drops. It's logged as ONE run; the By-raid value/hour tells you whether hero beats normal.">${m.options.map((o) => `<button type="button" data-runmode="${o}" class="${runModeSel === o ? "on" : ""}">${o}</button>`).join("")}</div>`
-          : `<span class="scan-mode-fixed" title="${m.locked ? "This raid is listed as a fixed mode." : "This raid has no hero version."}">${escTxt(m.options[0])}</span>`;
+          : `<span class="scan-mode-fixed mode-${escTxt(m.options[0])}" title="${m.locked ? "This raid is listed as a fixed mode." : "This raid has no hero version."}">${escTxt(m.options[0])}</span>`;
       })();
       // The run setup lives IN the raid panel now: mode and core boost are properties of the
       // fight you just picked, so they sit on the panel's header row instead of in a card of
       // their own. The IGN isn't shown at all, it's just the active character (sidebar), and the
       // status line calls it out when it's missing.
       const corePill = coreAvail
-        ? `<div class="modeToggle mini"><label class="chip" title="Adds the raid's Core Gold to the run value. Auto-ticks when a Core Boost Plus drop is in the log (that only happens on a boosted run); tick it manually if you boosted WITHOUT the Plus sub. Sticky."><input type="checkbox" id="scanCoreBoost"${coreBoosted() ? " checked" : ""}${isCoreBoosted() ? " disabled" : ""}>Core Boost${isCoreBoosted() ? " (auto)" : ""}</label></div>`
+        ? `<div class="modeToggle mini"><label class="chip scan-coreboost" title="Adds the raid's Core Gold to the run value. Auto-ticks when a Core Boost Plus drop is in the log (that only happens on a boosted run); tick it manually if you boosted WITHOUT the Plus sub. Sticky."><input type="checkbox" id="scanCoreBoost"${coreBoosted() ? " checked" : ""}${isCoreBoosted() ? " disabled" : ""}>Core Boost${isCoreBoosted() ? " (auto)" : ""}</label></div>`
         : "";
       const setupCard = `<div class="scan-card scan-card-raids">
         <div class="scan-raid-head">
@@ -7492,11 +7504,19 @@
       // cores, while run counts and spend stay the player's own (pet cores never pool).
       const coreAll = summarizeCoreSources(filtered, { windowDays: Infinity, campfireCost: CAMPFIRE_CORE_COST, pooled });
       const core30 = summarizeCoreSources(filtered, { campfireCost: CAMPFIRE_CORE_COST, pooled });
-      // Core Boost Plus is an ACCOUNT subscription: it pays out on every character you play, so
-      // its row is computed over ALL runs, ignoring the character filter (which would otherwise
-      // understate a multi-character player's return). Never pooled either, a party member's sub
-      // is theirs to profit from, not yours. Same 30-day window as the rest of the panel.
-      const plusAll = summarizeCoreSources(runs.map(withBaseGold), { campfireCost: CAMPFIRE_CORE_COST });
+      // Core Boost Plus is an ACCOUNT subscription: its term row is computed over ALL runs,
+      // ignoring the character filter (which would otherwise understate a multi-character
+      // player's return). Never pooled either, a party member's sub is theirs to profit from,
+      // not yours. Window = THE CURRENT TERM, not the panel's 30 days: the row reports
+      // subscription accounting (per-day rate, gold per dollar), so runs from a previous term
+      // would be charging this term's price for cores it didn't buy. With no term set, nothing
+      // is filtered (the row only prints a "set this up" prompt anyway). The plain 30-day
+      // contribution tally for Plus lives in its own row below, alongside the other buffs.
+      const plusAll = (() => {
+        const t = plusTerm();
+        const src = runs.map(withBaseGold).filter((r) => !t || new Date(r.savedAt).getTime() >= t.start);
+        return summarizeCoreSources(src, { campfireCost: CAMPFIRE_CORE_COST, windowDays: Infinity });
+      })();
       // Base-boost drop-QUALITY comparison: the daily core boost adds no lines, it upgrades what
       // base cores contain, so compare avg base-core value, boosted vs unboosted, per raid+mode.
       const boostCmp = {}; // "raid|mode" → { boosted:{runs,val}, plain:{runs,val} }
@@ -7602,15 +7622,20 @@
             `<span class="${net >= 0 ? "scan-good" : "scan-bad"}">${sfmt(net)}</span>`,
           ]));
         }
+        // Plus, plain contribution: the same per-run tally every other buff gets, over the
+        // panel's 30 days and the current character filter. Separate from the subscription row
+        // at the bottom, which is term-scoped and account-wide.
+        if (src.plus.cores) row("Core Boost Plus", sep([coresRuns(src.plus), fmt(src.plus.value), `${fmt(src.plus.value / src.plus.runsWith)}/run`]));
         if (src.vvip.cores) row("VVIP", sep([coresRuns(src.vvip), fmt(src.vvip.value), `${fmt(src.vvip.value / src.vvip.runsWith)}/run`]));
         if (src.pet.cores) row("Pet", sep([coresRuns(src.pet), fmt(src.pet.value), `${fmt(src.pet.value / src.pet.runsWith)}/run`]));
         // Luck: plain source tally, no per-level split (the Luck stat is no longer recorded).
         if (src.luck.cores) row("Luck", sep([coresRuns(src.luck), fmt(src.luck.value), `${fmt(src.luck.value / src.luck.runsWith)}/run`]));
-        // Core Boost Plus LAST: it's the only row that isn't a per-run tally. Bought per ACCOUNT
-        // for a fixed term, so it reports subscription accounting and reads `plusAll` (EVERY
-        // character's runs, since one sub covers them all). With no term set, or an expired one,
-        // there's nothing meaningful to divide by, so the figures are withheld rather than shown
-        // against a denominator that doesn't exist. The gear opens Settings, where the term lives.
+        // The subscription row LAST: it's the only row that isn't a per-run tally. Bought per
+        // ACCOUNT for a fixed term, so it reports subscription accounting and reads `plusAll`
+        // (EVERY character's runs since THIS term started, since one sub covers them all). With
+        // no term set, or an expired one, there's nothing meaningful to divide by, so the figures
+        // are withheld rather than shown against a denominator that doesn't exist. The gear opens
+        // Settings, where the term lives.
         {
           const term = plusTerm();
           const active = !!term && term.remaining > 0;
@@ -7638,7 +7663,7 @@
         const untracked = cs.runCount - cs.trackedCount;
         const notes = [];
         if (untracked > 0) notes.push(`${untracked} older run${untracked !== 1 ? "s" : ""} excluded (no source data).`);
-        if (plusAll.sources.plus.cores && runFilterChar) notes.push(`Core Boost Plus covers the whole account, so its row counts every character's runs, not just ${escTxt(runFilterChar)}'s.`);
+        if (plusAll.sources.plus.cores && runFilterChar) notes.push(`Core Boost Plus covers the whole account, so its subscription row (the one with the gear) counts every character's runs since the term started, not just ${escTxt(runFilterChar)}'s last 30 days.`);
         const note = notes.length ? `<p class="hint">${notes.join(" ")}</p>` : "";
         // Open state is sticky (runPrefs.buffOpen, SPEC §16.8). Survives re-renders AND reloads.
         // Honours the Pooled toggle: party cores sharpen the values, run counts stay self-only.
