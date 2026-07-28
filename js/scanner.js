@@ -1523,8 +1523,11 @@ export function makeStore() {
       rows.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
       return rows;
     },
-    // Copy-for-Sheets only needs Date, Item, Min (avg/listings stay in the table + CSV).
-    toTSV() { const t = todayIso(); return this.summary().map((r) => `${t}\t${r.name}\t${r.min}`).join("\n"); },
+    // Copy-for-Sheets targets the PriceDump staging tab, which is Item | Min and has no date
+    // column: a dump is dated by the day the script runs, not by the paste. Emitting a date
+    // here shifts every column right and the script rejects the whole batch.
+    // (avg/listings stay in the table + CSV, which keeps its date.)
+    toTSV() { return this.summary().map((r) => `${r.name}\t${r.min}`).join("\n"); },
     toCSV() {
       const t = todayIso();
       const lines = ["Date,Item,Avg,Min,Listings"];

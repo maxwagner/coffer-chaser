@@ -7085,7 +7085,7 @@
       scannerPanel.innerHTML = `<h3>Tracker</h3>${toggle}${body}${skips}`;
     }
 
-    // Prices subtab: auction-house OCR → Date/Item/Min TSV for the PriceInfo Sheet tab.
+    // Prices subtab: auction-house OCR → Item/Min TSV for the PriceDump Sheet tab.
     function renderScanPrices() {
       const rows = scanStore.summary();
       // Flag any scanned item whose name doesn't match a known app item, either a genuinely new
@@ -7106,7 +7106,7 @@
             ${scanReview.map(reviewCard).join("")}</details>`
         : "";
       const aliasCount = Object.keys(scanAliases).length;
-      return `<p class="hint">OCR auction-house screenshots into prices. Drop or paste (Ctrl+V) images, review the table, then <b>Copy for Sheets</b> and paste the Date/Item/Min rows into the PriceInfo Sheet tab. OCR runs entirely in your browser (PP-OCR, self-hosted, the first scan loads the model once, then works offline).</p>
+      return `<p class="hint">OCR auction-house screenshots into prices. Drop or paste (Ctrl+V) images, review the table, then <b>Copy for Sheets</b> and paste the Item/Min rows into cell A2 of the PriceDump Sheet tab (then run 🪙 Coffer Chaser: Update History). OCR runs entirely in your browser (PP-OCR, self-hosted, the first scan loads the model once, then works offline).</p>
         <div class="scan-drop" id="scanDrop">Drop screenshots here · or click to browse
           <input type="file" id="scanFiles" accept="image/*" multiple hidden></div>
         <div class="scan-actions">

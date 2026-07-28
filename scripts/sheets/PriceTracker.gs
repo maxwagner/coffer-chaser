@@ -105,8 +105,13 @@ function updateHistory() {
   const audit = _auditDump(dump, dumpData);
   const notes = audit.warnings.slice();
 
+  // Row 1 is only worth mentioning when skipping it LOSES something. A blank row 1
+  // is the normal state after a clear that didn't restore the header, or a paste at
+  // A2 into a fresh sheet: nothing is dropped, and the run rewrites the header on
+  // its way out. Only a row 1 carrying a real name — a paste that landed on A1 —
+  // means a row is about to vanish, and that's worth stopping for.
   const headerCell = String(dumpData[0][0]).trim();
-  if (headerCell.toLowerCase() !== "item") {
+  if (headerCell && headerCell.toLowerCase() !== "item") {
     notes.push('Row 1 held "' + headerCell + '" instead of the "Item" header, so it was ' +
                "skipped. Re-paste that row if it was real data.");
   }
