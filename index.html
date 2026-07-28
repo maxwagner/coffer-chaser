@@ -1285,7 +1285,7 @@
       quickAddFilter, newStepId,
       raidMilestones, raidShortfall, raidAimTargets, nextUnmetRaid, projectedStatsAt,
       clonePath, leadingDoneRun, shoppingListTSV, reorderPath, REORDER_MODES } from "./js/planner.js";
-    import { makeStore, makeCanonicalizer, repairName, suggestNames, parseDrops, parseDropLine, makeActorMatcher, unwrapLines, resolveDropName as resolveDropNamePure, makeRunRecord, distinctCharacters, summarizeRuns, runsToTSV, raidModeOptions, isJunk, mergeGifFrameLines, dropUnitValue, bottleContentsLabel, normalizeBottleName, CORE_SOURCES, summarizeCoreSources, parseBoxLine, parseBoxOpenings, summarizeBoxes, boxExpectedValues } from "./js/scanner.js";
+    import { makeStore, makeCanonicalizer, repairName, suggestNames, parseDrops, parseDropLine, makeActorMatcher, unwrapLines, resolveDropName as resolveDropNamePure, makeRunRecord, distinctCharacters, summarizeRuns, runsToTSV, raidModeOptions, isJunk, mergeGifFrameLines, dropUnitValue, bottleContentsLabel, normalizeBottleName, CORE_SOURCES, summarizeCoreSources, parseBoxLine, parseBoxOpenings, unifyBoxNames, summarizeBoxes, boxExpectedValues } from "./js/scanner.js";
     // js/ppocr.js pulls the ~10MB OCR bundle, load it lazily on first scan, not at page load.
     let _ppocr = null;
     async function getPpocr() { if (!_ppocr) _ppocr = await import("./js/ppocr.js"); return _ppocr; }
@@ -7904,8 +7904,10 @@
         const { openings, orphans } = parseBoxOpenings(lines);
         // Resolve names against the vocabulary (aliases + previously logged boxes/payouts) so
         // the stored log holds clean names; the Gold pseudo-item passes through untouched.
-        for (const o of openings) boxPending.push({
-          box: scanCanon(o.box),
+        // unifyBoxNames then collapses the leftover per-line spelling drift (a box the vocab
+        // has never seen reads six ways across six opens), so one rename fixes the whole batch.
+        for (const o of unifyBoxNames(openings.map((o) => ({ ...o, box: scanCanon(o.box) })), isKnownName)) boxPending.push({
+          box: o.box,
           items: o.items.map((it) => ({ name: it.name === "Gold" ? "Gold" : resolveDropName(it.name), qty: it.qty })),
         });
         const src = blobs.length > 1 ? `${blobs.length} images` : (blobs[0]?.name || "image");

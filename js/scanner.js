@@ -685,13 +685,19 @@ export function detectionsToLines(detections, h = 0) {
 
 // A leading "[SYSTEM]" tag (brackets often OCR-garbled → tolerate any wrapping punctuation).
 const SYSTEM_PREFIX = /^\W*\[?\s*system\s*\]?\W*\s*/i;
+// Digits OCR reads as letters inside a COUNT ("[Gold] xl00o0" is x10000, "xlo000" the same run).
+// Only ever applied to the quantity token, never to a name, and the token must still hold at least
+// one real digit, so a stray "xo"/"xl" in prose can't become a count.
+const QTY_DIGITS = "\\dloOIiSsBZz";
+const DIGIT_FIX = { l: "1", I: "1", i: "1", o: "0", O: "0", S: "5", s: "5", B: "8", Z: "2", z: "2" };
+const fixDigits = (s) => parseInt(s.replace(/[a-z]/gi, (c) => DIGIT_FIX[c] ?? ""), 10);
 // Trailing "× N." quantity at the END of a line ("x 4.", "× 4", "X4"). Used to strip the count off
 // a bracket-less item name. The ×/x may be an OCR misread of either.
-const QTY_RE = /[x×✕╳]\s*(\d+)\s*\.?\s*$/i;
+const QTY_RE = new RegExp(`[x×✕╳]\\s*[${QTY_DIGITS}]*\\d[${QTY_DIGITS}]*\\s*\\.?\\s*$`, "i");
 // The "× N" quantity ANYWHERE (not end-anchored). The count follows the item but a trailing
 // "(Luck Effect)"/"(VVIP Service)" tag can sit AFTER it ("[Item] x2.(Luck Effect)"), so anchoring
 // to end would miss it and undercount to 1. Applied to the tail after the item bracket.
-const QTY_ANYWHERE = /[x×✕╳]\s*(\d+)/i;
+const QTY_ANYWHERE = new RegExp(`[x×✕╳]\\s*([${QTY_DIGITS}]*\\d[${QTY_DIGITS}]*)`, "i");
 // "<Actor> [has|have] obtained [the] <rest>". Actor is lazy so it stops at the first "obtained".
 // Whitespace around the verb is optional. OCR squeezes it out both after has/have ("Droooo
 // hasobtained[…]") AND between the actor and a no-"has" "obtained" ("Drooooobtained[…]", where the
@@ -712,6 +718,28 @@ const GOLD_RE = /^(\d[\d,]*)\s+gold\b/i;
 // non-letters stripped) so OCR-garbled parens/spacing still resolve. Order matters:
 // "boost" before the rest so "Core Boost Plus Effect" can't fall through, and "vip"
 // (not "vvip") tolerates a dropped V.
+// Bracketed groups, NESTING-aware. An item's own name can carry brackets, and the chat wraps it in
+// another pair ("You obtained [Uaithne Crystal Box[AS]] x1"), which a flat /\[([^\]]+)\]/ clips to
+// "Uaithne Crystal Box[AS" (unpriceable). Returns TOP-LEVEL groups only, as { inner, end }; an
+// unclosed "[" contributes nothing, so the caller's bracket-less fallback still handles OCR that
+// lost a closer. Pure.
+function bracketGroups(text) {
+  const out = [];
+  let depth = 0, start = -1;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === "[") { if (depth === 0) start = i; depth++; }
+    else if (c === "]" && depth > 0 && --depth === 0) out.push({ inner: text.slice(start + 1, i), end: i + 1 });
+  }
+  return out;
+}
+
+// Trim edge punctuation off a scanned name; keeps the name's own parens, a trailing "%"
+// (…DMG +8%), and a trailing "]" ONLY when the name opened a bracket ("…Box[AS]").
+function trimName(s) {
+  return String(s).replace(/^[^\w(]+/, "").replace(s.includes("[") ? /[^\w)%\]]+$/ : /[^\w)%]+$/, "").trim();
+}
+
 export const CORE_SOURCES = ["base", "campfire", "plus", "vvip", "pet", "guild", "luck"];
 const CORE_SOURCE_KEYS = [
   ["campfire", "campfire"],
@@ -761,9 +789,9 @@ export function parseDropLine(raw) {
   // core-source tag live. Bracket-less fallback: only a TRAILING paren group can be the tag (the
   // name itself may contain parens, but those sit before the qty).
   let item = null, tail = rest, source = "base";
-  const brs = [...rest.matchAll(/\[([^\]]+)\]/g)];
+  const brs = bracketGroups(rest);
   if (brs.length) {
-    item = brs[brs.length - 1][1]; tail = rest.slice(rest.lastIndexOf("]") + 1);
+    item = brs[brs.length - 1].inner; tail = rest.slice(brs[brs.length - 1].end);
     const tags = [...tail.matchAll(/\(([^)]*)\)/g)];
     // Tag = last paren group after the item; if OCR lost the parens, try the tail text itself
     // (qty stripped). Letters-only matching in coreSource keeps this safe.
@@ -775,8 +803,8 @@ export function parseDropLine(raw) {
   }
   // Quantity (default 1): the count follows the item, tolerant of a trailing tag after it.
   const q = tail.match(QTY_ANYWHERE);
-  const qty = q ? parseInt(q[1], 10) : 1;
-  item = item.replace(/^[^\w(]+|[^\w)%]+$/g, "").trim(); // trim edge punctuation; keep name parens + a trailing "%" (…DMG +8%)
+  const qty = q ? fixDigits(q[1]) : 1;
+  item = trimName(item);
   if (!item || item.length <= 1) return null;
   return { kind: "item", actor, self, item, qty, source };
 }
@@ -915,9 +943,8 @@ export function parseBoxLine(raw) {
   const u = t.match(USED_RE);
   if (u) {
     const rest = u[1].trim();
-    const brs = [...rest.matchAll(/\[([^\]]+)\]/g)];
-    let box = brs.length ? brs[brs.length - 1][1] : rest;
-    box = box.replace(/^[^\w(]+|[^\w)%]+$/g, "").trim(); // trim edge punctuation (incl. the trailing ".")
+    const brs = bracketGroups(rest);
+    const box = trimName(brs.length ? brs[brs.length - 1].inner : rest); // drops the trailing "."
     return box.length > 1 ? { kind: "used", box } : null;
   }
   const p = parseDropLine(raw);
@@ -947,6 +974,34 @@ export function parseBoxOpenings(lines) {
   }
   close();
   return { openings, orphans };
+}
+
+// One box, six spellings: OCR reads the same name differently on every line ("Grade E
+// Box(Season I)" / "GradeE Box(Season 1)"), which logs one box as six and splits its drop
+// rates. Fold key = lowercase, alphanumerics only, with the classic digit/letter confusions
+// collapsed (1/I/l, 0/O, 5/S, 8/B, 2/Z): enough to merge the variants, not enough to merge
+// Grade D with Grade E. The cluster's label is a name the caller already KNOWS (a previously
+// logged box), else the most frequent read. Returns relabelled openings. Pure. SPEC §16.12.
+const FOLD = { i: "1", l: "1", o: "0", s: "5", b: "8", z: "2" };
+const foldName = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "").replace(/[ilosbz]/g, (c) => FOLD[c]);
+export function unifyBoxNames(openings, isKnown) {
+  const clusters = new Map();
+  for (const o of openings || []) {
+    const k = foldName(o?.box); if (!k) continue;
+    const c = clusters.get(k) || new Map();
+    c.set(o.box, (c.get(o.box) || 0) + 1);
+    clusters.set(k, c);
+  }
+  const label = new Map();
+  for (const [k, c] of clusters) {
+    const names = [...c.entries()];
+    const known = names.find(([n]) => isKnown?.(n));
+    label.set(k, known ? known[0] : names.sort((a, b) => b[1] - a[1])[0][0]);
+  }
+  return (openings || []).map((o) => {
+    const to = label.get(foldName(o?.box));
+    return to && to !== o.box ? { ...o, box: to } : o;
+  });
 }
 
 // Aggregate a box-opening log (each record = ONE opening: { box, items:[{name,qty}] };
