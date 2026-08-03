@@ -260,6 +260,26 @@ const scoreSubset = (statDiff, keys) => {
   return score(o);
 };
 
+// Penalty-aware ranking (SPEC §7.2): the point-weighted harm a move does to scored stats the
+// goal did NOT ask for. The greedy's net-useful metric already nets gains against losses on the
+// OPEN needs; this extends it to every scored stat, so a cleaner-but-pricier scroll (Tempestuous:
+// same Att Spd, smaller Bal hit) can beat a cheap lossy one (Fast) instead of both surviving the
+// binary allow-lossy gate untouched. Weight 1 = the harm costs exactly what it is worth on the
+// ranking scale, i.e. a pick is judged the way the Upgrades tab judges it (`pointGain`), with the
+// goal-stat gains still capped at what is actually still needed.
+// EXCLUDED from the penalty: goal stats (the caller already nets those) and floored stats
+// (`floorBudgetPenalty` charges those scarcity-scaled, so counting both would double-charge).
+// Unscored stats carry weight 0, so `score` restricts this to the nine ranked stats for free.
+const COLLATERAL_WEIGHT = 1;
+const collateralPenalty = (statDiff, needSet, floors) => {
+  let harm = 0;
+  for (const s in (statDiff || {})) {
+    if (needSet.has(s) || (floors && s in floors)) continue;
+    if (statDiff[s] < 0) harm += score({ [s]: -statDiff[s] });
+  }
+  return COLLATERAL_WEIGHT * harm;
+};
+
 // A move is "lossy" if it's a NET ranking-point LOSS, you're sacrificing overall
 // value to chase one stat (e.g. a Fast scroll: +Att Spd but −Bal/−Att, net negative).
 // NOT lossy: a net-positive move that merely dips a minor stat (a +10-crit earring
@@ -1056,7 +1076,11 @@ export function generateMoves(loadout, ctx) {
 // Three refinements over the naive greedy (SPEC §7.2):
 //   • NET-useful metric, a move's value is its gain on open needs MINUS its harm
 //     to OTHER open needs (a +Crit/−Bal move counts −Bal when Bal is also a goal),
-//     so the bundle doesn't pick moves that fight each other.
+//     so the bundle doesn't pick moves that fight each other. Ranking is POINT-weighted
+//     (a multi-stat goal isn't dominated by Att-sized raw deltas) and PENALTY-AWARE:
+//     harm to scored stats the goal never mentioned is debited at full weight too
+//     (`collateralPenalty`), so the bundle prefers a clean move over a messy one when
+//     they're close in gold. Inclusion is unchanged: a move must still help an open need.
 //   • lossy gating, when `allowLossy` is off (default), NET-LOSS moves (pointGain<0,
 //     e.g. a Fast scroll) are excluded in EVERY mode, maximize included; flip the
 //     toggle to pull them in (a +AttSpd/−Bal scroll for "max att spd").
@@ -1115,6 +1139,7 @@ function greedySolve(needs, loadout, ctx, solverOpts = {}) {
   const mc = makeMoveCache(states, ctx);
   while (open().length && chosen.length < CAP) {
     const need = open();
+    const needSet = new Set(need); // goal stats, excluded from the collateral penalty (netted below)
     let best = null, budgetBlocked = false, lossyBlocked = false;
     for (const slot in states) {
       for (const m of mc.movesFor(slot)) {
@@ -1137,7 +1162,12 @@ function greedySolve(needs, loadout, ctx, solverOpts = {}) {
           const improves = need.some((s) => (m.statDiff?.[s] || 0) > 0);
           const enables = need.some((s) => (m.enables?.[s] || 0) > 0);
           if (!improves && !enables) continue;            // helps no open need, directly or via headroom
-          value = scoreSubset(m.statDiff, need) + scoreSubset(m.enables, need);
+          // ...then DEBIT what the move costs you elsewhere (penalty-aware, weight 1): between two
+          // bases that push the open need equally, the one that doesn't dump Bal/Crit now wins.
+          // Maximize compares `value` directly (no division), so a net-negative value is meaningful
+          // and left unclamped, it simply sorts below every cleaner candidate.
+          value = scoreSubset(m.statDiff, need) + scoreSubset(m.enables, need)
+                - collateralPenalty(m.statDiff, needSet, floors);
           // Floor-efficiency (issue 6/7): a move eating a scarce floor's budget is worth LESS. Demote
           // it (down to a last-resort epsilon when the budget it eats outweighs its gain) rather than
           // dropping it, a floor-efficient alternative then wins, but if this is the only move that
@@ -1148,32 +1178,32 @@ function greedySolve(needs, loadout, ctx, solverOpts = {}) {
           // capped at what's still needed; cheapest gold per net unit wins. A tierStep's
           // unlocked tuning headroom counts too (so a destruction target unreachable on the
           // current base can climb tiers to a system whose Surplus cap covers it).
-          let useful = 0, enabled = 0;
+          // `useful`/`enabled` are RAW stat units and decide INCLUSION only (unchanged: a move must
+          // still push an open need to be considered at all). `vp` is the same thing POINT-weighted,
+          // and that is what RANKS, so a two-stat goal isn't decided by whichever stat happens to
+          // come in Att-sized numbers.
+          let useful = 0, enabled = 0, vp = 0;
           for (const s of need) {
             const d = m.statDiff?.[s] || 0;
             if (d > 0) useful += Math.min(d, remaining[s]);
             else if (d < 0) useful += d;
+            vp += score({ [s]: d > 0 ? Math.min(d, remaining[s]) : d });
             const e = m.enables?.[s] || 0;
-            if (e > 0) enabled += Math.min(e, remaining[s]);
+            if (e > 0) { enabled += Math.min(e, remaining[s]); vp += score({ [s]: Math.min(e, remaining[s]) }); }
           }
           if (useful + enabled <= 0) continue;
-          value = useful + enabled;
-          // Floor-efficiency (issue 6/7): when floors are set, rank in POINT units (so the floored-stat
-          // penalty is comparable to the need gain) and subtract the scarcity-scaled floor budget the
-          // move consumes, so a Bal-efficient move beats a cheaper-but-Bal-hungry one as the floor
-          // tightens. A move worth less than the floor budget it eats is demoted to a last-resort
-          // epsilon (kept, not dropped, so a boundary move that still FITS can close the goal; the hard
-          // floorViolation below governs real breaches). No floors ⇒ the raw net-stat value is unchanged.
-          if (floors) {
-            let vp = 0;
-            for (const s of need) {
-              const d = m.statDiff?.[s] || 0;
-              vp += score({ [s]: d > 0 ? Math.min(d, remaining[s]) : d });
-              const e = m.enables?.[s] || 0;
-              if (e > 0) vp += score({ [s]: Math.min(e, remaining[s]) });
-            }
-            value = Math.max(vp - floorBudgetPenalty(m, totals, floors, need), 1e-9);
-          }
+          // Penalty-aware (weight 1): debit the harm done to scored stats outside the goal, so the
+          // cheapest-per-goal-unit pick is no longer free to trash everything else on the way.
+          value = vp - collateralPenalty(m.statDiff, needSet, floors);
+          // Floor-efficiency (issue 6/7): when floors are set, also subtract the scarcity-scaled floor
+          // budget the move consumes (comparable units, both point-weighted), so a Bal-efficient move
+          // beats a cheaper-but-Bal-hungry one as the floor tightens.
+          if (floors) value -= floorBudgetPenalty(m, totals, floors, need);
+          // `value` is the DIVISOR of the gold metric, so it must stay positive: a move whose
+          // collateral/floor cost outweighs its goal progress is demoted to a last-resort epsilon,
+          // kept rather than dropped (a boundary move that still FITS can be what closes the goal;
+          // the hard floorViolation check below governs real breaches).
+          value = Math.max(value, 1e-9);
         }
         if (!lossyOK && isLossy(m)) { lossyBlocked = true; continue; } // net-loss move, gated off
         if (m.goldCost > budget - spent) { budgetBlocked = true; continue; } // wouldn't fit budget
