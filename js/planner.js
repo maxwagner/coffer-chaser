@@ -821,6 +821,65 @@ export function aggregateMaterials(entries, ids = null) {
   return { gold, materials, steps };
 }
 
+// Deep merged shopping pile (SPEC §17.16), the "full list" popup's data.
+// EVERY item at every crafting depth of the selected ready steps, ONE row per distinct
+// item, intermediates included. Demand propagates top-down by SHORTFALL: an item's need
+// is summed across all its consumers first (steps + parent recipes), then owned stock
+// (+ on-hand weekly-box coverage via `extraHave`) is credited, and only the remainder
+// recurses into its recipe. So owning a crafted intermediate shrinks its whole subtree,
+// and a base material shared by several recipes gets one row with the true merged total.
+// Recipes expand unconditionally (default to craft; `buyCheaper` flags rows the cost
+// model would buy instead), except free-flagged rows (shortfall 0, nothing to craft).
+// Rows: { name, need, have, boxNow, short, free, crafted, buyCheaper, unit (min
+// market/craft), market, craft, gold (short × unit), rank, sources [{ from, qty, step }] }.
+// `rank` = longest path from the top-level pile, so processing ascending guarantees every
+// consumer registered its demand before the item is judged, and rank DESCENDING is a
+// valid build order for the crafted rows (every recipe edge increases rank).
+// `labelFor(entry)` names step sources (the UI passes stepLabel).
+export function deepMaterials(entries, ids, ctx, { extraHave = {}, labelFor = null } = {}) {
+  const canCraft = (n) => !!ctx.recipes?.[n] && ctx.craftCost(n) != null;
+  const demand = {}, sources = {};
+  const addDemand = (n, q, from, step) => {
+    if (!(q > 0)) return;
+    demand[n] = (demand[n] || 0) + q;
+    const s = (sources[n] ||= []);
+    const prev = s.find((x) => x.from === from && x.step === step);
+    if (prev) prev.qty += q; else s.push({ from, qty: q, step });
+  };
+  for (const e of entries || []) {
+    if (e.status !== "ready" || e.step.kind !== "move") continue;
+    if (ids && ids.size && !ids.has(e.step.id)) continue;
+    const label = labelFor ? labelFor(e) : "a planned step";
+    for (const [n, q] of Object.entries(e.materials || {})) addDemand(n, q, label, true);
+  }
+  const rank = {};
+  const setRank = (n, r, depth) => {
+    if (depth > 40 || (rank[n] != null && rank[n] >= r)) return;
+    rank[n] = r;
+    if (canCraft(n)) for (const { material } of ctx.recipes[n].materials) setRank(material, r + 1, depth + 1);
+  };
+  for (const n of Object.keys(demand)) setRank(n, 0, 0);
+  const rows = [];
+  for (const n of Object.keys(rank).sort((a, b) => rank[a] - rank[b] || a.localeCompare(b))) {
+    const raw = demand[n];
+    if (!(raw > 0)) continue; // reachable but fully covered upstream
+    const need = Math.ceil(raw);
+    const free = !!ctx.freeItems?.has?.(n);
+    const have = ctx.inventory?.[n] || 0;
+    const boxNow = free ? 0 : Math.max(0, Math.min(extraHave[n] || 0, need - have));
+    const short = free ? 0 : Math.max(0, need - have - boxNow);
+    const market = ctx.priceOf?.(n) ?? null;
+    const craft = ctx.craftCost(n);
+    const unit = free ? 0 : ctx.cost(n) ?? null;
+    rows.push({ name: n, need, have, boxNow, short, free, crafted: canCraft(n),
+      buyCheaper: canCraft(n) && market != null && craft != null && market < craft,
+      unit, market, craft, gold: short * (unit ?? 0), rank: rank[n], sources: sources[n] || [] });
+    if (canCraft(n) && short > 0)
+      for (const { material, qty } of ctx.recipes[n].materials) addDemand(material, qty * short, n, false);
+  }
+  return rows;
+}
+
 // Projected-stat aggregation over a selection (SPEC §17, phase 3)
 // Sums the READY move entries' forward-simulated `statDiff`s (done/blocked/impossible
 // contribute nothing, done is already in currentStats, and the rest aren't priced).

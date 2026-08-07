@@ -193,6 +193,20 @@
       color: var(--fg); font-size: 12px; padding: 6px 12px; cursor: pointer; }
     .preset-acts button:hover { border-color: var(--head); color: var(--head); }
     .preset-acts .preset-apply { border-color: var(--head); color: var(--head); font-weight: 600; }
+    /* Full shopping list modal (SPEC §17.16): the merged deep pile, two groups + prices. */
+    .plan-full-modal { max-width: 780px; }
+    .pf-scope { margin: 8px 0 2px; font-size: 12px; line-height: 1.5; color: var(--fg-dim); }
+    .pf-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+    .pf-table th { text-align: left; font: 600 10px var(--font-mono); letter-spacing: .05em;
+      text-transform: uppercase; color: var(--head); padding: 4px 6px; border-bottom: 1px solid var(--border); }
+    .pf-table th.num, .pf-table td.num { text-align: right; white-space: nowrap; }
+    .pf-table td { padding: 3px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .pf-table tr:last-child td { border-bottom: none; }
+    .pf-table tr.is-free td { opacity: .65; }
+    .pf-name span[title] { cursor: help; }
+    .pf-tag { font-size: 10px; color: var(--fg-dim); border: 1px solid var(--border); border-radius: 4px;
+      padding: 0 4px; margin-left: 6px; white-space: nowrap; }
+    .pf-sub { margin: 4px 0 0; font-size: 12px; color: var(--fg-dim); text-align: right; }
     /* Settings modal (gear icon): per-currency count/exclude checkboxes + all-on/off buttons. */
     .set-hint { margin: 5px 0 0; font-size: 12px; line-height: 1.5; color: var(--fg-dim); }
     .set-acts { display: flex; gap: 8px; margin: 10px 0 6px; }
@@ -1291,7 +1305,7 @@
     import { generateMoves, solveThreshold, solveBudget, isLossy, slotsWithBaseSwap, bestBaseSwapBySlot, bestEnchantBySlotAffix, buildTierChain } from "./js/solver.js";
     import { tierPath as tierPathPure, expandBOM as expandBOMPure, moveBuys as moveBuysPure,
       isCraftedMat, drawMaterial,
-      reconcilePath, aggregateMaterials, aggregateStatDiffs, projectAffordability, stepLabel as stepLabelPure,
+      reconcilePath, aggregateMaterials, deepMaterials, aggregateStatDiffs, projectAffordability, stepLabel as stepLabelPure,
       newNoteStep, newGoalStep, newInfuseStep, insertSteps, removeStep, moveStep,
       moveToSteps, stepKey, serializePath, parsePath, migratePath, pathToTSV, slotUpgradeOptions, enhanceTargetOptions,
       quickAddFilter, newStepId,
@@ -4470,17 +4484,22 @@
       return `<div class="plan-mats-head"><h4>${planRaidPick ? "Raid" : "Next raid"}: ${esc(r.raid)} <span class="muted" style="font-weight:400">(${aimWord})</span></h4>${gapPill}</div>${controls}${rows}${foot}`;
     }
 
+    // Weekly-box plan for a materials pile (SPEC §18): how much of it the free weekly
+    // choice boxes cover, on-hand unopened boxes now, future weekly claims later.
+    // Shared by the rail panel and the full-list modal so both read the SAME schedule.
+    function planWeeklyFor(materials) {
+      const weeklyOpts = weeklyBoxes.length ? weeklyBoxOptions(weeklyBoxes, prices, PRICE_BASIS, cost) : [];
+      return weeklyOpts.length
+        ? weeklyBoxPlan(weeklyOpts, weeklyDemand(materials, new Set(weeklyOpts.map((o) => o.item)), moveCtx),
+            { onHand: weeklyBox.onHand, alts: weeklyBox.alts, maxWeeks: WEEKLY_BOX_MAX_WEEKS })
+        : null;
+    }
+
     function planMaterialsPanel(entries, afford, milestones, milestonesCap) {
       const hasSel = plannerSel.size > 0;
       const agg = aggregateMaterials(entries, hasSel ? plannerSel : null);
-      // Weekly boxes (SPEC §18): from the SAME pile as the panel (selection-scoped), how much
-      // of it the free weekly choice boxes cover, on-hand unopened boxes now, future weekly
-      // claims later. Purely advisory: nothing here changes affordability or step costs.
-      const weeklyOpts = weeklyBoxes.length ? weeklyBoxOptions(weeklyBoxes, prices, PRICE_BASIS, cost) : [];
-      const weekly = weeklyOpts.length
-        ? weeklyBoxPlan(weeklyOpts, weeklyDemand(agg.materials, new Set(weeklyOpts.map((o) => o.item)), moveCtx),
-            { onHand: weeklyBox.onHand, alts: weeklyBox.alts, maxWeeks: WEEKLY_BOX_MAX_WEEKS })
-        : null;
+      // Purely advisory here: nothing changes affordability or step costs.
+      const weekly = planWeeklyFor(agg.materials);
       // One materials row, recursive (SPEC §17.10): a CRAFTED item's name is an expand toggle.
       // Clicking reveals its recipe as indented sub-rows (need = per-craft qty × the parent's
       // remaining shortfall), each with the same free flag + owned stepper, recursively. The pile
@@ -4544,6 +4563,7 @@
         ${planRaidSection(entries, milestones, milestonesCap)}
         <div class="plan-mats-head"><h4>Materials: ${hasSel ? `selection (${agg.steps} ready step${agg.steps !== 1 ? "s" : ""})` : "whole path"}</h4>` +
           `<button type="button" class="plan-mat-tool${planShortOnly ? " on" : ""}" data-plan-do="short-toggle" title="Hide materials your stock already covers">shortfall only</button>` +
+          `<button type="button" class="plan-mat-tool" data-plan-do="full-list" title="Open the full shopping list: every material at every crafting depth, merged into one row per item, with prices">full list</button>` +
           `<button type="button" class="plan-mat-tool" data-plan-do="copy-shop" title="Copy this pile as a shopping list (TSV: item, need, have, shortfall, est. gold)">copy list</button></div>
         ${afmsg ? `<p class="plan-afford">${afmsg}</p>` : ""}
         ${matRows}
@@ -4604,6 +4624,93 @@
         ${counter("Unopened boxes", "onHand", "Claimed-but-unopened weekly boxes banked across the account")}
         ${counter("Boxes / week", "alts", "Characters claiming a weekly box (each needs the qualifying raid)")}
         ${schedule}`;
+    }
+
+    // Full shopping list modal (SPEC §17.16): the rail pile fully expanded and MERGED, one
+    // row per distinct item at ANY crafting depth, intermediates included, each with its own
+    // stepper + free pill so stock is marked right where the need shows. Two groups: "Buy /
+    // farm" (the leaves) and "Craft" (intermediates, deepest first = a valid build order).
+    // On-hand weekly boxes count as stock; future weekly claims only annotate. Steppers and
+    // free pills re-render the modal through the normal applyInventory/applyFreeItems chain
+    // (renderPlanner's tail refreshes the open modal).
+    let planFullBack = null; // the open modal's backdrop (null = closed)
+    function planFullListBody() {
+      const { entries } = reconcilePath(plannerPath, loadout, checklistDone, moveCtx);
+      const scope = plannerSel.size ? plannerSel : null;
+      const agg = aggregateMaterials(entries, scope);
+      const weekly = planWeeklyFor(agg.materials);
+      const extraHave = {}, future = {};
+      for (const [n, w] of Object.entries(weekly?.perItem || {})) {
+        if (w.coveredNow > 0) extraHave[n] = w.coveredNow;
+        if (w.covered > w.coveredNow) future[n] = { units: w.covered - w.coveredNow, lastWeek: w.lastWeek };
+      }
+      const rows = deepMaterials(entries, scope, moveCtx,
+        { extraHave, labelFor: (e) => stepLabelPure(e.step, planSlotLabel) });
+      if (!rows.length)
+        return `<p class="muted" style="font-size:13px">No materials needed${agg.steps ? "" : " (nothing ready in the selection)"}.</p>`;
+      const srcTip = (r) => "Used by: " + r.sources.map((s) =>
+        `${s.step ? "" : "crafting "}${s.from} (x${Math.ceil(s.qty)})`).join("; ");
+      const row = (r) => {
+        if (planShortOnly && (r.free || r.short <= 0)) return "";
+        const tags = r.buyCheaper
+          ? `<span class="pf-tag" title="${esc(`Market ${fmt(r.market)} beats crafting at ${fmt(r.craft)}; the cost model buys this outright, so its ingredients below are a farm-it-yourself alternative`)}">buying is cheaper</span>`
+          : "";
+        const boxNotes =
+          (r.boxNow > 0 ? `<span class="plan-weekly-note" title="${esc(`${r.boxNow} covered by weekly boxes on hand, counted as stock in this list. Open them via the rail's Weekly boxes section.`)}">box ×${r.boxNow}</span>` : "") +
+          (future[r.name] ? `<span class="pf-tag" title="${esc(`${future[r.name].units} more coverable by future weekly claims (by week ${future[r.name].lastWeek}). NOT counted here: buying today means buying these too.`)}">+${future[r.name].units} boxable later</span>` : "");
+        const unitTip = r.crafted ? ` title="${esc(`craft ${fmt(r.craft)} · market ${r.market == null ? "none" : fmt(r.market)}`)}"` : "";
+        return `<tr${r.free ? ` class="is-free"` : ""}>` +
+          `<td class="pf-name"><span${r.sources.length ? ` title="${esc(srcTip(r))}"` : ""}>${escTxt(r.name)}</span>${tags}${boxNotes}</td>` +
+          `<td class="num">${r.need}</td>` +
+          `<td class="num">${invStepper(r.name)}</td>` +
+          `<td class="num">${r.free ? `<span class="pos">free</span>` : r.short > 0 ? `<span class="neg">${r.short}</span>` : `<span class="pos">✓</span>`}</td>` +
+          `<td class="num"${unitTip}>${fmt(r.unit)}</td>` +
+          `<td class="num">${r.short > 0 ? fmt(r.gold) : ""}</td>` +
+          `<td><button type="button" class="plan-free-pill${r.free ? " on" : ""}" data-plan-free="${esc(r.name)}" title="Mark this item as free. You have a stash or it costs you no gold. Applies everywhere (Planner, Upgrades, Target, catalog).">free</button></td></tr>`;
+      };
+      const table = (cells) => cells.length
+        ? `<table class="pf-table"><thead><tr><th>Item</th><th class="num">Need</th><th class="num">Own</th><th class="num">Short</th>` +
+          `<th class="num" title="Cheapest unit price, the smaller of market and craft">Unit ea</th>` +
+          `<th class="num" title="Gold to buy this row's shortfall outright at the unit price">Gold</th><th></th></tr></thead><tbody>${cells.join("")}</tbody></table>`
+        : `<p class="muted" style="font-size:12px;margin:4px 0">Nothing here${planShortOnly ? " (shortfalls all covered)" : ""}.</p>`;
+      const gather = rows.filter((r) => !r.crafted).sort((a, b) => a.name.localeCompare(b.name));
+      const craft = rows.filter((r) => r.crafted).sort((a, b) => b.rank - a.rank || a.name.localeCompare(b.name));
+      const gatherGold = gather.reduce((s, r) => s + (r.short > 0 ? r.gold : 0), 0);
+      return `<p class="pf-scope">Scope: ${scope ? `selection (${agg.steps} ready step${agg.steps !== 1 ? "s" : ""})` : "whole path"} · ` +
+        `total gold as the rail prices it: <span class="gold">${fmt(agg.gold)}</span>. ` +
+        `Hover an item for what uses it; hover a crafted row's unit price for craft vs market.</p>` +
+        `<h3 class="preset-sec">Buy / farm</h3>` + table(gather.map(row).filter(Boolean)) +
+        (gatherGold > 0 ? `<p class="pf-sub">Buying every shortfall above: ${fmt(gatherGold)} gold (the craft-everything route)</p>` : "") +
+        (craft.length ? `<h3 class="preset-sec">Then craft, in this order</h3>` +
+          `<p class="pf-sub" style="text-align:left;margin:2px 0 0">Deepest ingredients first. Work top to bottom; tick the stepper as you craft and the buy list shrinks.</p>` +
+          table(craft.map(row).filter(Boolean)) : "");
+    }
+    function refreshPlanFullList() {
+      if (planFullBack) planFullBack.querySelector("[data-pf-body]").innerHTML = planFullListBody();
+    }
+    function openPlanFullList() {
+      if (planFullBack) return;
+      const back = document.createElement("div");
+      back.className = "modal-back";
+      back.innerHTML = `<div class="modal plan-full-modal" role="dialog" aria-modal="true" aria-label="Full shopping list">
+        <div class="mhead"><h2>Full shopping list</h2>
+          <button type="button" class="plan-mat-tool${planShortOnly ? " on" : ""}" data-pf-short title="Hide rows your stock already covers">shortfall only</button>
+          <button type="button" class="mclose" title="Close">&times;</button></div>
+        <div class="mbody" data-pf-body>${planFullListBody()}</div></div>`;
+      const close = () => { back.remove(); planFullBack = null; document.removeEventListener("keydown", onKey); };
+      const onKey = (e) => { if (e.key === "Escape") close(); };
+      back.addEventListener("click", (e) => {
+        // The modal lives on <body>, outside plannerPanel's delegation, so the free pill is
+        // handled here. Steppers ride the document-level .inv-btn/.inv-n handlers as-is.
+        const freeBtn = e.target.closest("button[data-plan-free]");
+        if (freeBtn) { toggleFreeItem(freeBtn.dataset.planFree, !freeItems.has(freeBtn.dataset.planFree)); return; }
+        const sh = e.target.closest("[data-pf-short]");
+        if (sh) { planShortOnly = !planShortOnly; sh.classList.toggle("on", planShortOnly); renderPlanner(); return; }
+        if (e.target === back || e.target.closest(".mclose")) close();
+      });
+      document.addEventListener("keydown", onKey);
+      document.body.appendChild(back);
+      planFullBack = back;
     }
 
     function renderPlanner() {
@@ -4738,6 +4845,9 @@
         const qa = plannerPanel.querySelector("[data-plan-qa-input]");
         if (qa) { qa.focus(); qa.setSelectionRange(qa.value.length, qa.value.length); }
       }
+      // Keep the full-list modal live: every planner re-render (inventory edits, free-pill
+      // toggles, gold changes) rebuilds its body from the same fresh reconcile.
+      refreshPlanFullList();
     }
 
     // Seeded empty state (SPEC §17.14): instead of hint prose, the top 3 cheapest-per-point
@@ -5246,6 +5356,7 @@
         }
         if (act === "done-toggle") { planDoneOpen = !planDoneOpen; renderPlanner(); return; }
         if (act === "short-toggle") { planShortOnly = !planShortOnly; renderPlanner(); return; }
+        if (act === "full-list") { openPlanFullList(); return; }
         if (act === "copy-shop") {
           // Shopping list (SPEC §17.14): the CURRENT scope's pile as a mats-only TSV.
           const { entries } = reconcilePath(plannerPath, loadout, checklistDone, moveCtx);
