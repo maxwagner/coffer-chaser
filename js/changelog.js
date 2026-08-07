@@ -3,6 +3,18 @@
 // (index.html `renderChangelog`). Write entries in plain player language, not commit-speak.
 export const CHANGELOG = [
   {
+    version: "0.6",
+    date: "2026-08-07",
+    notes: "Drop tracker improvements; smarter target tab picker",
+    changes: [
+      "Reworked the Drops tracker. Pick your raid from a table instead of a dropdown, and run a circuit that walks you through a rotation. Your character name comes from the active profile now.",
+      "The Target tab now counts what an upgrade takes away, not just what it adds. A scroll that gave you the stat you asked for but cost you 7 Crit used to look like the best buy.",
+      "The Planner's materials list has a 'full list' button: shows the entire tree of materials.",
+      "Damage bars now compare stats per ranking point. Old mode remains as a toggle.",
+      "Core Boost Plus is now two rows: what it earned you, and a subscription row scoped to the term you're actually paying for.",
+    ],
+  },
+  {
     version: "0.5",
     date: "2026-07-25",
     notes: "Added equipment icons; reworked the Upgrades table",
