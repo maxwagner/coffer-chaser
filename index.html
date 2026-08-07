@@ -2903,7 +2903,7 @@
     // Slot pills, so this glyph is the only place the slot is SHOWN, but `moveSearch` still
     // carries the slot name, so filtering by "helm" or "ring1" keeps working. A slot with
     // no glyph yields "" and the row simply reads without one.
-    const moveSlotIcon = (m) => slotIcon(m.slot, { label: m.slot });
+    const moveSlotIcon = (m) => slotIcon(m.slot);
 
     // Free-text the search bar matches against (the move's plain-text label + type word +
     // slot + affix), so a user can filter by what they SEE, "advance", "swap suffix",
@@ -6171,7 +6171,7 @@
         const titleText = [s, g.base || `— ${s} —`, affixes].filter(Boolean).join("  ·  ");
         // The slot icon (SPEC §22) leads the row. This list carries no slot LABELS, so the
         // glyph is what names the slot, which matters most for the empty ones.
-        const ico = slotIcon(s, { label: s });
+        const ico = slotIcon(s);
         return `<li class="editable" data-slot="${s}" title="${titleText}">` +
           (ico ? `<span class="gico">${ico}</span>` : "") +
           `<div class="gtext"><div class="item">${base}</div>${affixLine}</div></li>`;

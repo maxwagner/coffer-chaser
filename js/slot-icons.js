@@ -149,6 +149,20 @@ export const SLOT_GLYPHS = Object.freeze({
 // slots share one glyph; everything else matches by name.
 const SLOT_ALIAS = Object.freeze({ ring1: "ring", ring2: "ring" });
 
+// Display names for the slot ids, used as the icons' hover tooltip. Where the id is
+// terse ("pant", "hand") the name follows the in-game equipment words instead.
+const SLOT_NAMES = Object.freeze({
+  weapon: "Weapon", helm: "Helm", chest: "Chest armor", pant: "Pants", hand: "Gloves",
+  feet: "Boots", necklace: "Necklace", earrings: "Earrings", belt: "Belt",
+  brooch: "Brooch", ring1: "Ring 1", ring2: "Ring 2", ring: "Ring", totem: "Totem",
+  artifact: "Artifact", rhod: "Rhod Compass",
+});
+
+/** Display name for a slot id ("pant" → "Pants"); falls back to the id itself. */
+export function slotName(slotId) {
+  return SLOT_NAMES[slotId] || String(slotId || "");
+}
+
 export const SLOT_ICON_STYLES = Object.freeze(["solid", "tile"]);
 
 // The tile style's backdrop. Kept here (not in the page CSS) because it is part of the
@@ -168,11 +182,12 @@ export function slotGlyphKey(slotId) {
  * Wrap raw glyph markup in an `<svg>`. Colour comes from the CSS `color` of an ancestor,
  * see the header note. Exported so the asset exporter can render ARTIFACT_GLYPHS too.
  */
-export function renderIcon(glyph, { style = "solid", size = null, label = "" } = {}) {
+export function renderIcon(glyph, { style = "solid", size = null, label = "", tip = "" } = {}) {
   const dims = size ? ` width="${size}" height="${size}"` : "";
   // role/aria-label rather than <title>: a <title> would raise a NATIVE tooltip on hover,
-  // which fights the app's own instant [data-tip] tooltips.
-  const a11y = ` role="img" aria-label="${label}"`;
+  // which fights the app's own instant [data-tip] tooltips. `tip` opts INTO that app
+  // tooltip; the asset exporter never passes it, so the standalone .svg files stay clean.
+  const a11y = ` role="img" aria-label="${label}"${tip ? ` data-tip="${tip}"` : ""}`;
   const body = style === "tile"
     ? `<defs>${TILE_GRADIENT}</defs><rect width="24" height="24" rx="6" fill="url(#slotTileBg)"/>` +
       `<g transform="translate(12 12) scale(.64) translate(-12 -12)">${glyph}</g>`
@@ -187,7 +202,7 @@ export function renderIcon(glyph, { style = "solid", size = null, label = "" } =
 export function slotIcon(slotId, opts = {}) {
   const key = slotGlyphKey(slotId);
   if (!key) return "";
-  return renderIcon(SLOT_GLYPHS[key], { label: slotId, ...opts });
+  return renderIcon(SLOT_GLYPHS[key], { label: slotName(slotId), tip: slotName(slotId), ...opts });
 }
 
 /** `<svg>` markup for a named artifact family, or "" if the family is unknown. */
