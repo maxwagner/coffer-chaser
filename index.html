@@ -1299,6 +1299,7 @@
     import { loadWeeklyBoxes, weeklyBoxOptions, weeklyDemand, weeklyBoxPlan, nextReset, stepBoxWaits, stepBoxSavings } from "./js/weeklybox.js";
     import { loadLegacy, legacyIngredientConflicts } from "./js/legacy.js";
     import { score } from "./js/score.js";
+    import { RANKING_WEIGHTS } from "./js/config.js";
     import { CHANGELOG, VERSION } from "./js/changelog.js";
     import { damageBreakdown, damageRating, dpsGain, statMarginals, DAMAGE_STAT_KEYS } from "./js/damage.js";
     import { makeCoster, enchantMethods, successRate, enchantCost, reEnhanceCost } from "./js/cost.js";
@@ -3169,8 +3170,8 @@
     const loadDamagePrefs = () => {
       try {
         const p = JSON.parse(localStorage.getItem(DAMAGE_STORAGE_KEY));
-        return { raid: p?.raid ?? null, custom: { ...(p?.custom || {}) }, tweaks: { ...(p?.tweaks || {}) } };
-      } catch { return { raid: null, custom: {}, tweaks: {} }; }
+        return { raid: p?.raid ?? null, custom: { ...(p?.custom || {}) }, tweaks: { ...(p?.tweaks || {}) }, perOne: !!p?.perOne };
+      } catch { return { raid: null, custom: {}, tweaks: {}, perOne: false }; }
     };
     let damagePrefs = loadDamagePrefs();
     const persistDamagePrefs = () => localStorage.setItem(DAMAGE_STORAGE_KEY, JSON.stringify(damagePrefs));
@@ -5702,19 +5703,24 @@
           </span></div>`;
       };
       const brk = damageBreakdown(eff, b);
-      // Marginals table: % damage per +1 of each stat, best first.
+      // Marginals table. Default view divides each per-+1 marginal by its RANKING
+      // WEIGHT (SPEC §2), so bars read as damage per ranking point: one point of Att
+      // (+1) and one point of Bal (+1/300) are comparably hard to acquire, making the
+      // bars cost-comparable. The toggle shows the raw per-+1 physics instead.
+      const perOne = !!damagePrefs.perOne;
       let margRows = "";
       if (brk) {
         const marg = statMarginals(eff, b);
-        const entries = DAMAGE_STAT_KEYS.map((k) => ({ k, g: marg[k] })).sort((a, x) => (x.g ?? -1) - (a.g ?? -1));
-        const maxG = Math.max(1e-9, ...entries.map((e) => e.g ?? 0));
-        margRows = entries.map(({ k, g }) => {
+        const shown = (g, k) => (g == null ? null : perOne ? g : g / (RANKING_WEIGHTS[k] || 1));
+        const entries = DAMAGE_STAT_KEYS.map((k) => ({ k, g: marg[k], s: shown(marg[k], k) })).sort((a, x) => (x.s ?? -1) - (a.s ?? -1));
+        const maxG = Math.max(1e-9, ...entries.map((e) => e.s ?? 0));
+        margRows = entries.map(({ k, g, s }) => {
           const capped = (k === "bal" || k === "crit") && g != null && g <= 0 && (k === "bal" ? b.balCap : b.critCap) && eff[k] >= (k === "bal" ? b.balCap : b.critCap);
           return `<div class="dmg-mcard${capped ? " capped" : ""}">
             <span class="mname">${STAT_LABEL[k]}</span>
             <span class="mval">${fmt(eff[k] || 0)}</span>
-            <div class="dmg-bar"><i style="width:${Math.max(0, ((g ?? 0) / maxG) * 100)}%"></i></div>
-            <span class="mmarg">${capped ? `<span class="dmg-capflag">capped</span>` : `${marginFmt(g)} <span class="muted">/ +1</span>`}</span>
+            <div class="dmg-bar"><i style="width:${Math.max(0, ((s ?? 0) / maxG) * 100)}%"></i></div>
+            <span class="mmarg">${capped ? `<span class="dmg-capflag">capped</span>` : `${marginFmt(s)} <span class="muted">${perOne ? "/ +1" : "/ pt"}</span>`}</span>
           </div>`;
         }).join("");
       }
@@ -5865,7 +5871,10 @@
           Tweak them freely in the panel (your real stats don't change). The picked boss also prices the Upgrades tab's DPS columns.</p>
         <div class="dmg-body">
           <div class="dmg-main">
-          ${brk ? `<div class="dmg-sec">${whatif}<h4 class="dmg-sec-h">Damage per stat point<span class="muted">, vs ${bossName}</span></h4>
+          ${brk ? `<div class="dmg-sec">${whatif}<h4 class="dmg-sec-h">Damage per ${perOne ? "stat point" : "ranking point"}<span class="muted">, vs ${bossName}</span>
+            <button type="button" class="plan-mat-tool" data-dmg-margmode title="${perOne
+              ? "Normalize by scarcity: one ranking point is +1 Att or +1/300 Bal (the app's ranking weights), so bars compare fairly across cheap and rare stats"
+              : "Show the raw effect of a single +1 of each stat instead (Bal will dwarf Att: a Bal point is ~300x rarer)"}">${perOne ? "per ranking point" : "per +1"}</button></h4>
             <div class="dmg-list">${margRows}</div></div>
             ${chain}`
           : `<div class="dmg-sec"><p class="dmg-hint" style="margin:0">Pick a raid with a Def value (or enter a custom Boss DEF) to compute damage.</p></div>`}
@@ -5906,6 +5915,9 @@
     damagePanel.addEventListener("click", (e) => {
       if (e.target.closest("button[data-dmg-reset]")) {
         damagePrefs.tweaks = {}; persistDamagePrefs(); renderDamage(); return;
+      }
+      if (e.target.closest("button[data-dmg-margmode]")) {
+        damagePrefs.perOne = !damagePrefs.perOne; persistDamagePrefs(); renderDamage(); return;
       }
     });
     // Remember the pipeline expandable's state across re-renders (toggle doesn't bubble).
