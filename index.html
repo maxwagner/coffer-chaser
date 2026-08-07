@@ -203,7 +203,7 @@
     .pf-table td { padding: 3px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .pf-table tr:last-child td { border-bottom: none; }
     .pf-table tr.is-free td { opacity: .65; }
-    .pf-name span[title] { cursor: help; }
+    .pf-name span[data-tip] { cursor: help; }
     .pf-tag { font-size: 10px; color: var(--fg-dim); border: 1px solid var(--border); border-radius: 4px;
       padding: 0 4px; margin-left: 6px; white-space: nowrap; }
     .pf-sub { margin: 4px 0 0; font-size: 12px; color: var(--fg-dim); text-align: right; }
@@ -345,7 +345,7 @@
       align-items: center; width: fit-content; max-width: 100%; margin: 0 0 10px; }
     .mats .mq { color: var(--fg-dim); white-space: nowrap; }
     .mats .mn { color: var(--fg); }
-    .mats .mn[title] { cursor: help; border-bottom: 1px dotted var(--border); }
+    .mats .mn[data-tip] { cursor: help; border-bottom: 1px dotted var(--border); }
     .mats .mu, .mats .ml { font-family: var(--font-mono); color: var(--gold); text-align: right; white-space: nowrap; }
     .mats .mu { color: var(--fg-dim); }
     .mats .ml.owned { color: var(--accent); } /* line fully covered by owned stock */
@@ -507,12 +507,15 @@
     .movehint.hint-reenh { color: var(--gold); }     /* ↻ re-enhance (extra work) */
     .movehint.hint-wipe { color: var(--bad); }       /* ⚠ enchants wiped on advance */
     .tiercount { cursor: help; }                     /* ×N tier count (has a data-tip) */
-    /* Fast custom tooltip for [data-tip] hint badges, shows instantly (the native `title`
-       delay can't be shortened). Fixed + body-attached so table overflow never clips it. */
-    #hintTip { position: fixed; z-index: 1000; max-width: 320px; background: var(--surface2);
-      color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px;
-      font-size: 12px; line-height: 1.35; white-space: normal; pointer-events: none;
+    /* Fast custom tooltip for [data-tip] hint badges and the ? help icons, shows instantly
+       (the native `title` delay can't be shortened). Fixed + body-attached so table overflow
+       never clips it. A \n in the tip text splits it into sibling `.tl` blocks: a bare line
+       break sits too tight to scan, so the gap between paragraphs is a real margin. */
+    #hintTip { position: fixed; z-index: 1000; max-width: 360px; background: var(--surface2);
+      color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px;
+      font-size: 12px; line-height: 1.45; pointer-events: none;
       box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+    #hintTip .tl + .tl { margin-top: 7px; }
     /* Threshold + Catalog: bracket a group with an accent rail. The rail is a pseudo-element
        so it can be inset at the group's top (head) and bottom (last row). Consecutive
        groups then read as separate instead of blending into one continuous bar. */
@@ -576,7 +579,7 @@
     .plan-consume { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: var(--fg-dim); cursor: pointer; user-select: none; }
     .plan-consume input { accent-color: var(--accent); cursor: pointer; margin: 0; }
     .plan-help { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border: 1px solid var(--border); border-radius: 50%; font-size: 10px; color: var(--fg-dim); cursor: help; }
-    .plan-help:hover { border-color: var(--accent); color: var(--accent); }
+    .plan-help:hover, .plan-help:focus { border-color: var(--accent); color: var(--accent); outline: none; }
     .plan-gold-edit { width: 110px; } /* the Total-gold click-to-type editor needs room for millions */
     /* Two-column body: the step list on the left, the materials tally sticky on the right so
        it stays visible while you scroll a long path (SPEC §17.5). Collapses to one column narrow. */
@@ -1259,9 +1262,9 @@
     </label>
     <span class="numfilter" id="hideGroupWrap" style="display:none">Hide
       <span class="modeToggle" style="margin:0">
-        <label class="chip" id="hideLossyChip" title="Hide tradeoffs. These are gear swaps that focus on a single stat, (e.g. a Fast or Tempestuous scroll) but have a net loss of overall ranking points."><input type="checkbox" id="hideLossy" checked /> Tradeoffs</label>
-        <label class="chip" id="noRebaseChip" title="Hide enchant/enhance moves on a slot where a stronger base item is available. Investing in the current base is wasted before you swap (e.g. don't keep enchanting your current belt if a better belt is available; swap first). Matches the ⇄ (rebase) row hint."><input type="checkbox" id="noRebase" /> Rebase</label>
-        <label class="chip" id="noBetterChip" title="Hide moves a stronger option in the SAME upgrade chain already beats (e.g. a weaker r5 scroll when the r4 terminal of its family exists, or a weaker ring when a better ring base is available). A scroll at its chain end is never outclassed, and neither is a standalone with no chain. Matches the ▲ (better) row hint."><input type="checkbox" id="noBetter" /> Outclassed</label>
+        <label class="chip" id="hideLossyChip" data-tip="Hide tradeoffs.&#10;These are gear swaps that focus on a single stat (e.g. a Fast or Tempestuous scroll) but have a net loss of overall ranking points."><input type="checkbox" id="hideLossy" checked /> Tradeoffs</label>
+        <label class="chip" id="noRebaseChip" data-tip="Hide enchant/enhance moves on a slot where a stronger base item is available.&#10;Investing in the current base is wasted before you swap: don't keep enchanting your current belt if a better belt is available, swap first.&#10;Matches the ⇄ (rebase) row hint."><input type="checkbox" id="noRebase" /> Rebase</label>
+        <label class="chip" id="noBetterChip" data-tip="Hide moves a stronger option in the SAME upgrade chain already beats: a weaker r5 scroll when the r4 terminal of its family exists, or a weaker ring when a better ring base is available.&#10;A scroll at its chain end is never outclassed, and neither is a standalone with no chain.&#10;Matches the ▲ (better) row hint."><input type="checkbox" id="noBetter" /> Outclassed</label>
       </span>
     </span>
     <button type="button" id="vetoToggle" class="vetoToggle" title="Vetoed upgrades: moves you've hidden from every list and the Target solver. Open to review or un-veto.">Vetoed (0)</button>
@@ -1999,9 +2002,9 @@
     const invStepper = (name) => {
       if (!name) return `<span class="invstep"></span>`;
       const n = ownedOf(name);
-      return `<span class="invstep${n > 0 ? " has" : ""}" title="How many of ${esc(name)} you own. Netted out of upgrade costs">`
+      return `<span class="invstep${n > 0 ? " has" : ""}" data-tip="How many of ${esc(name)} you own.\nNetted out of upgrade costs">`
         + `<button class="inv-btn" data-inv="${esc(name)}" data-inv-dir="-1" type="button"${n <= 0 ? " disabled" : ""}>−</button>`
-        + `<span class="inv-n" data-inv="${esc(name)}" title="Click to type an exact amount">${n}</span>`
+        + `<span class="inv-n" data-inv="${esc(name)}" data-tip="Click to type an exact amount">${n}</span>`
         + `<button class="inv-btn" data-inv="${esc(name)}" data-inv-dir="1" type="button">+</button>`
         + `</span>`;
     };
@@ -2044,15 +2047,15 @@
       // tooltip names how many of this line you hold.
       const tip = priceTip(material);
       const owned = ownedOf(material);
-      const ownTip = reduced ? ` title="netted with your inventory${owned > 0 ? `, ${Math.min(owned, qty)} of ${qty} ${esc(material)} owned` : ""}"`
-        : owned > 0 ? ` title="${Math.min(owned, qty)} of ${qty} owned"` : "";
+      const ownTip = reduced ? ` data-tip="netted with your inventory${owned > 0 ? `, ${Math.min(owned, qty)} of ${qty} ${esc(material)} owned` : ""}"`
+        : owned > 0 ? ` data-tip="${Math.min(owned, qty)} of ${qty} owned"` : "";
       // Inline expand: the crafted material row IS the toggle, click its NAME to reveal its recipe
       // in a full-width `.submats` block indented under the row (no separate "Recipe:" line, issue 2/4).
       const expandable = seen && crafted && !seen.has(material);
       const open = expandable && openSubrecipes.has(material);
       const mn = expandable
-        ? `<span class="mn expandable" data-expand="${esc(material)}"${tip ? ` title="${esc(tip)}"` : ""}><span class="exp-caret">${open ? "▾" : "▸"}</span> ${material}${tag}</span>`
-        : `<span class="mn"${tip ? ` title="${esc(tip)}"` : ""}>${material}${tag}</span>`;
+        ? `<span class="mn expandable" data-expand="${esc(material)}"${tip ? ` data-tip="${esc(tip)}"` : ""}><span class="exp-caret">${open ? "▾" : "▸"}</span> ${material}${tag}</span>`
+        : `<span class="mn"${tip ? ` data-tip="${esc(tip)}"` : ""}>${material}${tag}</span>`;
       const cells = `<span class="mq">${qty} ×</span>${mn}`
         + `<span class="mu">${fmt(unit)} ea</span><span class="ml${reduced ? " owned" : ""}"${ownTip}>${fmt(line)}</span>${trendCell(material)}`
         + invStepper(material);
@@ -2346,16 +2349,24 @@
         </div>`;
     };
 
-    // Fast custom tooltip for any [data-tip] element (the ⇄/▲ hint badges): the native
-    // `title` attribute has a fixed ~0.5s browser delay we can't shorten, so we render our
-    // own fixed-position tip that shows instantly on hover. Fixed + body-attached so the
-    // moves table's overflow clipping never cuts it off.
+    // Fast custom tooltip for any [data-tip] element (the ⇄/▲ hint badges, the ? help icons):
+    // the native `title` attribute has a fixed ~0.5s browser delay we can't shorten, so we
+    // render our own fixed-position tip that shows instantly on hover. Fixed + body-attached so
+    // the moves table's overflow clipping never cuts it off. Also fires on keyboard focus, which
+    // native `title` never does: that's the whole point of tabindex="0" on .help-icon.
     let hintTipEl = null;
     const showHintTip = (el) => {
       const text = el.getAttribute("data-tip");
       if (!text) return;
       if (!hintTipEl) { hintTipEl = document.createElement("div"); hintTipEl.id = "hintTip"; document.body.appendChild(hintTipEl); }
-      hintTipEl.textContent = text;
+      // One `.tl` block per \n-separated paragraph. textContent per block, so tip text is still
+      // inert: this splits the string, it never parses it as markup.
+      hintTipEl.replaceChildren(...text.split("\n").map((s) => s.trim()).filter(Boolean).map((s) => {
+        const d = document.createElement("div");
+        d.className = "tl";
+        d.textContent = s;
+        return d;
+      }));
       hintTipEl.style.display = "block";
       const r = el.getBoundingClientRect();
       const tip = hintTipEl.getBoundingClientRect();
@@ -2375,6 +2386,22 @@
     document.addEventListener("mouseout", (e) => {
       if (e.target.closest?.("[data-tip]")) hideHintTip();
     });
+    // Keyboard parity: Tab onto a ? icon and the tip opens, Tab or Esc away and it closes.
+    document.addEventListener("focusin", (e) => {
+      const el = e.target.closest?.("[data-tip]");
+      if (el) showHintTip(el);
+    });
+    document.addEventListener("focusout", (e) => {
+      if (e.target.closest?.("[data-tip]")) hideHintTip();
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideHintTip(); });
+    // The tip is position:fixed, so any scroll leaves it stranded over unrelated content.
+    // Capture phase on document catches the panels/tables that scroll in their own boxes
+    // (`scroll` doesn't bubble); the window listener catches page scroll, whose event targets
+    // window/document and so never enters document's capture path.
+    document.addEventListener("scroll", hideHintTip, true);
+    window.addEventListener("scroll", hideHintTip, true);
+    window.addEventListener("resize", hideHintTip);
 
     // Delegated nav for every recipe carousel (added once): ONLY the ‹ / › arrows step the chain
     // (issue 6). A click anywhere else in the box, the slide body, a material's +/- stepper, an
@@ -2931,7 +2958,7 @@
       const items = Object.entries(m.inventoryUsed || {});
       const list = items.map(([n, q]) => `${q}× ${n}`).join(", ") || "owned stock";
       const summary = items.length ? `${items.length} item${items.length > 1 ? "s" : ""}` : "owned stock";
-      return `<div class="k">From inventory</div><div class="v gold" title="${esc(list)}">− ${fmt(m.inventoryCredit)} <span class="muted">(${summary})</span></div>`;
+      return `<div class="k">From inventory</div><div class="v gold" data-tip="${esc(list)}">− ${fmt(m.inventoryCredit)} <span class="muted">(${summary})</span></div>`;
     };
 
     // "Craft" button for an opened move (SPEC §5.2 side goal): consume the owned materials this
@@ -3013,7 +3040,11 @@
     // Long-form explanation lives in a "?" hover (issue 1), so the row stays terse but the two scrolls
     // still show. Each scroll line carries an "ignore" toggle + a "change" picker (a <details> whose
     // summary is the button; the <select> inside re-enchants with a different scroll, price check only).
-    const RE_ENCHANT_HELP = "A new base has no scrolls. This is the cost to enchant with the same scrolls. If not using the same scrolls, you can ignore this cost with the “ignore” button next to the scroll. You can also change the scroll you are re-enchanting with using the “change” button next to the scroll (price check only, not saved).";
+    // \n breaks a paragraph in #hintTip (white-space: pre-line), so a long help string reads as
+    // "what this is" / "how to change it" instead of one dense block.
+    const RE_ENCHANT_HELP = "A new base has no scrolls. This is the cost to enchant with the same scrolls.\n"
+      + "Not using the same scrolls? “ignore” next to a scroll drops its cost.\n"
+      + "“change” re-prices against a different scroll (price check only, not saved).";
     const reEnchantRows = (m, calc) => {
       const rows = calc.rows;
       if (!rows.length) return "";
@@ -3029,12 +3060,12 @@
         const name = x.changed ? `${x.affix} · ${esc(x.effScroll)} <span class="muted">(was ${esc(x.scroll)})</span>` : `${x.affix} · ${esc(x.effScroll)}`;
         return `<div class="reench-line"><span class="muted">${name}</span><span class="rn-gold${x.ignored ? " struck" : ""}">${x.ignored ? "0" : fmt(x.gold)}</span>${igBtn}${sel}</div>`;
       }).join("");
-      return `<div class="k">Re-enchant</div><div class="v gold">+${fmt(calc.total)} <span class="help-icon" tabindex="0" title="${esc(RE_ENCHANT_HELP)}">?</span><div class="reench-list">${lines}</div></div>`;
+      return `<div class="k">Re-enchant</div><div class="v gold">+${fmt(calc.total)} <span class="help-icon" tabindex="0" data-tip="${esc(RE_ENCHANT_HELP)}">?</span><div class="reench-list">${lines}</div></div>`;
     };
     // Re-enhance row (issue 1/2): terse line + a "?" hover explaining what +N means and why it's an
     // expected cost. Explanation-only (no ignore/change).
     const reEnhanceRow = (m) => m.reEnhance
-      ? `<div class="k">Re-enhance → +${m.toLevel}</div><div class="v gold">+${fmt(m.reEnhance)} <span class="help-icon" tabindex="0" title="A new base is at +0, meaning a net loss in Def Pen. Re-enhancing to +${m.toLevel} maintains the Def Pen that was in the prior item. This is an expected cost, due to re-enhancing not being guaranteed.">?</span></div>`
+      ? `<div class="k">Re-enhance → +${m.toLevel}</div><div class="v gold">+${fmt(m.reEnhance)} <span class="help-icon" tabindex="0" data-tip="A new base is at +0, meaning a net loss in Def Pen. Re-enhancing to +${m.toLevel} maintains the Def Pen that was in the prior item.\nThis is an expected cost, due to re-enhancing not being guaranteed.">?</span></div>`
       : "";
 
     // Detail for a MERGED step-run (issue 5): the whole enhance chain is one row ("enhance +12→+16"),
@@ -3072,7 +3103,7 @@
             <div class="k">Gold / attempt</div><div class="v gold">${fmt(Math.round(m.perAttempt))}</div>
             <div class="k">Expected gold</div><div class="v gold">${fmt(m.goldCost)}</div>
             <div class="k">Gold / point</div><div class="v gold">${fmt(m.goldPerPoint)}</div>
-            <div class="k">From inventory</div><div class="v muted" title="Enhancement is an expected value over a random number of attempts, so a finite owned stock can't net cleanly against it. Its materials are left at full price (SPEC §5.2).">not applied <span class="muted">(probabilistic. EV over random attempts)</span></div>
+            <div class="k">From inventory</div><div class="v muted" data-tip="Enhancement is an expected value over a random number of attempts, so a finite owned stock can't net cleanly against it.\nIts materials are left at full price.">not applied <span class="muted">(probabilistic. EV over random attempts)</span></div>
           </div>${matsBlock}</div>`;
       }
       if (m.type === "enchantSwap") {
@@ -4274,12 +4305,12 @@
       const side = [];
       // A FREE-flagged ready step (SPEC §17.9) shows a "free" badge in place of its gold + the
       // "affordable" pill (both moot, it costs nothing). Its stat gain still applies.
-      if (coverable.has(step.id) && !free) side.push(`<span class="plan-cover" title="You can afford this step now from your current materials + gold">affordable</span>`);
+      if (coverable.has(step.id) && !free) side.push(`<span class="plan-cover" data-tip="You can afford this step now from your current materials + gold">affordable</span>`);
       // Box-wait tag (SPEC §18): part of this step's materials arrives from a FUTURE free
       // weekly box, the date of the last one it waits on (advisory, like the whole section).
       if (status === "ready" && kind === "move" && boxWait)
-        side.push(`<span class="plan-boxwait" title="Some of this step's materials are covered by future free weekly boxes. The last one lands the week of ${esc(planWeekDate(boxWait))}. Buy them instead if you'd rather not wait (see Weekly boxes in the right rail).">boxes ${esc(planWeekDate(boxWait))}</span>`);
-      if (status === "ready" && free) side.push(`<span class="plan-cover" title="You marked this step free. No gold or materials counted">free</span>`);
+        side.push(`<span class="plan-boxwait" data-tip="Some of this step's materials are covered by future free weekly boxes. The last one lands the week of ${esc(planWeekDate(boxWait))}.\nBuy them instead if you'd rather not wait (see Weekly boxes in the right rail).">boxes ${esc(planWeekDate(boxWait))}</span>`);
+      if (status === "ready" && free) side.push(`<span class="plan-cover" data-tip="You marked this step free. No gold or materials counted">free</span>`);
       else if (status === "ready" && gold != null) side.push(`<span class="plan-gold">${fmt(gold)}</span>`);
       if (status === "ready" && kind === "move") {
         side.push(`<button data-plan-do="complete" data-plan-id="${esc(step.id)}" title="Apply this step to your loadout (updates the sidebar gear + stats)${plannerConsume ? " and consume its materials + gold" : ""}">Complete</button>`);
@@ -4305,7 +4336,7 @@
       // target, so without this the folded cost + span is invisible. `move.from` is the base at
       // THIS point in the plan (reconcile's forward simulation), i.e. what stage you're at.
       const tierFold = status === "ready" && move && move.type === "tierStep" && move.steps > 1
-        ? `<div class="plan-tierfold" title="This one step advances through ${move.steps} tiers. Its gold covers every hop from your current ${escTxt(move.from)}. Add the in-between tiers as their own steps (⁺ Upgrade) if you'd rather track them separately.">` +
+        ? `<div class="plan-tierfold" data-tip="This one step advances through ${move.steps} tiers. Its gold covers every hop from your current ${escTxt(move.from)}.\nAdd the in-between tiers as their own steps (⁺ Upgrade) if you'd rather track them separately.">` +
           `spans ${move.steps} tiers · from your current <b>${escTxt(move.from)}</b>` +
           (move.wipe ? (move.wipePreserved ? ` · enchants carried by rune` : ` · re-enchant needed`) : "") +
           `</div>`
@@ -4426,7 +4457,7 @@
         // Total gold net of the free weekly boxes (SPEC §18): the whole claim/open schedule's
         // coverage, so future weeks count too, the date says how long the last box takes.
         (weekly && weekly.totalSaved > 0
-          ? `<div class="plan-stat plan-stat-total"><span class="plan-stat-name" title="What the same scope costs after the free weekly boxes cover ${fmt(weekly.totalSaved)} of it, counting boxes on hand AND future weekly claims (see Weekly boxes below).">Total gold − boxes</span>` +
+          ? `<div class="plan-stat plan-stat-total"><span class="plan-stat-name" data-tip="What the same scope costs after the free weekly boxes cover ${fmt(weekly.totalSaved)} of it.\nCounts boxes on hand AND future weekly claims (see Weekly boxes below).">Total gold − boxes</span>` +
             `<span class="plan-stat-val gold">${fmt(Math.max(0, matAgg.gold - weekly.totalSaved))}` +
             (weekly.weeks > 0 ? ` <span class="muted">by ${esc(planWeekDate(weekly.weeks))}</span>` : "") +
             `</span></div>`
@@ -4520,13 +4551,13 @@
         // this row's shallow "need". Details in the Weekly boxes section below the pile.
         const wk = weekly?.perItem?.[n];
         const wkNote = !free && wk?.covered
-          ? `<span class="plan-weekly-note" title="${esc(`${wk.covered} coverable by weekly boxes${wk.lastWeek > 0 ? ` within ${wk.lastWeek} week${wk.lastWeek !== 1 ? "s" : ""}` : " from boxes on hand"} (counts this pile's total remaining shortfall, incl. inside crafted sub-recipes), see Weekly boxes below`)}">box ×${wk.covered}</span>`
+          ? `<span class="plan-weekly-note" data-tip="${esc(`${wk.covered} coverable by weekly boxes${wk.lastWeek > 0 ? ` within ${wk.lastWeek} week${wk.lastWeek !== 1 ? "s" : ""}` : " from boxes on hand"}.\nCounts this pile's total remaining shortfall, incl. inside crafted sub-recipes. See Weekly boxes below.`)}">box ×${wk.covered}</span>`
           : "";
         const status = free ? `<span class="pos">free</span>` : planStockStatus(have, need);
         const expandable = isCraftedMat(moveCtx, n) && !seen.has(n);
         const open = expandable && planOpenSubs.has(pathKey);
         const name = expandable
-          ? `<span class="plan-mat-name expandable" data-plan-expand="${esc(pathKey)}" title="Crafted. Click to show its recipe"><span class="exp-caret">${open ? "▾" : "▸"}</span> ${escTxt(n)}</span>`
+          ? `<span class="plan-mat-name expandable" data-plan-expand="${esc(pathKey)}" data-tip="Crafted. Click to show its recipe"><span class="exp-caret">${open ? "▾" : "▸"}</span> ${escTxt(n)}</span>`
           : `<span class="plan-mat-name">${escTxt(n)}</span>`;
         let html = `<div class="plan-mat${free ? " is-free" : ""}${depth ? " plan-mat-sub" : ""}"${depth ? ` style="padding-left:${depth * 16}px"` : ""}>${name}` +
           `<span class="plan-mat-ctl">` +
@@ -4550,9 +4581,9 @@
           : `<div class="muted" style="font-size:12px;padding:4px 0">No materials needed${agg.steps ? "" : " (nothing ready in the selection)"}.</div>`);
       // Gold on hand gets the same inline stepper treatment as the material rows (±1M, shift
       // ×10, click-to-type). It edits the sidebar's goldTracker via data-plan-gold-* handlers.
-      const goldStep = `<span class="invstep${goldTracker > 0 ? " has" : ""}" title="Gold on hand. The same manual total as the sidebar field; feeds the affordability projection">`
+      const goldStep = `<span class="invstep${goldTracker > 0 ? " has" : ""}" data-tip="Gold on hand.\nThe same manual total as the sidebar field; feeds the affordability projection">`
         + `<button class="inv-btn" data-plan-gold-dir="-1" type="button"${goldTracker <= 0 ? " disabled" : ""}>−</button>`
-        + `<span class="inv-n" data-plan-gold-n title="Click to type an exact amount">${fmt(goldTracker)}</span>`
+        + `<span class="inv-n" data-plan-gold-n data-tip="Click to type an exact amount">${fmt(goldTracker)}</span>`
         + `<button class="inv-btn" data-plan-gold-dir="1" type="button">+</button></span>`;
       const N = afford.prefixN, total = entries.length;
       const afmsg = total === 0 ? ""
@@ -4584,7 +4615,7 @@
       if (!weekly) return "";
       const counter = (label, field, title) => {
         const v = weeklyBox[field];
-        return `<div class="plan-mat"><span class="plan-mat-name" title="${esc(title)}">${label}</span>` +
+        return `<div class="plan-mat"><span class="plan-mat-name" data-tip="${esc(title)}">${label}</span>` +
           `<span class="plan-mat-ctl"><span class="invstep${v > 0 ? " has" : ""}">` +
           `<button class="inv-btn" data-plan-weekly-dir="-1" data-plan-weekly-field="${field}" type="button"${v <= 0 ? " disabled" : ""}>−</button>` +
           `<span class="inv-n">${v}</span>` +
@@ -4620,7 +4651,7 @@
           (weekly.exhausted ? ` Some demand outlives the ${WEEKLY_BOX_MAX_WEEKS}-week horizon, buy the rest.` : "");
         schedule = `<p class="plan-afford">${summary}</p>` + schedule;
       }
-      return `<h4 title="One free choice box per week per farming character (resets Tue 07:00 UTC). Contents bind, so they're worth only what your plan needs. Claim every week, open on demand.">Weekly boxes</h4>
+      return `<h4 data-tip="One free choice box per week per farming character (resets Tue 07:00 UTC).\nContents bind, so they're worth only what your plan needs.\nClaim every week, open on demand.">Weekly boxes</h4>
         <p class="hint" style="margin:2px 0 6px">One free box per farming character per week. Claim weekly; open on demand.</p>
         ${counter("Unopened boxes", "onHand", "Claimed-but-unopened weekly boxes banked across the account")}
         ${counter("Boxes / week", "alts", "Characters claiming a weekly box (each needs the qualifying raid)")}
@@ -4654,14 +4685,14 @@
       const row = (r) => {
         if (planShortOnly && (r.free || r.short <= 0)) return "";
         const tags = r.buyCheaper
-          ? `<span class="pf-tag" title="${esc(`Market ${fmt(r.market)} beats crafting at ${fmt(r.craft)}; the cost model buys this outright, so its ingredients below are a farm-it-yourself alternative`)}">buying is cheaper</span>`
+          ? `<span class="pf-tag" data-tip="${esc(`Market ${fmt(r.market)} beats crafting at ${fmt(r.craft)}.\nThe cost model buys this outright, so its ingredients below are a farm-it-yourself alternative.`)}">buying is cheaper</span>`
           : "";
         const boxNotes =
-          (r.boxNow > 0 ? `<span class="plan-weekly-note" title="${esc(`${r.boxNow} covered by weekly boxes on hand, counted as stock in this list. Open them via the rail's Weekly boxes section.`)}">box ×${r.boxNow}</span>` : "") +
-          (future[r.name] ? `<span class="pf-tag" title="${esc(`${future[r.name].units} more coverable by future weekly claims (by week ${future[r.name].lastWeek}). NOT counted here: buying today means buying these too.`)}">+${future[r.name].units} boxable later</span>` : "");
-        const unitTip = r.crafted ? ` title="${esc(`craft ${fmt(r.craft)} · market ${r.market == null ? "none" : fmt(r.market)}`)}"` : "";
+          (r.boxNow > 0 ? `<span class="plan-weekly-note" data-tip="${esc(`${r.boxNow} covered by weekly boxes on hand, counted as stock in this list.\nOpen them via the rail's Weekly boxes section.`)}">box ×${r.boxNow}</span>` : "") +
+          (future[r.name] ? `<span class="pf-tag" data-tip="${esc(`${future[r.name].units} more coverable by future weekly claims (by week ${future[r.name].lastWeek}).\nNOT counted here: buying today means buying these too.`)}">+${future[r.name].units} boxable later</span>` : "");
+        const unitTip = r.crafted ? ` data-tip="${esc(`craft ${fmt(r.craft)} · market ${r.market == null ? "none" : fmt(r.market)}`)}"` : "";
         return `<tr${r.free ? ` class="is-free"` : ""}>` +
-          `<td class="pf-name"><span${r.sources.length ? ` title="${esc(srcTip(r))}"` : ""}>${escTxt(r.name)}</span>${tags}${boxNotes}</td>` +
+          `<td class="pf-name"><span${r.sources.length ? ` data-tip="${esc(srcTip(r))}"` : ""}>${escTxt(r.name)}</span>${tags}${boxNotes}</td>` +
           `<td class="num">${r.need}</td>` +
           `<td class="num">${invStepper(r.name)}</td>` +
           `<td class="num">${r.free ? `<span class="pos">free</span>` : r.short > 0 ? `<span class="neg">${r.short}</span>` : `<span class="pos">✓</span>`}</td>` +
@@ -4811,7 +4842,7 @@
       // (two aligned columns), no longer a footer scrunched into the ⋯ menu.
       const kbdRow = (keys, desc) =>
         `<span class="keys">${keys.map((k) => `<kbd>${k}</kbd>`).join("")}</span><span>${desc}</span>`;
-      const kbdHelp = `<span class="plan-kbd-wrap"><span class="help-icon" tabindex="0" title="Keyboard shortcuts">?</span>` +
+      const kbdHelp = `<span class="plan-kbd-wrap"><span class="help-icon" tabindex="0" role="button" aria-label="Keyboard shortcuts">?</span>` +
         `<div class="plan-kbd-pop"><div class="plan-kbd-h">Keyboard (this tab)</div><div class="plan-kbd-grid">` +
         kbdRow(["/"], "search &amp; add an upgrade") +
         kbdRow(["Del"], "delete the selection") +
@@ -4829,7 +4860,7 @@
         (plannerSel.size ? `<span class="plan-selcount">${plannerSel.size} selected</span>` : "") +
         (plannerSel.size ? `<button data-plan-do="del-sel" class="plan-ghost plan-danger" title="Delete every selected step">Delete selected</button>` : "") +
         `<label class="plan-consume"><input type="checkbox" data-plan-consume${plannerConsume ? " checked" : ""}>Consume resources on complete` +
-        `<span class="plan-help" title="When on, marking a step complete also subtracts its expected materials from your inventory and its gold from your tracker. These are expected values. Real luck and prices differ, so adjust your stock if reality did.">?</span></label>` +
+        `<span class="plan-help" tabindex="0" data-tip="When on, marking a step complete also subtracts its expected materials from your inventory and its gold from your tracker.\nThese are expected values. Real luck and prices differ, so adjust your stock if reality did.">?</span></label>` +
         `</div>` +
         (plannerImportOpen ? planImportPanel() : "");
 
@@ -6682,7 +6713,7 @@
       // Planner's (SPEC §17.14).
       const kbdRow = (keys, desc) =>
         `<span class="keys">${keys.map((k) => `<kbd>${k}</kbd>`).join("")}</span><span>${desc}</span>`;
-      const kbdHelp = `<span class="plan-kbd-wrap"><span class="help-icon" tabindex="0" title="Keyboard shortcuts">?</span>` +
+      const kbdHelp = `<span class="plan-kbd-wrap"><span class="help-icon" tabindex="0" role="button" aria-label="Keyboard shortcuts">?</span>` +
         `<div class="plan-kbd-pop"><div class="plan-kbd-h">Search (this tab)</div><div class="plan-kbd-grid">` +
         kbdRow(["↑", "↓"], "move through the results") +
         kbdRow(["Tab"], "next result (Shift+Tab: previous)") +
@@ -7416,14 +7447,14 @@
              <button class="scan-junk-btn" data-circuit-step="-1" title="Back one step">‹</button>
              <button class="scan-junk-btn" data-circuit-step="1" title="Skip to the next step">›</button>`;
         return `<div class="scan-charname"><span class="scan-field-lbl">Circuit</span>${body}
-          <span class="help-icon" tabindex="0" title="Saving a run advances the circuit to its next raid. It runs through once and then reports complete, use ↻ to go again. ‹ › step manually, e.g. to skip a raid you're not doing.">?</span></div>`;
+          <span class="help-icon" tabindex="0" data-tip="Saving a run advances the circuit to its next raid.\nIt runs through once and then reports complete, use ↻ to go again.\n‹ › step manually, e.g. to skip a raid you're not doing.">?</span></div>`;
       })() : "";
       // Mode toggle rides WITH the raid name (they're one choice: which fight you just did),
       // rather than sitting on its own labelled row.
       const modeToggle = (() => {
         const m = currentRaidModes();
         return m.options.length > 1
-          ? `<div class="modeToggle mini scan-runmode" title="Hero doubles the boss HP and the drops. It's logged as ONE run; the By-raid value/hour tells you whether hero beats normal.">${m.options.map((o) => `<button type="button" data-runmode="${o}" class="${runModeSel === o ? "on" : ""}">${o}</button>`).join("")}</div>`
+          ? `<div class="modeToggle mini scan-runmode" data-tip="Hero doubles the boss HP and the drops.\nIt's logged as ONE run; the By-raid value/hour tells you whether hero beats normal.">${m.options.map((o) => `<button type="button" data-runmode="${o}" class="${runModeSel === o ? "on" : ""}">${o}</button>`).join("")}</div>`
           : `<span class="scan-mode-fixed mode-${escTxt(m.options[0])}" title="${m.locked ? "This raid is listed as a fixed mode." : "This raid has no hero version."}">${escTxt(m.options[0])}</span>`;
       })();
       // The run setup lives IN the raid panel now: mode and core boost are properties of the
@@ -7431,16 +7462,16 @@
       // their own. The IGN isn't shown at all, it's just the active character (sidebar), and the
       // status line calls it out when it's missing.
       const corePill = coreAvail
-        ? `<div class="modeToggle mini"><label class="chip scan-coreboost" title="Adds the raid's Core Gold to the run value. Auto-ticks when a Core Boost Plus drop is in the log (that only happens on a boosted run); tick it manually if you boosted WITHOUT the Plus sub. Sticky."><input type="checkbox" id="scanCoreBoost"${coreBoosted() ? " checked" : ""}${isCoreBoosted() ? " disabled" : ""}>Core Boost${isCoreBoosted() ? " (auto)" : ""}</label></div>`
+        ? `<div class="modeToggle mini"><label class="chip scan-coreboost" data-tip="Adds the raid's Core Gold to the run value.\nAuto-ticks when a Core Boost Plus drop is in the log (that only happens on a boosted run). Tick it manually if you boosted WITHOUT the Plus sub.\nSticky."><input type="checkbox" id="scanCoreBoost"${coreBoosted() ? " checked" : ""}${isCoreBoosted() ? " disabled" : ""}>Core Boost${isCoreBoosted() ? " (auto)" : ""}</label></div>`
         : "";
       const setupCard = `<div class="scan-card scan-card-raids">
         <div class="scan-raid-head">
           <h5 class="scan-card-h">Raid</h5>
           ${modeToggle}
           ${corePill}
-          <span class="help-icon" tabindex="0" title="Pick the raid you just ran, it scopes drop-name matching to that raid's known drop list and is required to save. Circuits walk you through a rotation, advancing after each save. Sticky: your pick survives a reload.">?</span>
+          <span class="help-icon" tabindex="0" data-tip="Pick the raid you just ran, it scopes drop-name matching to that raid's known drop list and is required to save.\nCircuits walk you through a rotation, advancing after each save.\nSticky: your pick survives a reload.">?</span>
           ${partyChip}
-          <span class="scan-ign" title="${hasName ? `Drops are counted for ${escTxt(charName.trim())}. This is the active character in the sidebar, and must match your in-game name.` : "No active character. Pick or save one in the sidebar, drops are matched against its name."}">${hasName ? escTxt(charName.trim()) : `<span class="scan-bad">no character</span>`}</span>
+          <span class="scan-ign" data-tip="${hasName ? `Drops are counted for ${escTxt(charName.trim())}.\nThis is the active character in the sidebar, and must match your in-game name.` : "No active character.\nPick or save one in the sidebar, drops are matched against its name."}">${hasName ? escTxt(charName.trim()) : `<span class="scan-bad">no character</span>`}</span>
         </div>
         ${circuitRow}
         ${raidPickerHtml()}
@@ -7592,7 +7623,7 @@
       const perHour = perHourVal == null ? "—" : fmt(perHourVal);
       const durVal = pooled ? s.totalPooledDurationSec : s.totalDurationSec;
       const dataViewToggle = anyPartyRuns
-        ? `<div class="modeToggle mini scan-dataview" title="Off = only your drops. On = every party member's run counts as a sample (runs and total scale with party size; per-run and per-hour are what one player gets). A bigger sample of what a run is worth. The Core buffs panel pools too: party cores sharpen the per-core values, run counts and spend stay your own (pet cores never pool).">
+        ? `<div class="modeToggle mini scan-dataview" data-tip="Off = only your drops.\nOn = every party member's run counts as a sample: runs and total scale with party size, while per-run and per-hour stay what one player gets. A bigger sample of what a run is worth.\nThe Core buffs panel pools too: party cores sharpen the per-core values, run counts and spend stay your own (pet cores never pool).">
             <button type="button" data-dataview="${pooled ? "mine" : "pooled"}" class="onoff${pooled ? " on" : ""}">Pooled</button></div>`
         : "";
       const summary = `<div class="scan-run-summary">
