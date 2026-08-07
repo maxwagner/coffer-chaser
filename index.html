@@ -7099,6 +7099,7 @@
     let scanVocab = null;       // the vocabulary list (for suggestNames)
     let scanKnown = null;       // Set of lowercased known names, to flag scans the app doesn't recognize
     let scanBusy = false;
+    let scanCount = null; // {done, total} while a multi-shot batch is scanning
     let ocrError = null;        // engine load / run failure message
     const escTxt = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -7227,7 +7228,7 @@
       // item to add to the sheet, or an OCR misread worth checking before pasting.
       const unknown = rows.filter((r) => !isKnownName(r.name)).length;
       const status = ocrError ? ocrError
-        : scanBusy ? "Scanning…"
+        : scanBusy ? scanningLabel()
         : `${scanStore.itemCount} item${scanStore.itemCount !== 1 ? "s" : ""} · ${scanStore.listingCount} listing${scanStore.listingCount !== 1 ? "s" : ""}${unknown ? ` · ${unknown} not in app` : ""}${scanReview.length ? ` · ${scanReview.length} to review` : ""}${scanSkips.length ? ` · ${scanSkips.length} skipped` : ""}`;
       const badge = `<span class="scan-newbadge" title="No matching item in the app, a new item, or an OCR misread to check before pasting">not in app</span>`;
       const table = rows.length
@@ -7882,6 +7883,10 @@
       renderScanner();
     }
 
+    // "Scanning 3 / 7…" while a multi-shot batch runs; plain "Scanning…" for a single image.
+    const scanningLabel = () =>
+      scanCount && scanCount.total > 1 ? `Scanning ${Math.min(scanCount.done + 1, scanCount.total)} / ${scanCount.total}…` : "Scanning…";
+
     const scanProgress = (m) => {
       const el = scannerPanel.querySelector(".scan-status");
       if (el && m?.status) el.textContent = m.status === "loading models" ? "Loading OCR model (first scan)…" : "Scanning…";
@@ -7892,10 +7897,10 @@
       if (scanMode === "boxes") return scanBoxFiles(blobs);
       blobs = [...blobs].filter(Boolean);
       if (!blobs.length || scanBusy) return;
-      scanBusy = true; ocrError = null; renderScanner();
+      scanBusy = true; ocrError = null; scanCount = { done: 0, total: blobs.length }; renderScanner();
       let scanImage;
       try { scanImage = await getScanImage(); }
-      catch { ocrError = "Couldn't load the OCR engine."; scanBusy = false; renderScanner(); return; }
+      catch { ocrError = "Couldn't load the OCR engine."; scanBusy = false; scanCount = null; renderScanner(); return; }
       for (const blob of blobs) {
         const fname = blob.name || "clipboard image";
         try {
@@ -7907,7 +7912,7 @@
             repair: (n) => repairName(n, isKnownName, scanCanon),
             onProgress: (m) => {
               const el = scannerPanel.querySelector(".scan-status");
-              if (el && m?.status) el.textContent = m.status === "loading models" ? "Loading OCR model (first scan)…" : "Scanning…";
+              if (el && m?.status) el.textContent = m.status === "loading models" ? "Loading OCR model (first scan)…" : scanningLabel();
             },
           });
           if (entries.length) scanStore.add(entries);
@@ -7927,8 +7932,11 @@
         } catch (err) {
           scanSkips.push({ file: fname, reason: String(err?.message || err) });
         }
+        scanCount.done++;
+        const el = scannerPanel.querySelector(".scan-status");
+        if (el && scanCount.done < scanCount.total) el.textContent = scanningLabel();
       }
-      scanBusy = false; renderScanner();
+      scanBusy = false; scanCount = null; renderScanner();
     }
 
     // Raid-drops OCR: chat-log screenshot → text lines → parseDrops (filtered to the player's
