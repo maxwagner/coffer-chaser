@@ -55,7 +55,7 @@ const INFO_TIMESTAMP_COL = 10; // column J
 function _getConfig() {
   const ss     = SpreadsheetApp.getActiveSpreadsheet();
   const config = ss.getSheetByName(CONFIG_SHEET);
-  const defaults = { stale: 14, neutralZone: 1, tierThreshold: 15 };
+  const defaults = { stale: 14, neutralZone: 1, tierThreshold: 15, window: 5 };
   if (!config) return defaults;
 
   const data = config.getDataRange().getValues();
@@ -68,6 +68,7 @@ function _getConfig() {
     stale:         parseInt(map["Stale Threshold (days)"])  || defaults.stale,
     neutralZone:   parseFloat(map["Trend Neutral Zone (%)"])   || defaults.neutralZone,
     tierThreshold: parseFloat(map["Trend Tier Threshold (%)"]) || defaults.tierThreshold,
+    window:        Math.max(1, parseInt(map["Price Window (snapshots)"]) || defaults.window),
   };
 }
 
@@ -328,8 +329,8 @@ function _buildOutputRows(log, existingItems, cfg) {
     const row  = logData[r];
     const date = _dateKey(row[LOG_DATE]);
     const name = String(row[LOG_ITEM]).trim();
-    const min  = parseFloat(row[LOG_MIN]) || 0;
-    if (!name) continue;
+    const min  = parseFloat(row[LOG_MIN]);
+    if (!name || !isFinite(min) || min <= 0) continue; // garbage/zero cell: skip, never average in
     if (!itemMap[name]) itemMap[name] = [];
     itemMap[name].push({ date, min });
   }
@@ -350,13 +351,19 @@ function _buildOutputRows(log, existingItems, cfg) {
     const entries = itemMap[name];
     const n       = entries.length;
     const latest  = entries[n - 1];
-    const rollMin = entries.reduce((s, e) => s + e.min, 0) / n;
+    // Windowed median, mirroring the app (js/prices.js): the cost basis is the
+    // median of the last `window` snapshots (robust to lowballs, converges a few
+    // uploads after a real regime change), and trend compares the latest min
+    // against the median of the up-to-`window` snapshots BEFORE it.
+    const rollMin = _median(entries.slice(-cfg.window).map(e => e.min));
+    const prior   = entries.slice(-(cfg.window + 1), -1);
+    const base    = prior.length ? _median(prior.map(e => e.min)) : 0;
 
     outputRows.push([
       name, n, latest.date,
       latest.min,
       rollMin,
-      _trendLabel(latest.min, rollMin),
+      _trendLabel(latest.min, base),
       Math.max(...entries.map(e => e.min)),
       Math.min(...entries.map(e => e.min)),
     ]);
@@ -521,6 +528,12 @@ function _dateKey(date) {
 
 function _dupeKey(date, name, min) {
   return _dateKey(date) + "|" + String(name).trim() + "|" + min;
+}
+
+function _median(nums) {
+  const s = nums.slice().sort((a, b) => a - b);
+  const mid = s.length >> 1;
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
 function _trendLabel(current, rollingAvg) {

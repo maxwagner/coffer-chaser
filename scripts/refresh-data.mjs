@@ -58,9 +58,10 @@ const canon = (s) => {
 };
 
 // Tabs where row POSITION carries meaning (accessories = blank-row-separated
-// blocks with per-block headers): moving rows there is a real change, so they
-// get the plain byte compare. Never sort/filter these sheets.
-const ORDER_SENSITIVE = new Set(["accessories"]);
+// blocks with per-block headers; pricelog = append-only log whose same-date row
+// order breaks "latest snapshot" ties): moving rows there is a real change, so
+// they get the plain byte compare. Never sort/filter these sheets.
+const ORDER_SENSITIVE = new Set(["accessories", "pricelog"]);
 
 // The publish endpoint sometimes stalls a request without erroring (the same
 // behavior that made the app go snapshot-only). Abort at 30s and retry once so

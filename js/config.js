@@ -43,26 +43,28 @@ export const CURRENT_STATS = Object.freeze({
   defPen: 0,
 });
 
-// Price feed (main pricing tab, one row per item, deduped from the log)
-export const PRICE_CSV_URL = tabCsv(948265913);
-export const PRICE_CSV_FALLBACK = "data/prices.csv";
+// Price feed: the raw PriceLog tab (one row per observed snapshot, Date|Item|Min).
+// The app computes its own per-item stats from this history (js/prices.js); the
+// Sheet's PriceInfo summary tab is human-display only and is NOT read here.
+export const PRICE_CSV_URL = tabCsv(427546811);
+export const PRICE_CSV_FALLBACK = "data/pricelog.csv";
 
 // Header names in the published sheet → fields we keep. Parsed by name, so the
 // column order in the sheet can change without breaking anything.
 export const PRICE_COLUMNS = Object.freeze({
+  date: "Date",
   name: "Item",
-  min: "Latest Min",        // cheapest current listing (volatile; used for deal flag)
-  avg: "Rolling Avg (Min)", // smoothed across snapshots (the cost basis, see PRICE_BASIS)
-  date: "Latest Date",
-  trend: "Min Trend",
-  ath: "ATH Min",
-  atl: "ATL Min",
-  snapshots: "# Snapshots",
+  min: "Min",
 });
 
-// Which price the cost model uses everywhere: "avg" (Rolling Avg Min, stable,
-// matches the user's sheet) or "min" (Latest Min, true current floor).
+// Which price the cost model uses everywhere: "avg" (windowed median of recent
+// snapshots, stable) or "min" (latest snapshot, true current floor).
 export const PRICE_BASIS = "avg";
+
+// How many recent snapshots feed the windowed median (`avg`). The median of 5
+// shrugs off up to two lowball listings and re-converges about three uploads
+// after a game update genuinely moves a price.
+export const PRICE_WINDOW = 5;
 
 // Flag a price as a "deal" when the Latest Min sits this far below the Rolling
 // Avg (i.e. an unusually cheap listing right now).
