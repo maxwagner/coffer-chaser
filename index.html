@@ -301,7 +301,24 @@
     .detailrow td { background: var(--surface2); white-space: normal; padding: 12px 16px 14px 30px; }
     .detail h4 { margin: 0 0 6px; font-size: 12px; color: var(--head); text-transform: uppercase; letter-spacing: .03em; }
     .detail .grid { display: grid; grid-template-columns: auto auto; gap: 2px 18px; width: fit-content; margin-bottom: 10px; }
-    .detail .k { color: var(--fg-dim); } .detail .v { font-family: var(--font-mono); }
+    /* Price-history spark: sits to the RIGHT of the price-detail k/v grid (wraps under
+       it when narrow). The scale column shows the series high/low; hover slats inside
+       the svg carry per-snapshot data-tips. */
+    .detail .pdrow { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+    .detail .sparkwrap { width: fit-content; }
+    .detail .sparkwrap .k { margin-bottom: 2px; }
+    .detail .spark { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; display: block; }
+    .detail .sparkdates { display: flex; justify-content: space-between; font: 11px var(--font-mono); color: var(--fg-dim); }
+    /* Dashed guide at the current cost basis, labeled on the line (a surface-colored halo
+       keeps the label legible where it crosses the data); hover slats light their
+       snapshot's point + drop line */
+    .detail .spark .basis { stroke: var(--fg-dim); stroke-width: 1; stroke-dasharray: 3 3; opacity: .6; }
+    .detail .spark .basislbl { font: 10px var(--font-mono); fill: var(--fg-dim);
+      paint-order: stroke; stroke: var(--surface2); stroke-width: 3px; }
+    .detail .spark .slat line { stroke: var(--fg-dim); stroke-width: 1; opacity: 0; }
+    .detail .spark .slat circle { fill: var(--gold); stroke: var(--surface2); stroke-width: 2; opacity: 0; }
+    .detail .spark .slat:hover line { opacity: .5; }
+    .detail .spark .slat:hover circle { opacity: 1; }
     .detail .v.gold { color: var(--gold); }
     .detail .best { color: var(--good); font-weight: 600; }
     .detail table.shoptbl { border-collapse: collapse; font-size: 12px; margin-top: 8px; }
@@ -1854,6 +1871,68 @@
     const dealBadge = (p) => dealPct(p) >= DEAL_DISCOUNT_THRESHOLD
       ? `<span class="deal" title="Latest min is below the rolling average">▼ ${Math.round(dealPct(p) * 100)}%</span>` : "";
 
+    // Price-history sparkline: the item's full PriceLog series as a small inline SVG
+    // line, x scaled by REAL date (a gap in uploads reads as a gap), y linear across
+    // the observed range. A soft area fill sits under the line, a dashed guide marks
+    // the current cost basis, and the surface is split into full-height hover slats
+    // (one per snapshot): hovering a slat lights its point + drop line and shows a
+    // date · price [data-tip] via the app's instant tooltip. "" under 2 points.
+    let sparkSeq = 0;
+    const priceSpark = (p) => {
+      const h = p.history;
+      if (!h || h.length < 2) return "";
+      const W = 300, H = 84, PAD = 7;
+      const gid = `sparkfill${++sparkSeq}`;
+      const t0 = Date.parse(h[0].date), t1 = Date.parse(h[h.length - 1].date);
+      let lo = h[0].min, hi = h[0].min;
+      for (const e of h) { if (e.min < lo) lo = e.min; if (e.min > hi) hi = e.min; }
+      const x = (e) => t1 === t0 ? W / 2 : PAD + ((Date.parse(e.date) - t0) / (t1 - t0)) * (W - 2 * PAD);
+      const yv = (v) => hi === lo ? H / 2 : H - PAD - ((v - lo) / (hi - lo)) * (H - 2 * PAD);
+      const y = (e) => yv(e.min);
+      const pts = h.map((e) => `${x(e).toFixed(1)},${y(e).toFixed(1)}`).join(" ");
+      const area = `${x(h[0]).toFixed(1)},${H} ${pts} ${x(h[h.length - 1]).toFixed(1)},${H}`;
+      const last = h[h.length - 1];
+      const yb = yv(p.avg);
+      // Basis-label placement: the label hugs one end of the dashed line, above or
+      // below it, whichever corner the data series doesn't run through (checked
+      // against the snapshot points inside the label's x-extent; first clean corner
+      // wins, right-above preferred). Drawn after the data line + haloed, so even a
+      // forced overlap stays legible.
+      const LBLW = 92, LBLH = 12;
+      const lblCands = [
+        { x: W - PAD - 2, anchor: "end", y: yb - 5 },
+        { x: W - PAD - 2, anchor: "end", y: yb + 13 },
+        { x: PAD + 2, anchor: "start", y: yb - 5 },
+        { x: PAD + 2, anchor: "start", y: yb + 13 },
+      ];
+      const lblClean = (c) => {
+        const x0 = c.anchor === "end" ? c.x - LBLW : c.x, x1 = x0 + LBLW;
+        return !h.some((e) => { const ex = x(e); return ex >= x0 - 3 && ex <= x1 + 3 && y(e) >= c.y - LBLH && y(e) <= c.y + 3; });
+      };
+      const lbl = lblCands.find(lblClean) || lblCands[0];
+      const lblY = Math.min(H - 4, Math.max(12, lbl.y));
+      const hits = h.map((e, i) => {
+        const xm = x(e), ym = y(e);
+        const x0 = i === 0 ? 0 : (x(h[i - 1]) + xm) / 2;
+        const x1 = i === h.length - 1 ? W : (x(h[i + 1]) + xm) / 2;
+        return `<g class="slat"><line x1="${xm.toFixed(1)}" y1="${ym.toFixed(1)}" x2="${xm.toFixed(1)}" y2="${H}"/><circle cx="${xm.toFixed(1)}" cy="${ym.toFixed(1)}" r="3.5"/><rect x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="${H}" fill="transparent" data-tip="${e.date} · ${fmt(e.min)}"/></g>`;
+      }).join("");
+      return `<div class="sparkwrap"><div class="k">Price history</div>
+        <svg class="spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Price history, ${h.length} snapshots">
+          <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="var(--gold)" stop-opacity="0.22"/>
+            <stop offset="1" stop-color="var(--gold)" stop-opacity="0.02"/>
+          </linearGradient></defs>
+          <polygon points="${area}" fill="url(#${gid})"/>
+          <line class="basis" x1="${PAD}" y1="${yb.toFixed(1)}" x2="${W - PAD}" y2="${yb.toFixed(1)}"/>
+          <polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="${x(last).toFixed(1)}" cy="${y(last).toFixed(1)}" r="3" fill="var(--gold)"/>
+          <text class="basislbl" x="${lbl.x}" y="${lblY.toFixed(1)}" text-anchor="${lbl.anchor}">avg ${fmt(p.avg)}</text>
+          ${hits}
+        </svg>
+        <div class="sparkdates"><span>${h[0].date}</span><span>${last.date}</span></div></div>`;
+    };
+
     // Marketplace freshness/volatility for one priced name, folded into a Catalog row's
     // detail (the former Prices tab). "" when the name carries no price feed.
     const priceDetail = (name) => {
@@ -1861,14 +1940,14 @@
       if (!p) return "";
       const trend = p.trend == null ? "—"
         : `<span class="${p.trend < 0 ? "down" : p.trend > 0 ? "up" : ""}">${p.trend}%</span>`;
-      return `<h4 style="margin-top:10px">Price detail</h4><div class="grid">
+      return `<h4 style="margin-top:10px">Price detail</h4><div class="pdrow"><div class="grid">
           <div class="k">Rolling avg (cost basis)</div><div class="v gold">${fmt(p.avg)}</div>
           <div class="k">Latest min</div><div class="v gold">${fmt(p.min)}${dealBadge(p)}</div>
           <div class="k">Trend</div><div class="v">${trend}</div>
           <div class="k">Updated</div><div class="v">${p.date ?? "—"}</div>
           <div class="k">All-time high / low</div><div class="v">${fmt(p.ath)} / ${fmt(p.atl)}</div>
           <div class="k">Snapshots</div><div class="v">${p.snapshots ?? "—"}</div>
-        </div>`;
+        </div>${priceSpark(p)}</div>`;
     };
 
     // Seal Shop breakdown for a redemption currency (SPEC §16.10): its implied value =

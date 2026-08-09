@@ -1,6 +1,6 @@
 // Price feed loader (SPEC §5.1): raw PriceLog snapshot (Date | Item | Min, one row
 // per observed marketplace snapshot) → price map keyed by exact item name:
-//   prices[name] = { min, avg, date, trend, ath, atl, snapshots }
+//   prices[name] = { min, avg, date, trend, ath, atl, snapshots, history }
 // Stats are computed HERE, not in the Sheet. `avg` (the cost basis) is the median
 // of the last PRICE_WINDOW snapshots: robust to lowball listings, and it re-converges
 // a few uploads after a game update genuinely moves a price. `trend` compares the
@@ -54,6 +54,7 @@ export function logToPrices(rows, window = PRICE_WINDOW) {
       ath,
       atl,
       snapshots: entries.length,
+      history: entries, // full {date,min} series, date-sorted; feeds the price-history spark
     };
   }
   return prices;
