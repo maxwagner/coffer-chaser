@@ -1,9 +1,9 @@
 # Keeps the offline CSV snapshots in data/ in sync with the published Google Sheet.
 #
-# The snapshots are the app's fallback when the live Sheet fetch fails or times out
-# (js/sheet.js), so they mainly need to track the sheet's SHAPE — new tabs, columns,
-# raids. Nobody remembers to run `npm run refresh:data`, so this does it weekly and
-# commits only when something actually changed.
+# The snapshots ARE the app's runtime data (js/sheet.js never touches Google), so a
+# stale one is a stale app: the header's DATA badge, every price, every recipe. Nobody
+# remembers to run `npm run refresh:data`, so this does it weekly and commits only when
+# something actually changed.
 #
 # scripts/refresh-data.mjs discovers tabs from js/config.js (*_CSV_URL paired with
 # *_CSV_FALLBACK), so a tab added to config is picked up here with no workflow edit —
@@ -24,7 +24,7 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    # The refresh script aborts stalled fetches itself (30s x2 per tab); this is the
+    # The refresh script aborts stalled fetches itself (30s x3 per tab); this is the
     # backstop so a surprise hang can never burn the default 6h of Actions minutes.
     timeout-minutes: 15
     steps:
@@ -35,7 +35,12 @@ jobs:
         with:
           node-version: "22"
       # No install step: the script uses only node built-ins + fetch.
-      - run: node scripts/refresh-data.mjs
+      # One tab timing out must NOT discard the tabs that did fetch: the script exits 1
+      # on any failure, so swallow that here, commit whatever came back, then re-fail the
+      # job at the end so a broken tab still shows up as a red run.
+      - id: refresh
+        continue-on-error: true
+        run: node scripts/refresh-data.mjs
       - name: Commit changed snapshots
         run: |
           if git diff --quiet -- data/; then
@@ -47,3 +52,8 @@ jobs:
           git add data/
           git commit -m "Refresh data snapshots from the published Sheet"
           git push
+      - name: Surface fetch failures
+        if: steps.refresh.outcome == 'failure'
+        run: |
+          echo "::error::refresh-data.mjs reported a failed tab; see the refresh step log"
+          exit 1

@@ -64,12 +64,17 @@ const canon = (s) => {
 const ORDER_SENSITIVE = new Set(["accessories", "pricelog"]);
 
 // The publish endpoint sometimes stalls a request without erroring (the same
-// behavior that made the app go snapshot-only). Abort at 30s and retry once so
-// one hung tab costs a minute, not the workflow's whole job budget.
+// behavior that made the app go snapshot-only). Abort at 30s and retry twice so
+// one hung tab costs ~a minute and a half, not the workflow's whole job budget.
+// The pause between attempts matters: back-to-back retries hit the same stalled
+// upstream and burn both attempts on one bad minute (2026-08-10's failed run).
 const FETCH_TIMEOUT_MS = 30_000;
+const RETRY_PAUSE_MS = 5_000;
+const ATTEMPTS = 3;
 async function fetchCsv(url) {
   let lastErr;
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    if (attempt > 1) await new Promise((r) => setTimeout(r, RETRY_PAUSE_MS));
     try {
       const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
