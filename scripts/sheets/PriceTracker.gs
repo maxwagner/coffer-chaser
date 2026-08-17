@@ -165,8 +165,12 @@ function updateHistory() {
   }
 
   // ── Append to PriceLog ────────────────────────────────────
+  // PriceLog IS the app's price feed, so an append has to reach the repo. A script
+  // write doesn't fire the onChange trigger, so queue the debounced push by hand
+  // (PushTrigger.gs) — otherwise these rows never leave the sheet.
   if (newRows.length > 0) {
     log.getRange(log.getLastRow() + 1, 1, newRows.length, LOG_COLS).setValues(newRows);
+    queuePushAfterScriptWrite();
   }
 
   // ── Clear PriceDump ───────────────────────────────────────
@@ -251,6 +255,7 @@ function removeItemByName(name) {
   }
 
   updateHistory_silent(existingItems);
+  queuePushAfterScriptWrite(); // script write: onChange won't see it (PushTrigger.gs)
   return { ok: true, msg: "Removed " + removed + " log entries for \"" + name + "\" and refreshed PriceInfo." };
 }
 
@@ -290,6 +295,7 @@ function mergeItems(sourceName, targetName) {
      .setValues(logData.slice(1).map((row) => [row[LOG_ITEM]]));
 
   updateHistory_silent(existingItems);
+  queuePushAfterScriptWrite(); // script write: onChange won't see it (PushTrigger.gs)
   return {
     ok: true,
     msg: "Merged " + merged + " entries from \"" + sourceName + "\" into \"" + targetName + "\" and refreshed PriceInfo."

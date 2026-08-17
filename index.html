@@ -143,6 +143,9 @@
     .hdr-status .badge, .hdr-status .badge.live { background: none; border: 1px solid var(--border);
       color: var(--fg-dim); font: 600 11px var(--font-mono); padding: 2px 7px; line-height: normal; }
     .hdr-status .badge.fallback { background: none; color: var(--fallback); border-color: var(--fallback); }
+    /* Stale = the snapshot stopped arriving. Warm but not alarming: the numbers are still
+       usable, they are just old, and the pipeline behind them needs a look. */
+    .hdr-status .badge.stale { color: var(--warn, #c90); border-color: var(--warn, #c90); }
     /* Settings cog + repo link: muted icons that lift on hover, like the version button. */
     .hdr-set { background: none; border: none; padding: 0; display: inline-flex; color: var(--fg-dim); cursor: pointer; }
     .hdr-set:hover { color: var(--fg); }
@@ -8558,14 +8561,23 @@
     // Data is snapshot-only; the Sheet pushes edits into the repo automatically
     // (debounced Apps Script trigger + weekly cron backstop), so "how fresh" is
     // simply the latest scan date the pricing tab carries.
+    // Past STALE_DAYS the badge turns warm and says so. Silence here is what let the
+    // feed sit nine days behind unnoticed: the badge showed a date, just an old one,
+    // and an old date reads the same as a fresh one at a glance.
+    const STALE_DAYS = 7;
     function renderStatus() {
       let latest = null;
       for (const p of Object.values(prices)) if (p.date && (!latest || p.date > latest)) latest = p.date;
       const label = latest
         ? new Date(latest + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })
         : null;
+      const age = latest ? Math.floor((Date.now() - new Date(latest + "T00:00:00").getTime()) / 86400000) : null;
+      const stale = age != null && age > STALE_DAYS;
+      const tip = stale
+        ? `Newest marketplace scan in the data: ${latest} (${age} days ago). Snapshots push automatically from the Sheet, so this old means the push or the refresh workflow needs a look.`
+        : `Newest marketplace scan in the data: ${latest}. Snapshots push automatically from the Sheet.`;
       document.getElementById("status").innerHTML = label
-        ? `<span class="badge live" title="Newest marketplace scan in the data: ${latest}. Snapshots push automatically from the Sheet.">DATA ${label.toUpperCase()}</span>`
+        ? `<span class="badge ${stale ? "stale" : "live"}" title="${tip}">DATA ${label.toUpperCase()}${stale ? ` · ${age}D OLD` : ""}</span>`
         : `<span class="badge fallback" title="No dated price rows in the snapshot">NO DATA</span>`;
     }
     // Header version button → changelog modal (js/changelog.js is the single source of truth).

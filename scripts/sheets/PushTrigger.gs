@@ -52,6 +52,21 @@ function queuePush() {
   }
 }
 
+// Same debounce, for SCRIPT-driven writes. Apps Script's onChange trigger does not
+// fire for changes a script makes, so anything this project writes (PriceTracker's
+// PriceLog append, item removal, merges) is invisible to queuePush and would sit in
+// the sheet unpushed until a human happened to type in a cell — which is exactly how
+// the snapshot froze at 2026-08-07 while the sheet had rows through 08-16. Those
+// writers call this instead. Never throws: a push that can't be queued must not take
+// down the price-logging run that just succeeded.
+function queuePushAfterScriptWrite() {
+  try {
+    queuePush();
+  } catch (e) {
+    console.error("queuePushAfterScriptWrite: " + (e && e.message ? e.message : e));
+  }
+}
+
 // Manual push for the sidebar: fire immediately, cancel any pending debounce timer
 // (firePush deletes them), and return a result object for the sidebar to display.
 function pushNow() {
