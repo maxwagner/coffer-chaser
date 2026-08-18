@@ -1316,7 +1316,7 @@
     import { slotIcon } from "./js/slot-icons.js";
     import { infusionKind, infusionOptions, infusionTargets, infusionStatus, INFUSION_STAT_LABEL } from "./js/infusion.js";
     import { snapshotState, makeProfileRecord, upsertProfile, removeProfile, renameProfile } from "./js/profiles.js";
-    import { loadRaids, nextRaid } from "./js/raids.js";
+    import { loadRaids, nextRaid, byPts } from "./js/raids.js";
     import { loadRaidDrops, deriveRaidEssences } from "./js/raiddrops.js";
     import { loadSealShop, sealShopValues } from "./js/sealshop.js";
     import { loadWeeklyBoxes, weeklyBoxOptions, weeklyDemand, weeklyBoxPlan, nextReset, stepBoxWaits, stepBoxSavings } from "./js/weeklybox.js";
@@ -3288,13 +3288,19 @@
     };
     let damagePrefs = loadDamagePrefs();
     const persistDamagePrefs = () => localStorage.setItem(DAMAGE_STORAGE_KEY, JSON.stringify(damagePrefs));
-    // Raids that can drive the model = those with a boss Def filled in the sheet.
-    const damageRaids = () => raids.filter((r) => r.boss?.def > 0);
+    // Raids that can drive the model = those with a boss Def filled in the sheet, listed
+    // hardest→easiest by JOIN points (so Space Time sorts above same-level ordinary raids).
+    const damageRaids = () => byPts(raids.filter((r) => r.boss?.def > 0), true);
     // Resolve the reference boss: picked raid's sheet values (def from boss{}, caps
     // from caps{}), with custom overrides on top. No picked raid → easiest raid with
     // a Def value (so the DPS columns work out of the box); null def → model disabled.
     function damageBoss() {
-      const r = damagePrefs.raid ? raidByName[damagePrefs.raid] : (damageRaids()[0] ?? null);
+      // The picker lists hardest-first, but the DEFAULT is the LOWEST-Def raid, so an un-picked
+      // Damage tab reads as a floor. Keyed on Def, not on the picker's join-points order: the
+      // gateless Redeemers all score 0 points yet span 17k-70k Def, so "last in the picker"
+      // would land on Shadow's Castle, one of the beefiest bosses in the sheet.
+      const r = damagePrefs.raid ? raidByName[damagePrefs.raid]
+        : (damageRaids().reduce((a, b) => (a && a.boss.def <= b.boss.def ? a : b), null) ?? null);
       return {
         raid: r?.raid ?? null,
         def: damagePrefs.custom.def ?? r?.boss?.def ?? null,
@@ -4057,12 +4063,13 @@
       recomputeLoadout();
       renderVetoPanel();
     };
-    // Raid mode panel: a raid picker (hardest→easiest, like the sheet) + a read-only
-    // view of the resulting goals, each tagged floor (QB entry min) or cap (ceiling).
+    // Raid mode panel: a raid picker (hardest→easiest by JOIN points, so Space Time and the
+    // gateless Redeemers land in the right place instead of by level) + a read-only view of
+    // the resulting goals, each tagged floor (QB entry min) or cap (ceiling).
     function raidGoals() {
       if (!raids.length) return `<p class="warn">No raid data loaded.</p>`;
       const r = raidByName[thRaid] || raids[0];
-      const opts = [...raids].reverse().map((x) =>
+      const opts = byPts(raids, true).map((x) =>
         `<option value="${esc(x.raid)}" ${x.raid === r.raid ? "selected" : ""}>${esc(x.raid)} (Lv ${x.level})</option>`).join("");
       const aimToggle = `<div class="modeToggle" style="margin:0 0 0 8px">
         <button data-aim="qb" class="${thRaidAim === "qb" ? "on" : ""}" title="Quick-Battle entry minimums">QB entry</button>
@@ -4565,7 +4572,7 @@
       const controls = `<div class="plan-raid-ctl">` +
         `<select data-plan-raid-pick title="Which raid this card tracks. Auto = the easiest raid the plan's projected stats don't yet reach.">` +
         `<option value="">Auto: next unmet</option>` +
-        raids.map((x) => `<option value="${esc(x.raid)}"${planRaidPick === x.raid ? " selected" : ""}>${escTxt(x.raid)}</option>`).join("") +
+        byPts(raids, true).map((x) => `<option value="${esc(x.raid)}"${planRaidPick === x.raid ? " selected" : ""}>${escTxt(x.raid)}</option>`).join("") +
         `</select><div class="modeToggle plan-raid-aim">` +
         `<button type="button" data-plan-raid-aim="qb" class="${aim === "qb" ? "on" : ""}" title="Quick-Battle entry minimums: what actually gates getting in">QB entry</button>` +
         `<button type="button" data-plan-raid-aim="cap" class="${aim === "cap" ? "on" : ""}" title="Entry floors with Bal/Crit/Crit Res raised to the raid's caps">Caps</button></div></div>`;
@@ -7376,16 +7383,20 @@
     // Raid picker for the drops subtab, laid out as a TABLE rather than a dropdown: every raid is
     // visible at once, so picking one is a single click instead of open-scroll-click. Columns are
     // Circuits, then the level tiers of ordinary raids (hardest tier first, hardest raid first
-    // within it), then the odd battle types pooled into Special, then the Redeemers. A raid with
-    // no drop table still lists (it just won't scope OCR). Derived entirely from the sheet's Type
-    // and Level, so a new raid or a new tier appears with no code edit.
+    // within it), then Space Time, then the odd battle types pooled into Special, then the Hell
+    // Redeemers and the ordinary Redeemers. A raid with no drop table still lists (it just won't
+    // scope OCR). Derived entirely from the sheet's Type and Level, so a new raid or a new tier
+    // appears with no code edit.
     function raidPickerColumns() {
-      const byLevel = {}, special = [], redeemer = [];
+      const byLevel = {}, special = [], spaceTime = [], redeemer = [], hellRedeemer = [];
       for (const r of dRaids || []) {
         const type = (r.type || "").trim().toLowerCase();
-        if (type === "redeemer") redeemer.push(r);
+        // Hell Redeemers share the Redeemer type but are their own difficulty family, so they
+        // split off by NAME (the sheet has no column for it).
+        if (type === "redeemer") (/^hell\b/i.test(r.raid) ? hellRedeemer : redeemer).push(r);
+        else if (type === "space time") spaceTime.push(r);
         else if (type === "raid") (byLevel[r.level || 0] ||= []).push(r);
-        else special.push(r);           // Special, RAR, RME: one-off formats, not a level tier
+        else special.push(r);           // Special, RAR, RME, Shadow's Castle: not a level tier
       }
       const cell = (value, label, on) => ({ value, label, on });
       const cols = [];
@@ -7399,6 +7410,10 @@
       for (const lv of Object.keys(byLevel).map(Number).sort((a, b) => b - a)) {
         cols.push({ label: `${lv} Raids`, items: byLevel[lv].map(pick) });
       }
+      // Space Time IS a difficulty ladder but spans levels 110-125, so it orders by join points
+      // rather than by level. Hardest first, like the dropdowns elsewhere. NOTE the level columns
+      // above still lead with their EASIEST raid; only this column is hardest-first.
+      if (spaceTime.length) cols.push({ label: "Space Time", items: byPts(spaceTime, true).map(pick) });
       // Special has no natural order (it isn't a difficulty ladder and the sheet's order is
       // incidental), so it's listed explicitly. Anything new falls in after these, in sheet order.
       if (special.length) {
@@ -7406,6 +7421,8 @@
         const rank = (r) => { const i = order.indexOf(r.raid); return i === -1 ? order.length : i; };
         cols.push({ label: "Special", items: special.slice().sort((a, b) => rank(a) - rank(b)).map(pick) });
       }
+      // Redeemers have no QB gate (0 points for all of them), so both columns stay in sheet order.
+      if (hellRedeemer.length) cols.push({ label: "Hell Redeemer", items: hellRedeemer.map(pick) });
       if (redeemer.length) cols.push({ label: "Redeemer", items: redeemer.map(pick) });
       return cols;
     }

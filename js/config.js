@@ -410,8 +410,9 @@ export const ACCESSORY_ENHANCE_COLUMNS = Object.freeze({
 // A raid's `targets` (built in js/raids.js) = QB floors, with bal/crit/critRes
 // raised to their caps. NOTE: the sheet ALSO carries Crit Rate / Crit Res / Bal
 // Res / Def (no QB/Cap prefix) columns, intentionally NOT used (no defined role
-// yet; never invent data). QB ALR maps to `destruction` but is currently 0 for
-// every raid, so it imposes no constraint until the sheet fills it in.
+// yet; never invent data). QB ALR maps to `destruction`: 0 (no constraint) for every
+// ordinary raid, but the four Space Time raids DO gate on it (Taros Jr 2,000 →
+// Taros 13,000), so it's a live floor there.
 // Rows are sorted ascending difficulty in the loader (the sheet lists them
 // hardest→easiest), so "next raid" = the easiest one whose QB floors you don't meet.
 export const RAID_INFO_CSV_URL = tabCsv(0);
@@ -441,6 +442,15 @@ export const RAID_GOLD_COLUMNS = Object.freeze({
 // only when the run's `coreBoost` flag is set (a per-run checkbox). So it adds on top of the
 // mode's base gold for boosted runs and leaves un-boosted runs unchanged.
 export const RAID_CORE_GOLD_COLUMN = "Core Gold";
+// OPTIONAL column: JOIN difficulty as a single number = the ranking score (SPEC §2) of the
+// raid's QB entry floors, i.e. how much total stat the gate asks for. NOT the difficulty of
+// the fight. Sheet-maintained so it stays one number per row; `js/raids.js` falls back to
+// score(qb) when the cell is blank, so the two can't drift. Used ONLY to ORDER raid pickers
+// (Target/Planner/Damage/Tracker) across families whose levels aren't comparable: Space Time
+// raids sit at lv110-125 but gate far harder than ordinary raids of the same level, and the
+// Redeemers have no QB gate at all (score 0). Entry itself is still the per-stat conjunction
+// in `raidShortfall`, never this sum: a surplus in one stat can't pay for a shortfall in another.
+export const RAID_PTS_COLUMN = "Pts";
 // Level-cap bonus: a max-level character earns an extra 20% on the raid's gold reward. Applied LIVE,
 // only when the run's `maxLevel` flag is set (a per-CHARACTER checkbox, see MAXLEVEL_STORAGE_KEY). It
 // multiplies the run reward + core gold (the deterministic gold the app models), not the chat-log gold.

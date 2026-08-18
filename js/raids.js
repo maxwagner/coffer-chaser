@@ -2,7 +2,7 @@
 // entry per raid with the stat goals needed to take it on.
 //
 // Each raid yields:
-//   { raid, level, qb:{stat:val}, caps:{stat:val}, targets:{stat:val} }
+//   { raid, level, pts, qb:{stat:val}, caps:{stat:val}, targets:{stat:val} }
 // where `targets` = the QB ENTRY floors with bal/crit/critRes raised to their CAPS
 // (the cap is ≥ the QB floor in the data, so it's the effective goal for a capped
 // stat). Crit Res has only a cap, no floor → its target is the cap alone.
@@ -14,8 +14,10 @@
 import {
   RAID_INFO_CSV_URL, RAID_INFO_CSV_FALLBACK, RAID_INFO_COLUMNS,
   RAID_QB_COLUMNS, RAID_CAP_COLUMNS, RAID_BOSS_COLUMNS, RAID_HERO_COLUMN, RAID_GOLD_COLUMNS, RAID_CORE_GOLD_COLUMN,
+  RAID_PTS_COLUMN,
 } from "./config.js";
 import { fetchSheetRows, headerIndex, toInt } from "./sheet.js";
+import { score } from "./score.js";
 
 // A "has hero version" cell → boolean. Lenient (yes/y/true/1/hero); blank/no → false.
 const isHeroYes = (v) => /^(y|yes|true|1|hero)/i.test(String(v || "").trim());
@@ -35,6 +37,7 @@ export function rowsToRaids(rows) {
   const goldNormalIdx = findCol(RAID_GOLD_COLUMNS.goldNormal);
   const goldHeroIdx = findCol(RAID_GOLD_COLUMNS.goldHero);
   const coreGoldIdx = findCol(RAID_CORE_GOLD_COLUMN);
+  const ptsIdx = findCol(RAID_PTS_COLUMN);
   // Bare boss-stat columns are OPTIONAL too (exact-name match, so "Crit Res" never
   // collides with "Crit Res Cap"). Blank/0 cells → field omitted from boss{}.
   const bossIdx = {};
@@ -66,11 +69,24 @@ export function rowsToRaids(rows) {
       const v = ci >= 0 ? toInt(row[ci]) : null;
       if (v != null && v > 0) boss[k] = v;
     }
-    raids.push({ raid: name, level: toInt(row[idx.level]), type: (row[idx.type] || "").trim(), hero, goldNormal, goldHero, coreGold, qb, caps, targets, boss });
+    // Join-difficulty points: the sheet's own column, else the same thing computed here
+    // (qb keys ARE scored-stat keys, so score(qb) is exactly the sheet's formula).
+    const ptsCell = ptsIdx >= 0 ? toInt(row[ptsIdx]) : null;
+    const pts = ptsCell != null ? ptsCell : score(qb);
+    raids.push({ raid: name, level: toInt(row[idx.level]), type: (row[idx.type] || "").trim(), hero, goldNormal, goldHero, coreGold, pts, qb, caps, targets, boss });
   }
   // Ascending difficulty so "next raid" = easiest unmet.
   raids.sort((a, b) => (a.level - b.level) || ((a.qb.att ?? 0) - (b.qb.att ?? 0)));
   return raids;
+}
+
+// Display ordering by join difficulty (`pts`, see RAID_PTS_COLUMN). STABLE: equal-pts rows
+// (every Redeemer scores 0) keep the caller's incoming order. Separate from the loader's own
+// level-then-Att sort, which still drives nextRaid/nextUnmetRaid/raidMilestones.
+export function byPts(raids, desc = false) {
+  return (raids || []).map((r, i) => [r, i])
+    .sort((a, b) => (desc ? b[0].pts - a[0].pts : a[0].pts - b[0].pts) || (a[1] - b[1]))
+    .map(([r]) => r);
 }
 
 // The "next" raid = the easiest one whose QB ENTRY floors `current` doesn't all
