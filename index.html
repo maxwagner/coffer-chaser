@@ -433,6 +433,23 @@
       border-left: 2px solid var(--border); }
     .mats > .submats[hidden] { display: none; }
     .mats > .submats > .grid { margin-bottom: 6px; }
+    /* ⚒ sub-craft button on a crafted row (SPEC §5.2), inside the stepper span after the +.
+       Stained by material coverage: none (red) / some (yellow) / full (green). Non-crafted rows
+       carry an equal-width gap so the +/- columns line up. */
+    .inv-btn.craft-sub { margin-left: 4px; font-size: 12px; }
+    .inv-btn.craft-sub.none { color: var(--bad); border-color: var(--bad); }
+    .inv-btn.craft-sub.some { color: var(--warn, #c90); border-color: var(--warn, #c90); }
+    .inv-btn.craft-sub.full { color: var(--good); border-color: var(--good); }
+    .inv-btn.craft-sub:hover:not(:disabled) { background: var(--good); border-color: var(--good); color: #fff; }
+    .inv-btn.craft-sub.none:hover:not(:disabled) { background: var(--bad); border-color: var(--bad); }
+    .craft-sub-gap { display: inline-block; width: 18px; margin-left: 4px; }
+    .mats .mtag.mshared { color: var(--warn, #c90); cursor: help; }
+    /* "Total needed at every depth" list under a deep recipe: collapsed by default. */
+    details.tree-tot { margin: 4px 0 10px; }
+    details.tree-tot > summary { cursor: pointer; font-size: 12px; color: var(--fg-dim); }
+    details.tree-tot > summary:hover { color: var(--head); }
+    details.tree-tot > .mats { margin-top: 6px; }
+    details.tree-tot .mt .pos { color: var(--good); }
     /* Per-level expander inside a merged enhance-chain detail (issue 5). */
     details.stepsub { margin-top: 6px; border-left: 2px solid var(--border); padding-left: 10px; }
     details.stepsub > summary { cursor: pointer; list-style: none; font-size: 12px; padding: 2px 0; user-select: none; }
@@ -1328,7 +1345,7 @@
     import { makeCoster, enchantMethods, successRate, enchantCost, reEnhanceCost } from "./js/cost.js";
     import { generateMoves, solveThreshold, solveBudget, isLossy, slotsWithBaseSwap, bestBaseSwapBySlot, bestEnchantBySlotAffix, buildTierChain } from "./js/solver.js";
     import { tierPath as tierPathPure, expandBOM as expandBOMPure, moveBuys as moveBuysPure,
-      isCraftedMat, drawMaterial,
+      isCraftedMat, drawMaterial, recipeTree, recipeTreeTotals,
       reconcilePath, aggregateMaterials, deepMaterials, aggregateStatDiffs, projectAffordability, stepLabel as stepLabelPure,
       newNoteStep, newGoalStep, newInfuseStep, insertSteps, removeStep, moveStep,
       moveToSteps, stepKey, serializePath, parsePath, migratePath, pathToTSV, slotUpgradeOptions, enhanceTargetOptions,
@@ -2081,14 +2098,16 @@
     // Inventory +/- stepper for a priced item name (SPEC §5.2): shows how many you OWN,
     // with buttons to adjust. A delegated document handler applies the change. Returns "" for
     // a nameless cell. Used on every material row + the catalog Owned column.
-    const invStepper = (name) => {
+    // `extra` (optional HTML) rides inside the span after the +, the deep recipe rows put their
+    // ⚒ sub-craft button (or an equal-width gap) there so the +/- columns stay aligned.
+    const invStepper = (name, extra = "") => {
       if (!name) return `<span class="invstep"></span>`;
       const n = ownedOf(name);
       return `<span class="invstep${n > 0 ? " has" : ""}" data-tip="How many of ${esc(name)} you own.\nNetted out of upgrade costs">`
         + `<button class="inv-btn" data-inv="${esc(name)}" data-inv-dir="-1" type="button"${n <= 0 ? " disabled" : ""}>−</button>`
         + `<span class="inv-n" data-inv="${esc(name)}" data-tip="Click to type an exact amount">${n}</span>`
         + `<button class="inv-btn" data-inv="${esc(name)}" data-inv-dir="1" type="button">+</button>`
-        + `</span>`;
+        + extra + `</span>`;
     };
 
     // Which sub-recipe <details> are expanded, keyed by item name, so an inventory edit's re-render
@@ -2099,125 +2118,141 @@
     // a multi-tier tierStep's carousel back to slide 1 (hiding the sub-recipe you were editing).
     const openCarouselSlide = new Map();
 
-    // `pool` (optional {name:count}, MUTATED): a shared owned-inventory clone drawn down across the
-    // material rows of one recipe render, so a line's total reflects the stock you own, for a LEAF
-    // you own, or (via netCost's recursion) a CRAFTED intermediate whose own leaves you own. Passing
-    // it makes the line NETTED (and the parent recipe's total = fee + Σ these lines stays consistent);
-    // omit it (catalog / reference sub-recipes) for the gross per-unit line.
-    // `seen` (optional Set, deep move-detail views only): when passed AND the material is itself
-    // crafted, its own recipe is expanded INLINE as a collapsed <details> placed directly under this
-    // row, the one, uniform "main recipe with expand-in-place sub-recipes" model (issue 2/4). The
-    // set guards cycles/dupes (recipes already shown up the tree, owned-tier rows). Omit it (catalog,
-    // combined buy list, reference rows) for a flat, non-expanding row.
-    const matLi = (material, qty, pool = null, seen = null) => {
-      const unit = cost(material);
-      const gross = unit == null ? null : qty * unit;
-      const line = pool ? (unit == null ? null : netCost(material, qty, pool, {})) : gross;
-      const reduced = line != null && gross != null && line < gross; // owned stock cut this line
-      // `isCraftedItem` is a per-unit market check (craft ≤ buy). But owned ingredients can flip a
-      // buy→craft even when the market price is below the nominal craft cost, netCost already priced
-      // this line via that cheaper craft path (so it came in `reduced`). Treat such a row as crafted
-      // HERE too, so it gets the "(crafted)" tag + drill-in and the player can see/edit the owned
-      // leaves that cut it (otherwise the discount would show with no way to inspect its source).
-      const crafted = isCraftedItem(material)
-        || (reduced && !!recipes[material] && craftCost(material) != null);
-      const tag = unit == null ? ` <span class="mtag">(unpriced)</span>`
-        : unit === 0 ? ` <span class="mtag">(free)</span>`
-        : crafted ? ` <span class="mtag">(crafted)</span>` : "";
-      // Owned stock is shown by the colored line total + the stepper count. NOT an inline text
-      // tag, which would shift the +/- buttons as the count changes (SPEC §5.2). The line total
-      // tooltip names how many of this line you hold.
-      const tip = priceTip(material);
-      const owned = ownedOf(material);
-      const ownTip = reduced ? ` data-tip="netted with your inventory${owned > 0 ? `, ${Math.min(owned, qty)} of ${qty} ${esc(material)} owned` : ""}"`
-        : owned > 0 ? ` data-tip="${Math.min(owned, qty)} of ${qty} owned"` : "";
-      // Inline expand: the crafted material row IS the toggle, click its NAME to reveal its recipe
-      // in a full-width `.submats` block indented under the row (no separate "Recipe:" line, issue 2/4).
-      const expandable = seen && crafted && !seen.has(material);
-      const open = expandable && openSubrecipes.has(material);
-      const mn = expandable
-        ? `<span class="mn expandable" data-expand="${esc(material)}"${tip ? ` data-tip="${esc(tip)}"` : ""}><span class="exp-caret">${open ? "▾" : "▸"}</span> ${material}${tag}</span>`
-        : `<span class="mn"${tip ? ` data-tip="${esc(tip)}"` : ""}>${material}${tag}</span>`;
-      const cells = `<span class="mq">${qty} ×</span>${mn}`
-        + `<span class="mu">${fmt(unit)} ea</span><span class="ml${reduced ? " owned" : ""}"${ownTip}>${fmt(line)}</span>${trendCell(material)}`
-        + invStepper(material);
-      if (!expandable) return cells;
-      // recipeBlock(title="__inline__") returns just the body (craft-price grid + its own `.mats`, whose
-      // crafted materials expand the same way); `seen` guards cycles (recipeBlock adds `material` itself).
-      return cells + `<div class="submats" data-submats="${esc(material)}"${open ? "" : " hidden"}>${recipeBlock(material, true, seen, "__inline__")}</div>`;
-    };
-
     // Is `name` a thing you'd CRAFT (has a recipe, not free, and crafting beats buying)? Same
-    // test matLi uses for its "(crafted)" tag and expandBOM uses to decide whether to expand.
+    // test the gross rows use for their "(crafted)" tag and expandBOM uses to decide whether to expand.
     const isCraftedItem = (n) => !!recipes[n] && cost(n) !== 0
       && craftCost(n) != null && craftCost(n) <= (priceOf(n) ?? Infinity);
 
-    // Recipe block for a craftable name: a "Craft price (total)" top row followed by the
-    // per-material breakdown. Returns "" when the name has no recipe. Shared by the Catalog
-    // detail AND the Upgrades move math so a craft cost always shows what it's made of.
-    // `deep` (move details): recurse into each CRAFTED material so its own sub-materials get
-    // their own owned-stock steppers, you can net the Advancement Stone's leaves (SPEC §5.2)
-    // straight from the Upgrades tab, not just the top recipe. `seen` guards recipe cycles.
-    // `netted` (move details only): the "Craft price (total)" draws owned stock down so it tracks
-    // the +/- steppers, matching the move's gold, with a "from inventory" credit sub-line. The
-    // catalog leaves it gross (its Price column is gross). `baseOwned` (optional, with netted):
-    // net against THIS stock snapshot instead of the full inventory, a jump tierStep passes the
-    // inventory left after its enhancement/tuning draws (invLeft), so shared stock isn't
-    // re-credited here after the Math grid already credited it there.
-    const recipeBlock = (name, deep = false, seen = new Set(), title = null, netted = false, baseOwned = null) => {
-      const r = recipes[name];
-      if (!r) return "";
-      // Netted render: draw ONE owned clone down across the material lines (in recipe order) so each
-      // line reflects your stock, a crafted intermediate's line drops when you own its leaves, not
-      // just the total. fee + Σ(these lines) == the netted total below. Sub-recipes stay gross
-      // reference recipes (their own steppers still re-net THIS parent line on edit via re-render).
-      // OWNED-TIER rows (the incoming `seen`, e.g. the move's `from`—"1 × Beginner Uaithne Weapon")
-      // get NO pool: you own that piece, so its row must not expand its BOM and eat the stock the
-      // OTHER rows (the Advancement Stone) should be credited with. Snapshot `seen` now, the deep
-      // recursion below mutates it with every sub-recipe name.
-      const ownedRows = new Set(seen);
-      const pool = netted ? { ...(baseOwned || inventory) } : null;
-      // Deep move-detail views expand each crafted material's own recipe INLINE, under its row
-      // (matLi does it when handed `childSeen`). `childSeen` = the incoming guard set PLUS this
-      // recipe's name, so a recipe never re-expands itself or a tier already shown up the tree.
-      // Owned-tier rows (the move's `from`, pre-seeded in `seen`) neither net nor expand, you own
-      // that piece. Non-deep (catalog) renders flat, no expanders. The incoming `seen` is never
-      // mutated (a fresh set is threaded down), so sibling renders don't leak state into each other.
-      const childSeen = deep ? new Set([...seen, name]) : null;
-      const mats = r.materials.map(({ material, qty }) => {
-        const isOwned = ownedRows.has(material);
-        return matLi(material, qty, isOwned ? null : pool, isOwned ? null : childSeen);
-      }).join("");
-      const feeTxt = r.fee ? ` · flat fee ${fmt(r.fee)}` : "";
-      const gross = craftCost(name);
-      // Netted total, consistent BY CONSTRUCTION with the lines above: fee + Σ(the displayed
-      // line values), each recomputed on a parallel clone drawn in the same order as the
-      // display pool. Never nets the OUTPUT node itself, netCost at the root would buy a
-      // market-cheaper item at its market price (mislabeling "Craft price" and inventing a
-      // phantom "from inventory" credit = craft − market with an EMPTY inventory), or consume
-      // an owned unit of the output while the material lines stay gross. Owned-tier rows
-      // (`ownedRows`) stay gross, matching their pool-less matLi line.
-      let totalGold = gross;
-      if (netted) {
-        const tpool = { ...(baseOwned || inventory) };
-        let sum = r.fee || 0, ok = true;
-        for (const { material, qty } of r.materials) {
-          const unit = cost(material);
-          const line = unit == null ? null
-            : ownedRows.has(material) ? qty * unit
-            : netCost(material, qty, tpool, {});
-          if (line == null) { ok = false; break; }
-          sum += line;
-        }
-        totalGold = ok ? sum : null;
+    // A GROSS row node (catalog, tuning breakdowns, reference rows): the recipeTree node shape with
+    // nothing owned, so matRow renders the plain per-unit line. Crafted tag = the market test.
+    const grossNode = (name, qty) => {
+      const unit = cost(name), gross = unit == null ? null : unit * qty;
+      return { name, qty, per: qty, crafts: 1, unit, gross, owned: 0, need: qty, line: gross, buy: null, crafted: false, fee: 0, children: null, grossTag: isCraftedItem(name) };
+    };
+
+    // The "⚒" sub-craft button on a crafted row (SPEC §5.2): craft this row's batch from the DIRECT
+    // materials you hold, in inventory bookkeeping terms (subtract the materials, ADD the output).
+    // Stained by coverage of the batch: red = you own none of the materials, yellow = some (crafts as
+    // many as your stock allows), green = enough for the whole batch. Free materials (cost 0) count as
+    // covered and are never subtracted. Disabled when not even one craft is possible.
+    // Coverage reads the tree's per-node `owned` (what the pool allotted THIS row after upstream
+    // draws), so two rows competing for one stock don't both go green.
+    const subCraftButton = (node) => {
+      const kids = node.children || [];
+      if (!kids.length || node.need <= 0) return `<span class="craft-sub-gap"></span>`;
+      let crafts = Infinity, anyOwned = false, mats = [];
+      for (const k of kids) {
+        if (k.unit === 0) continue;                       // free: no stock needed
+        crafts = Math.min(crafts, Math.floor(k.owned / k.per));
+        if (k.owned > 0) anyOwned = true;
+        mats.push([k.name, k.per]);
       }
-      const credit = netted && gross != null && totalGold != null ? gross - totalGold : 0;
-      const body = `<div class="grid"><div class="k">Craft price (total)</div><div class="v gold best">${fmt(totalGold)}</div>`
+      if (crafts === Infinity) crafts = node.need;        // every material free
+      const k = Math.min(crafts, node.need);
+      const tone = k >= node.need ? "full" : anyOwned ? "some" : "none";
+      const payload = { out: node.name, k, mats };
+      const title = k >= node.need
+        ? `Craft ${node.need}× ${node.name} from your inventory: subtracts ${mats.map(([n, q]) => `${q * k}× ${n}`).join(", ")}, adds ${k}× ${node.name}.`
+        : k > 0
+          ? `You hold enough for ${k} of the ${node.need}× ${node.name} needed. Craft ${k}: subtracts ${mats.map(([n, q]) => `${q * k}× ${n}`).join(", ")}, adds ${k}× ${node.name}.`
+          : anyOwned ? `You hold some of the materials for ${node.name}, but not enough for one craft.`
+          : `You hold none of the materials for ${node.name}.`;
+      return `<button class="inv-btn craft-sub ${tone}" type="button" data-craftsub="${esc(JSON.stringify(payload))}" title="${esc(title)}"${k > 0 ? "" : " disabled"}>⚒</button>`;
+    };
+
+    // One material row as six aligned grid cells (qty · name · unit ea · line · trend · stepper)
+    // from a recipeTree NODE. `qty` is the BATCH quantity (per-craft × crafts of the parent), the
+    // per-craft figure rides in the tooltip when they differ. The line is the netted gold: 0 (owned
+    // colour) when your stock covers it, cut when it covers part or a crafted intermediate's leaves.
+    // `o.seen` (deep move-detail views): a crafted node with children expands INLINE, its own recipe
+    // in a `.submats` block under the row (the name is the toggle), rendered from the SAME tree so
+    // batch quantities and netting stay consistent all the way down. `o.all` (per-name totals across
+    // the whole tree): a name used in more than one branch gets a "N total" hint so a partially-
+    // stocked shared material isn't mistaken for covered.
+    const matRow = (node, o = {}) => {
+      const { name: material, qty, unit, gross, line, owned } = node;
+      const reduced = line != null && gross != null && line < gross;
+      const crafted = node.crafted || !!node.grossTag;
+      const tag = unit == null ? ` <span class="mtag">(unpriced)</span>`
+        : unit === 0 ? ` <span class="mtag">(free)</span>`
+        : crafted ? ` <span class="mtag">(crafted)</span>` : "";
+      const tot = o.all?.[material];
+      const shared = tot != null && tot > qty
+        ? ` <span class="mtag mshared" data-tip="${esc(`${qty} here, ${tot} across this whole recipe (also used in another branch). Stock is credited top to bottom, so check the total, not this row alone.`)}">· ${tot} total</span>` : "";
+      const tip = priceTip(material);
+      const ownTip = owned > 0
+        ? ` data-tip="${owned} of ${qty} owned${node.need > 0 && node.crafted && reduced ? ", the rest crafted from owned materials" : ""}"`
+        : reduced ? ` data-tip="netted with your inventory (owned materials inside this craft)"` : "";
+      const expandable = o.seen && node.children && !o.seen.has(material);
+      const open = expandable && openSubrecipes.has(material);
+      const qtyTip = node.crafts > 1 ? ` data-tip="${node.per} per craft × ${node.crafts} crafts"` : "";
+      const mn = expandable
+        ? `<span class="mn expandable" data-expand="${esc(material)}"${tip ? ` data-tip="${esc(tip)}"` : ""}><span class="exp-caret">${open ? "▾" : "▸"}</span> ${material}${tag}${shared}</span>`
+        : `<span class="mn"${tip ? ` data-tip="${esc(tip)}"` : ""}>${material}${tag}${shared}</span>`;
+      const stepper = o.seen ? invStepper(material, node.children ? subCraftButton(node) : `<span class="craft-sub-gap"></span>`) : invStepper(material);
+      const cells = `<span class="mq"${qtyTip}>${qty} ×</span>${mn}`
+        + `<span class="mu">${fmt(unit)} ea</span><span class="ml${reduced || (owned > 0 && line === 0) ? " owned" : ""}"${ownTip}>${fmt(line)}</span>${trendCell(material)}`
+        + stepper;
+      if (!expandable) return cells;
+      const childSeen = new Set([...o.seen, material]);
+      return cells + `<div class="submats" data-submats="${esc(material)}"${open ? "" : " hidden"}>${treeBody(node, childSeen, o.all)}</div>`;
+    };
+
+    // Gross convenience wrapper for the flat callers (tuning breakdowns, catalog rows, rune rows).
+    const matLi = (material, qty) => matRow(grossNode(material, qty));
+
+    // Body of a crafted node's inline sub-recipe: the batch craft price ("Craft price (8×)"), its
+    // inventory credit, and its child rows. `seen` guards re-expansion up the tree.
+    const treeBody = (node, seen, all) => {
+      const credit = node.gross != null && node.line != null ? node.gross - node.line : 0;
+      const label = node.need > 1 ? `Craft price (${node.need}×)` : node.qty > 1 && node.need === 1 ? `Craft price (1×)` : "Craft price";
+      const rows = (node.children || []).map((k) => matRow(k, { seen, all })).join("");
+      return `<div class="grid"><div class="k">${label}</div><div class="v gold best">${fmt(node.line)}</div>`
         + `${credit > 0 ? `<div class="k">from inventory</div><div class="v gold">− ${fmt(credit)} <span class="muted">(owned, netted above)</span></div>` : ""}</div>
-        <div class="mats">${mats}</div>`;
-      // Inline sub-recipe (matLi passes title="__inline__"): return JUST the body, the crafted
-      // material's own row is the toggle, so there's no wrapper/summary line here (issue 2/4).
-      // Its `.mats` crafted materials expand the same way, recursively (via matLi + childSeen).
+        <div class="mats">${rows}</div>`;
+    };
+
+    // Collapsed "Total needed at every depth" list under a deep recipe: one row per LEAF (what you
+    // buy / farm, merged across every branch and depth), with the batch total and owned status. The
+    // place to check whether stock covers the WHOLE item when a material appears in two branches.
+    const treeTotalsBlock = (root) => {
+      const { leaves } = recipeTreeTotals(root);
+      const names = Object.keys(leaves);
+      if (!names.length) return "";
+      const rows = names.sort((a, b) => a.localeCompare(b)).map((n) => {
+        const l = leaves[n], unit = cost(n);
+        const short = Math.max(0, l.qty - l.owned);
+        const gold = unit == null ? null : unit * short;
+        const st = l.owned >= l.qty ? `<span class="pos">covered</span>` : l.owned > 0 ? `<span class="muted">${l.owned} of ${l.qty} owned</span>` : `<span class="muted">none owned</span>`;
+        return `<span class="mq">${l.qty} ×</span><span class="mn">${esc(n)}</span><span class="mu">${fmt(unit)} ea</span><span class="ml${short === 0 ? " owned" : ""}">${fmt(gold)}</span><span class="mt">${st}</span>${invStepper(n)}`;
+      }).join("");
+      return `<details class="tree-tot"><summary>Total needed at every depth <span class="muted">(${names.length} items, merged across branches)</span></summary><div class="mats">${rows}</div></details>`;
+    };
+
+    // Recipe block for a craftable name: a "Craft price" top row followed by the per-material
+    // breakdown, rendered from ONE recipeTree walk. Returns "" when the name has no recipe. Shared
+    // by the Catalog detail AND the Upgrades move math so a craft cost always shows what it's made of.
+    // `deep` (move details): every crafted material expands INLINE (matRow), with batch quantities
+    // and steppers all the way down, plus the "Total needed at every depth" list. `seen`: names never
+    // expanded AND (for a move) OMITTED from the recipe: the move's owned `from` tier is a material of
+    // the target's recipe, but you hold it, so its row is dropped and the "Craft price" is the STEP
+    // price (target craft − owned tier), matching the Math grid. `netted` (move details only): draw
+    // owned stock down (from `baseOwned` when the move pre-drew stock, see invLeft) so every line and
+    // the total track the +/- steppers and reconcile with the move's gold. The catalog stays gross.
+    const recipeBlock = (name, deep = false, seen = new Set(), title = null, netted = false, baseOwned = null) => {
+      if (!recipes[name]) return "";
+      const pool = netted ? { ...(baseOwned || inventory) } : {};
+      const noExpand = new Set([...seen, name]);
+      // A minimal ctx (not moveCtx: the catalog renders before that is initialised).
+      const tree = recipeTree({ recipes, cost, craftCost, priceOf }, name, 1, pool, { noExpand, omit: seen });
+      const all = deep ? recipeTreeTotals(tree).all : null;
+      const mats = tree.children.map((k) => matRow(k, deep ? { seen: noExpand, all } : {})).join("");
+      const r = recipes[name];
+      const feeTxt = r.fee ? ` · flat fee ${fmt(r.fee)}` : "";
+      const credit = tree.gross != null && tree.total != null ? tree.gross - tree.total : 0;
+      const body = `<div class="grid"><div class="k">Craft price${seen.size ? " (this step)" : " (total)"}</div><div class="v gold best">${fmt(tree.total)}</div>`
+        + `${credit > 0 ? `<div class="k">from inventory</div><div class="v gold">− ${fmt(credit)} <span class="muted">(owned, netted above)</span></div>` : ""}</div>
+        <div class="mats">${mats}</div>${deep ? treeTotalsBlock(tree) : ""}`;
       if (title === "__inline__") return body;
       return `<h4 style="margin-top:10px">Recipe${feeTxt}</h4>${body}`;
     };
@@ -2232,7 +2267,7 @@
       const block = (b) => {
         // A crafted tuning material (the Crystal) expands INLINE on its row, same as any recipe;
         // no separate "X is crafted" list appended below (issue 2). Fresh guard set per block.
-        const mats = b.materials.map((x) => matLi(x.material, x.qty, null, new Set())).join("");
+        const mats = b.materials.map((x) => matLi(x.material, x.qty)).join("");
         const fee = b.feeGold ? `<span class="muted"> · fee ${fmt(b.feeGold)}</span>` : "";
         const tag = b.prereq ? ` <span class="mtag">(prerequisite)</span>` : "";
         return `<div class="tunerow"><div class="statline"><b>${tuneStatDisplay(b.stat)}</b>${tag} <span class="muted">+${fmt(b.gain)} over ${fmt(b.ticks)}× ticks</span> = <span class="v gold">${fmt(b.rowGold)}</span>${fee}</div><div class="mats">${mats}</div></div>`;
@@ -2254,7 +2289,7 @@
       const bd = m.tunePrereqBreakdown;
       if (!bd || !bd.length) return "";
       const block = (b) => {
-        const mats = b.materials.map((x) => matLi(x.material, x.qty, null, new Set())).join("");
+        const mats = b.materials.map((x) => matLi(x.material, x.qty)).join("");
         const fee = b.feeGold ? `<span class="muted"> · fee ${fmt(b.feeGold)}</span>` : "";
         return `<div class="tunerow"><div class="statline"><b>${tuneStatDisplay(b.stat)}</b> <span class="muted">+${fmt(b.gain)} over ${fmt(b.ticks)}× ticks</span> = <span class="v gold">${fmt(b.rowGold)}</span>${fee}</div><div class="mats">${mats}</div></div>`;
       };
@@ -2359,17 +2394,22 @@
       const { buys, fee } = expandBOM(toName, fromName);
       const entries = Object.entries(buys)
         .sort((a, b) => ((cost(b[0]) ?? 0) * b[1]) - ((cost(a[0]) ?? 0) * a[1]));
+      // One pool drawn in display order; each leaf becomes a netted row node (owned units taken
+      // first, the rest priced by netCost, so an owned leaf visibly cuts its own row, and leaves are
+      // unique after expandBOM so Σ lines == total).
       const owned = { ...(baseOwned || inventory) };
       let total = fee, gross = fee;
-      for (const [n, q] of entries) {
-        const u = cost(n); if (u != null) gross += u * q;
-        const g = netCost(n, q, owned, {}); if (g != null) total += g;
-      }
+      const nodes = entries.map(([n, q]) => {
+        const node = grossNode(n, q);
+        const take = Math.min(owned[n] || 0, q);
+        node.owned = take; node.need = q - take;
+        node.line = netCost(n, q, owned, {});
+        if (node.gross != null) gross += node.gross;
+        if (node.line != null) total += node.line;
+        return node;
+      });
       const credit = gross - total;
-      // Net each displayed leaf line too (parallel pool; leaves are unique after expandBOM, so
-      // Σ lines == total) so an owned leaf visibly cuts its own row, not just the header total.
-      const linePool = { ...(baseOwned || inventory) };
-      const lis = entries.map(([n, q]) => matLi(n, q, linePool)).join("");
+      const lis = nodes.map((node) => matRow(node)).join("");
       return `<div class="grid"><div class="k">Materials total</div><div class="v gold best">${fmt(total)}</div>`
         + `${credit > 0 ? `<div class="k">from inventory</div><div class="v gold">− ${fmt(credit)} <span class="muted">(owned, netted above)</span></div>` : ""}`
         + `${fee ? `<div class="k">incl. flat fees</div><div class="v gold">${fmt(fee)}</div>` : ""}</div><div class="mats">${lis}</div>`;
@@ -2379,20 +2419,11 @@
     // collapsed sub-recipe (e.g. the Uaithne Advancement Stone) so you can drill in + net its leaves
     // right here, same as the single-tier recipeBlock. `seen` (seeded with the chain's tier nodes)
     // keeps intermediate tiers from re-expanding, they're their own slides.
+    // The tier-node rows (the previous tier, always in `seen`) are OMITTED: that piece is the
+    // previous slide, so this slide's "Craft price (this step)" is the hop's own price.
     const stepSlideBody = (step, seen, baseOwned = null) => {
-      const r = recipes[step];
-      if (!r) return `<div class="mats"></div>`;
-      // Net each line against a shared owned clone (from `baseOwned` when the move pre-drew
-      // stock, see invLeft) so a crafted material's line (the Advancement Stone) reflects owned
-      // leaves, matching the sub-recipe drill-in below. TIER-NODE rows (the previous tier,
-      // always in `seen`) get NO pool: you own or separately build that piece, so its row must
-      // not expand its BOM and eat the stock the other rows should be credited with.
-      const pool = { ...(baseOwned || inventory) };
-      // `seen` already holds the chain's tier nodes (so neighbouring tiers don't re-expand); pass it
-      // as the inline-expand guard so a crafted material (the Advancement Stone) drills in on its own
-      // row instead of stacking a separate block below.
-      const mats = r.materials.map(({ material, qty }) => matLi(material, qty, seen.has(material) ? null : pool, seen.has(material) ? null : seen)).join("");
-      return `<div class="mats">${mats}</div>`;
+      if (!recipes[step]) return `<div class="mats"></div>`;
+      return recipeBlock(step, true, seen, "__inline__", true, baseOwned);
     };
 
     // One-box, click-to-advance carousel for a multi-tier tierStep: the combined buy list
@@ -2576,6 +2607,21 @@
       let used;
       try { used = JSON.parse(btn.dataset.craft); } catch { return; }
       for (const [name, qty] of used) setOwned(name, Math.max(0, ownedOf(name) - qty));
+      applyInventory();
+    });
+
+    // Delegated ⚒ sub-craft (SPEC §5.2): craft `k` of a recipe row's output from owned direct
+    // materials, subtracting `per × k` of each and ADDING k of the output to inventory (a real
+    // production step, unlike the move-level Craft button above which only clears stock). The
+    // payload is encoded on the button so the handler is independent of the regenerated tree.
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".craft-sub"); if (!btn) return;
+      e.stopPropagation();
+      let p;
+      try { p = JSON.parse(btn.dataset.craftsub); } catch { return; }
+      if (!p || !(p.k > 0)) return;
+      for (const [name, per] of p.mats) setOwned(name, Math.max(0, ownedOf(name) - per * p.k));
+      setOwned(p.out, ownedOf(p.out) + p.k);
       applyInventory();
     });
 
@@ -3171,7 +3217,7 @@
     const moveDetail = (m) => {
       if (m.merged) return mergedStepDetail(m);
       if (m.type === "enhanceStep") {
-        const mats = m.materials ? Object.entries(m.materials).map(([n, q]) => matLi(n, q, null, new Set())).join("") : "";
+        const mats = m.materials ? Object.entries(m.materials).map(([n, q]) => matLi(n, q)).join("") : "";
         const matsBlock = mats
           ? `<h4 style="margin-top:10px">Per-attempt cost (× the ${m.attempts.toFixed(1)} expected attempts)</h4>
              <div class="statline muted">${m.fee ? `${fmt(m.fee)} gold fee + ` : ""}materials, each attempt:</div><div class="mats">${mats}</div>`
@@ -3229,8 +3275,7 @@
           ${m.setDelta && Object.keys(m.setDelta).length ? `<h4 style="margin-top:10px">Set bonus change <span class="muted">(included above)</span></h4><div class="statline">${diffLine(m.setDelta)}</div>` : ""}
           <h4 style="margin-top:10px">Math</h4><div class="grid">
             <div class="k">Point gain</div><div class="v">+${fmt(m.pointGain)}</div>
-            <div class="k">Craft target tier</div><div class="v gold">${fmt(cr)}</div>
-            <div class="k">Own current tier</div><div class="v gold">− ${fmt(m.ownCredit)} <span class="muted">${m.ownCredit ? "(already owned)" : "(free starting gear, nothing to credit)"}</span></div>
+            <div class="k">Craft cost</div><div class="v gold">${fmt(cr == null ? null : cr - m.ownCredit)} <span class="muted">(this step, your ${esc(m.from)} counted as owned)</span></div>
             ${m.tunePrereqGold ? `<div class="k">Max base tuning</div><div class="v gold">+ ${fmt(m.tunePrereqGold)} <span class="muted">(required gate: the piece must be fully base-tuned before the jump, then that tuning is wiped. Pure sunk gold, it buys no lasting stat. The stat change above is measured against your current tuning.)${m.tunePrereqOk === false ? " ⚠ some tuning materials unpriced. Cost understated" : ""}</span></div>` : ""}
             ${m.reEnchant ? `<div class="k">Re-enchant</div><div class="v gold">+ ${fmt(m.reEnchant)} <span class="muted">(enchants wiped on the jump, base-stat tuning is wiped too, only Destruction carries)</span></div>` : ""}
             ${m.extraction ? `<div class="k">Extraction rune</div><div class="v gold">+ ${fmt(m.extraction)} <span class="muted">(carries your enchants across, cheaper than re-enchanting)</span></div>` : ""}

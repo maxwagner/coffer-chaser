@@ -75,6 +75,88 @@ export const expandBOM = (ctx, toName, fromName) => {
   return { buys, fee };
 };
 
+// Inventory-netted RECIPE TREE (SPEC §5.2), the model behind every move-detail recipe view.
+// Walks the whole craft tree of `name` × `qty` top-down, in recipe order, against ONE owned
+// `pool` (MUTATED, clone it first), so every node carries its BATCH quantity (per-craft qty
+// × how many of the parent must actually be crafted), the stock it drew, and its netted line.
+// Buy-vs-craft is decided per node exactly like cost.netCost: owned units first, then the
+// shortfall is crafted when the inventory-aware craft total ≤ buying it. So for a crafted
+// node fee + Σ children.line == node.line, and Σ top-level lines + fee == what netCost
+// charges the move. Owning 50 Unstable Runes therefore zeroes the Unstable row AND cuts
+// every crafted ancestor's line by the same gold.
+//   opts.noExpand: names never expanded (owned tiers, ancestors: cycle guard).
+//   opts.omit: material names dropped from the tree entirely (the move's owned `from`
+//              tier: you hold it, it is neither bought nor charged).
+// Node: { name, qty, per, crafts, unit, gross, owned, need, line, buy, crafted, fee, children }
+//   qty = per × crafts (batch), owned = units the pool covered, need = qty − owned,
+//   crafted = the shortfall is crafted (children populated), line = netted gold.
+// Root: { name, qty, fee, gross, total, children } (the output itself is never netted:
+// the recipe view describes MAKING it).
+export const recipeTree = (ctx, name, qty, pool, { noExpand = new Set(), omit = new Set() } = {}) => {
+  const r = ctx.recipes[name];
+  if (!r) return null;
+  const visit = (n, per, crafts, anc, p) => {
+    const q = per * crafts;
+    const unit = ctx.cost(n);
+    const gross = unit == null ? null : unit * q;
+    const node = { name: n, qty: q, per, crafts, unit, gross, owned: 0, need: q, line: gross, buy: null, crafted: false, fee: 0, children: null };
+    const have = p[n] || 0, take = Math.min(have, q);
+    if (take > 0) { if (have - take > 0) p[n] = have - take; else delete p[n]; }
+    node.owned = take; node.need = q - take;
+    if (node.need <= 0 || unit === 0) { node.line = 0; return node; }
+    const market = ctx.priceOf(n);
+    node.buy = market != null ? market * node.need : null;
+    const rr = ctx.recipes[n];
+    if (rr && !anc.has(n) && !noExpand.has(n)) {
+      const cp = { ...p }, sub = new Set(anc); sub.add(n);
+      const kids = []; let total = (rr.fee || 0) * node.need, ok = true;
+      for (const { material, qty: mq } of rr.materials) {
+        const k = visit(material, mq, node.need, sub, cp);
+        kids.push(k);
+        if (k.line == null) ok = false; else total += k.line;
+      }
+      if (ok && (node.buy == null || total <= node.buy)) {
+        for (const k in p) delete p[k];
+        Object.assign(p, cp);
+        node.children = kids; node.line = total; node.crafted = true; node.fee = (rr.fee || 0) * node.need;
+        return node;
+      }
+    }
+    node.line = node.buy != null ? node.buy : (unit == null ? null : unit * node.need);
+    return node;
+  };
+  const anc = new Set([name]);
+  const children = [];
+  let total = (r.fee || 0) * qty, gross = total, ok = true;
+  for (const { material, qty: mq } of r.materials) {
+    if (omit.has(material)) continue;
+    const k = visit(material, mq, qty, anc, pool);
+    children.push(k);
+    if (k.line == null || k.gross == null) ok = false;
+    else { total += k.line; gross += k.gross; }
+  }
+  return { name, qty, fee: (r.fee || 0) * qty, gross: ok ? gross : null, total: ok ? total : null, children };
+};
+
+// Per-name quantity totals across a recipe tree. `all`: every node (a name used in two
+// branches, e.g. a Fragment both in the top recipe and inside the Advancement Stone, sums
+// both, the "3 of 6 total" row hint). `leaves`: only the nodes you actually BUY / farm (not
+// crafted further, or already covered by stock), the "Total needed at every depth" list,
+// each as { qty, owned }.
+export const recipeTreeTotals = (root) => {
+  const all = {}, leaves = {};
+  const walk = (n) => {
+    all[n.name] = (all[n.name] || 0) + n.qty;
+    if (n.children) n.children.forEach(walk);
+    else {
+      const l = leaves[n.name] || (leaves[n.name] = { qty: 0, owned: 0 });
+      l.qty += n.qty; l.owned += n.owned;
+    }
+  };
+  (root?.children || []).forEach(walk);
+  return { all, leaves };
+};
+
 // Fold one material into a buys map, expanding a crafted mat to the leaves you buy.
 export const addLeafBuys = (ctx, buys, material, qty) => {
   if (ctx.recipes[material])
